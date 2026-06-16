@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Controle de Terceiros</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F0F2F5;
+      --surface:   #FFFFFF;
+      --border:    #DDE1E9;
+      --text:      #1A1D23;
+      --muted:     #6B7280;
+      --accent:    #1B4FD8;
+      --accent-lt: #EEF2FF;
+      --ok:        #16A34A;
+      --ok-lt:     #DCFCE7;
+      --danger:    #DC2626;
+      --danger-lt: #FEE2E2;
+      --warn:      #D97706;
+      --warn-lt:   #FEF3C7;
+      --radius:    10px;
+      --shadow:    0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 58px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -.3px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .brand svg { flex-shrink: 0; }
+
+    nav { display: flex; gap: 4px; }
+
+    nav button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      color: var(--muted);
+      transition: background .15s, color .15s;
+    }
+
+    nav button:hover { background: var(--bg); color: var(--text); }
+    nav button.active { background: var(--accent-lt); color: var(--accent); }
+
+    /* ── LAYOUT ── */
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 16px; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 18px;
+    }
+
+    /* ── FORM ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-grid .full { grid-column: 1 / -1; }
+
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; color: var(--text); }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(27,79,216,.12);
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 72px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 20px;
+      border-radius: 7px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-danger  { background: var(--danger-lt); color: var(--danger); }
+    .btn-danger:hover  { opacity: .8; }
+    .btn-ghost   { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover   { background: var(--border); }
+
+    /* ── SEARCH BAR ── */
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .search-wrap input {
+      padding-left: 36px;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .12s;
+    }
+
+    tbody tr:hover { background: var(--bg); }
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody td { padding: 11px 14px; vertical-align: middle; }
+
+    .td-name  { font-weight: 600; }
+    .td-cpf   { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+    .td-company { color: var(--muted); font-size: 13px; }
+
+    .actions { display: flex; gap: 6px; }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      white-space: nowrap;
+    }
+
+    .badge-ok      { background: var(--ok-lt);     color: var(--ok); }
+    .badge-blocked { background: var(--danger-lt);  color: var(--danger); }
+    .badge-warn    { background: var(--warn-lt);    color: var(--warn); }
+
+    /* ── PORTARIA ── */
+    .portaria-search { display: flex; gap: 10px; margin-bottom: 24px; }
+    .portaria-search input { flex: 1; font-size: 16px; padding: 12px 16px; }
+    .portaria-search button { padding: 12px 22px; font-size: 15px; }
+
+    .result-card {
+      border-radius: var(--radius);
+      padding: 28px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      display: none;
+    }
+
+    .result-card.show { display: block; }
+
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .status-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .status-icon.ok      { background: var(--ok-lt);     color: var(--ok); }
+    .status-icon.blocked { background: var(--danger-lt);  color: var(--danger); }
+
+    .status-label { font-size: 26px; font-weight: 800; line-height: 1; }
+    .status-label.ok      { color: var(--ok); }
+    .status-label.blocked { color: var(--danger); }
+
+    .status-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    .result-info { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .info-item label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+    .info-item span  { font-size: 15px; font-weight: 500; display: block; margin-top: 2px; }
+
+    .motivos {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: var(--danger-lt);
+      border-radius: 8px;
+      border-left: 4px solid var(--danger);
+    }
+
+    .motivos-title { font-size: 12px; font-weight: 700; color: var(--danger); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+
+    .motivos ul { padding-left: 16px; }
+    .motivos ul li { font-size: 13.5px; color: var(--danger); margin-bottom: 4px; font-weight: 500; }
+
+    .not-found {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      display: none;
+    }
+    .not-found.show { display: block; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state svg { margin-bottom: 12px; opacity: .35; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      display: none;
+      padding: 16px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .modal-title { font-size: 17px; font-weight: 700; }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .modal-close:hover { background: var(--bg); color: var(--text); }
+
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+
+    /* ── TOASTS ── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 300;
+    }
+
+    .toast {
+      background: var(--text);
+      color: #fff;
+      padding: 11px 18px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      animation: slideIn .2s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(80px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .result-info { grid-template-columns: 1fr; }
+      nav button { padding: 6px 10px; font-size: 13px; }
+    }
+
+    .tag-venc {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--danger);
+      margin-left: 4px;
+    }
+
+    .tag-ok {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ok);
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    Controle de Terceiros
+  </div>
+  <nav>
+    <button class="active" onclick="showPage('cadastro')">Cadastro</button>
+    <button onclick="showPage('listagem')">Terceiros</button>
+    <button onclick="showPage('empresas')">Empresas</button>
+    <button onclick="showPage('portaria')">Portaria</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ═══════════ CADASTRO ═══════════ -->
+  <div id="page-cadastro" class="page active">
+    <h2>Novo Terceiro</h2>
+    <div class="card">
+      <div class="card-title">Dados pessoais</div>
+      <div class="form-grid">
+        <div>
+          <label for="f-nome">Nome completo *</label>
+          <input id="f-nome" type="text" placeholder="Ex.: João da Silva" />
+        </div>
+        <div>
+          <label for="f-cpf">CPF *</label>
+          <input id="f-cpf" type="text" placeholder="000.000.000-00" maxlength="14" />
+        </div>
+        <div>
+          <label for="f-empresa">Empresa *</label>
+          <select id="f-empresa">
+            <option value="">Selecione uma empresa…</option>
+          </select>
+        </div>
+        <div>
+          <label for="f-funcao">Função *</label>
+          <input id="f-funcao" type="text" placeholder="Ex.: Eletricista" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Documentação</div>
+      <div class="form-grid">
+        <div>
+          <label for="f-aso">Validade do ASO *</label>
+          <input id="f-aso" type="date" />
+        </div>
+        <div>
+          <label for="f-integ">Validade da Integração *</label>
+          <input id="f-integ" type="date" />
+        </div>
+        <div class="full">
+          <label for="f-obs">Observação</label>
+          <textarea id="f-obs" placeholder="Informações adicionais..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="salvarTerceiro()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salvar terceiro
+      </button>
+      <button class="btn btn-ghost" onclick="limparForm()">Limpar</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ LISTAGEM ═══════════ -->
+  <div id="page-listagem" class="page">
+    <h2>Terceiros Cadastrados</h2>
+    <div class="card" style="padding:16px 20px;">
+      <div class="search-row">
+        <div class="search-wrap" style="flex:1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="busca-lista" placeholder="Buscar por nome ou CPF…" oninput="renderLista()" />
+        </div>
+        <button class="btn btn-primary" onclick="showPage('cadastro')">+ Cadastrar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Empresa</th>
+              <th>ASO</th>
+              <th>Integração</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabela-body"></tbody>
+        </table>
+        <div id="lista-empty" class="empty-state" style="display:none;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p>Nenhum terceiro encontrado.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PORTARIA ═══════════ -->
+  <div id="page-portaria" class="page">
+    <h2>Consulta — Portaria</h2>
+    <div class="card">
+      <div class="card-title">Buscar terceiro</div>
+      <div class="portaria-search">
+        <input type="text" id="busca-portaria" placeholder="Digite o nome ou CPF do terceiro…" onkeydown="if(event.key==='Enter') consultarPortaria()" />
+        <button class="btn btn-primary" onclick="consultarPortaria()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Consultar
+        </button>
+      </div>
+
+      <div id="portaria-not-found" class="not-found">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:10px;opacity:.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p>Nenhum terceiro encontrado para esta busca.</p>
+      </div>
+
+      <!-- resultado -->
+      <div id="portaria-result" class="result-card">
+        <div class="result-status">
+          <div id="r-icon" class="status-icon">
+            <svg id="r-icon-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+          </div>
+          <div>
+            <div id="r-status-label" class="status-label"></div>
+            <div class="status-sub" id="r-status-sub"></div>
+          </div>
+        </div>
+
+        <div class="result-info">
+          <div class="info-item">
+            <label>Nome</label>
+            <span id="r-nome"></span>
+          </div>
+          <div class="info-item">
+            <label>Empresa</label>
+            <span id="r-empresa"></span>
+          </div>
+          <div class="info-item">
+            <label>Função</label>
+            <span id="r-funcao"></span>
+          </div>
+          <div class="info-item">
+            <label>CPF</label>
+            <span id="r-cpf" style="font-family:'JetBrains Mono',monospace;font-size:14px;"></span>
+          </div>
+          <div class="info-item">
+            <label>Validade ASO</label>
+            <span id="r-aso"></span>
+          </div>
+          <div class="info-item">
+            <label>Validade Integração</label>
+            <span id="r-integ"></span>
+          </div>
+        </div>
+
+        <div id="r-motivos" class="motivos" style="display:none;">
+          <div class="motivos-title">⚠ Motivo(s) do bloqueio</div>
+          <ul id="r-motivos-list"></ul>
+        </div>
+
+        <div id="r-obs-wrap" style="margin-top:14px;display:none;">
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Observação</label>
+          <p id="r-obs" style="margin-top:4px;font-size:14px;color:var(--text);"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ EMPRESAS ═══════════ -->
+  <div id="page-empresas" class="page">
+    <h2>Empresas Cadastradas</h2>
+    <div class="card" style="padding:16px 20px;">
+      <div class="search-row">
+        <div class="search-wrap" style="flex:1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="busca-empresas" placeholder="Buscar por razão social, fantasia ou CNPJ…" oninput="renderEmpresas()" />
+        </div>
+        <button class="btn btn-primary" onclick="abrirModalNovaEmpresa()">+ Nova Empresa</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Razão Social</th>
+              <th>Nome Fantasia</th>
+              <th>CNPJ</th>
+              <th>Responsável</th>
+              <th>Telefone</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabela-empresas"></tbody>
+        </table>
+        <div id="empresas-empty" class="empty-state" style="display:none;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          <p>Nenhuma empresa cadastrada.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════ MODAL DE EDIÇÃO ═══════════ -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Editar Terceiro</span>
+      <button class="modal-close" onclick="fecharModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-grid">
+      <div><label for="e-nome">Nome completo *</label><input id="e-nome" type="text"/></div>
+      <div><label for="e-cpf">CPF *</label><input id="e-cpf" type="text" maxlength="14"/></div>
+      <div><label for="e-empresa">Empresa *</label><select id="e-empresa"><option value="">Selecione uma empresa…</option></select></div>
+      <div><label for="e-funcao">Função *</label><input id="e-funcao" type="text"/></div>
+      <div><label for="e-aso">Validade do ASO *</label><input id="e-aso" type="date"/></div>
+      <div><label for="e-integ">Validade da Integração *</label><input id="e-integ" type="date"/></div>
+      <div class="full"><label for="e-obs">Observação</label><textarea id="e-obs"></textarea></div>
+    </div>
+    <input type="hidden" id="e-id"/>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicao()">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL DE EMPRESAS ═══════════ -->
+<div class="modal-overlay" id="modal-empresa">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-empresa-title">Nova Empresa</span>
+      <button class="modal-close" onclick="fecharModalEmpresa()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-grid">
+      <div class="full"><label for="emp-razao">Razão Social *</label><input id="emp-razao" type="text" placeholder="Ex.: Construtora ABC Ltda"/></div>
+      <div><label for="emp-fantasia">Nome Fantasia</label><input id="emp-fantasia" type="text" placeholder="Ex.: ABC Construções"/></div>
+      <div><label for="emp-cnpj">CNPJ *</label><input id="emp-cnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18"/></div>
+      <div><label for="emp-resp">Responsável *</label><input id="emp-resp" type="text" placeholder="Nome do responsável"/></div>
+      <div><label for="emp-tel">Telefone</label><input id="emp-tel" type="text" placeholder="(00) 00000-0000" maxlength="15"/></div>
+      <div><label for="emp-email">E-mail</label><input id="emp-email" type="email" placeholder="contato@empresa.com.br"/></div>
+    </div>
+    <input type="hidden" id="emp-id"/>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModalEmpresa()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEmpresa()">Salvar empresa</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="toast-container"></div>
+
+<script>
+  // ──────────────────────────────────────────────────
+  //  STORAGE
+  // ──────────────────────────────────────────────────
+  function getAll() {
+    return JSON.parse(localStorage.getItem('terceiros') || '[]');
+  }
+
+  function saveAll(data) {
+    localStorage.setItem('terceiros', JSON.stringify(data));
+  }
+
+  // ──────────────────────────────────────────────────
+  //  UTILS
+  // ──────────────────────────────────────────────────
+  function hoje() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function fmtData(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function getStatus(t) {
+    const h = hoje();
+    const motivos = [];
+    if (t.aso < h)   motivos.push('ASO vencido em ' + fmtData(t.aso));
+    if (t.integ < h) motivos.push('Integração vencida em ' + fmtData(t.integ));
+    return { ok: motivos.length === 0, motivos };
+  }
+
+  function maskCPF(v) {
+    v = v.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9) v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2})$/, '$1.$2.$3-$4');
+    else if (v.length > 6) v = v.replace(/^(\d{3})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+    else if (v.length > 3) v = v.replace(/^(\d{3})(\d{1,3})$/, '$1.$2');
+    return v;
+  }
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+  function toast(msg) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  // ──────────────────────────────────────────────────
+  //  NAVEGAÇÃO
+  // ──────────────────────────────────────────────────
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach((b, i) => {
+      const pages = ['cadastro','listagem','empresas','portaria'];
+      b.classList.toggle('active', pages[i] === name);
+    });
+    document.getElementById('page-' + name).classList.add('active');
+    if (name === 'listagem') renderLista();
+    if (name === 'empresas') renderEmpresas();
+    if (name === 'cadastro') popularSelectEmpresas();
+  }
+
+  // ──────────────────────────────────────────────────
+  //  CPF MASK
+  // ──────────────────────────────────────────────────
+  document.getElementById('f-cpf').addEventListener('input', function() {
+    this.value = maskCPF(this.value);
+  });
+  document.getElementById('e-cpf').addEventListener('input', function() {
+    this.value = maskCPF(this.value);
+  });
+
+  // ──────────────────────────────────────────────────
+  //  CADASTRO
+  // ──────────────────────────────────────────────────
+  function salvarTerceiro() {
+    const nome    = document.getElementById('f-nome').value.trim();
+    const cpf     = document.getElementById('f-cpf').value.trim();
+    const empSel  = document.getElementById('f-empresa');
+    const empresaId = empSel.value;
+    const empresa = empSel.options[empSel.selectedIndex]?.text || '';
+    const funcao  = document.getElementById('f-funcao').value.trim();
+    const aso     = document.getElementById('f-aso').value;
+    const integ   = document.getElementById('f-integ').value;
+    const obs     = document.getElementById('f-obs').value.trim();
+
+    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+      toast('⚠ Preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    const lista = getAll();
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    const duplicado = lista.find(t => t.cpf.replace(/\D/g, '') === cpfLimpo);
+    if (duplicado) {
+      toast('⚠ Já existe um terceiro com este CPF.');
+      return;
+    }
+
+    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs });
+    saveAll(lista);
+    limparForm();
+    toast('✓ Terceiro cadastrado com sucesso!');
+  }
+
+  function limparForm() {
+    ['f-nome','f-cpf','f-funcao','f-aso','f-integ','f-obs'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('f-empresa').value = '';
+  }
+
+  // ──────────────────────────────────────────────────
+  //  LISTAGEM
+  // ──────────────────────────────────────────────────
+  function renderLista() {
+    const q = document.getElementById('busca-lista').value.toLowerCase().trim();
+    let lista = getAll();
+    if (q) lista = lista.filter(t =>
+      t.nome.toLowerCase().includes(q) || t.cpf.replace(/\D/g,'').includes(q.replace(/\D/g,''))
+    );
+
+    const tbody = document.getElementById('tabela-body');
+    const empty = document.getElementById('lista-empty');
+    tbody.innerHTML = '';
+
+    if (!lista.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    lista.forEach(t => {
+      const { ok, motivos } = getStatus(t);
+      const badge = ok
+        ? `<span class="badge badge-ok">✓ Liberado</span>`
+        : `<span class="badge badge-blocked">✕ Bloqueado</span>`;
+      const h = hoje();
+      const asoTag  = t.aso  < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
+      const integTag= t.integ< h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-name">${t.nome}</td>
+        <td class="td-cpf">${t.cpf}</td>
+        <td class="td-company">${t.empresa}</td>
+        <td>${fmtData(t.aso)}${asoTag}</td>
+        <td>${fmtData(t.integ)}${integTag}</td>
+        <td>${badge}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirEdicao('${t.id}')">Editar</button>
+            <button class="btn btn-danger" style="padding:5px 12px;font-size:12px;" onclick="excluir('${t.id}')">Excluir</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function excluir(id) {
+    if (!confirm('Deseja excluir este terceiro?')) return;
+    saveAll(getAll().filter(t => t.id !== id));
+    renderLista();
+    toast('Terceiro removido.');
+  }
+
+  // ──────────────────────────────────────────────────
+  //  EDIÇÃO
+  // ──────────────────────────────────────────────────
+  function abrirEdicao(id) {
+    const t = getAll().find(t => t.id === id);
+    if (!t) return;
+    popularSelectEmpresas('e-empresa', t.empresaId || '');
+    document.getElementById('e-id').value     = t.id;
+    document.getElementById('e-nome').value   = t.nome;
+    document.getElementById('e-cpf').value    = t.cpf;
+    document.getElementById('e-funcao').value = t.funcao;
+    document.getElementById('e-aso').value    = t.aso;
+    document.getElementById('e-integ').value  = t.integ;
+    document.getElementById('e-obs').value    = t.obs;
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function fecharModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  // fechar modal ao clicar fora
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+  });
+
+  function salvarEdicao() {
+    const id      = document.getElementById('e-id').value;
+    const nome    = document.getElementById('e-nome').value.trim();
+    const cpf     = document.getElementById('e-cpf').value.trim();
+    const empSel  = document.getElementById('e-empresa');
+    const empresaId = empSel.value;
+    const empresa = empSel.options[empSel.selectedIndex]?.text || '';
+    const funcao  = document.getElementById('e-funcao').value.trim();
+    const aso     = document.getElementById('e-aso').value;
+    const integ   = document.getElementById('e-integ').value;
+    const obs     = document.getElementById('e-obs').value.trim();
+
+    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+      toast('⚠ Preencha todos os campos obrigatórios.'); return;
+    }
+
+    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf, empresaId, empresa, funcao, aso, integ, obs } : t);
+    saveAll(lista);
+    fecharModal();
+    renderLista();
+    toast('✓ Alterações salvas!');
+  }
+
+  // ──────────────────────────────────────────────────
+  //  EMPRESAS — STORAGE
+  // ──────────────────────────────────────────────────
+  function getAllEmpresas() {
+    return JSON.parse(localStorage.getItem('empresas') || '[]');
+  }
+
+  function saveAllEmpresas(data) {
+    localStorage.setItem('empresas', JSON.stringify(data));
+  }
+
+  // ──────────────────────────────────────────────────
+  //  EMPRESAS — SELECT HELPER
+  // ──────────────────────────────────────────────────
+  function popularSelectEmpresas(selectId, selectedId) {
+    const sel = document.getElementById(selectId || 'f-empresa');
+    if (!sel) return;
+    const empresas = getAllEmpresas();
+    sel.innerHTML = '<option value="">Selecione uma empresa…</option>';
+    empresas.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.fantasia ? `${e.razao} (${e.fantasia})` : e.razao;
+      if (selectedId && e.id === selectedId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ──────────────────────────────────────────────────
+  //  EMPRESAS — MASK CNPJ / TELEFONE
+  // ──────────────────────────────────────────────────
+  function maskCNPJ(v) {
+    v = v.replace(/\D/g, '').slice(0, 14);
+    if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})$/, '$1.$2.$3/$4-$5');
+    else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})$/, '$1.$2.$3/$4');
+    else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+    else if (v.length > 2) v = v.replace(/^(\d{2})(\d{1,3})$/, '$1.$2');
+    return v;
+  }
+
+  function maskTel(v) {
+    v = v.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+    else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
+    return v;
+  }
+
+  document.getElementById('emp-cnpj').addEventListener('input', function() { this.value = maskCNPJ(this.value); });
+  document.getElementById('emp-tel').addEventListener('input',  function() { this.value = maskTel(this.value); });
+
+  // ──────────────────────────────────────────────────
+  //  EMPRESAS — MODAL
+  // ──────────────────────────────────────────────────
+  function abrirModalNovaEmpresa() {
+    document.getElementById('modal-empresa-title').textContent = 'Nova Empresa';
+    document.getElementById('emp-id').value = '';
+    ['emp-razao','emp-fantasia','emp-cnpj','emp-resp','emp-tel','emp-email'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('modal-empresa').classList.add('open');
+  }
+
+  function abrirModalEditarEmpresa(id) {
+    const e = getAllEmpresas().find(e => e.id === id);
+    if (!e) return;
+    document.getElementById('modal-empresa-title').textContent = 'Editar Empresa';
+    document.getElementById('emp-id').value      = e.id;
+    document.getElementById('emp-razao').value   = e.razao;
+    document.getElementById('emp-fantasia').value= e.fantasia || '';
+    document.getElementById('emp-cnpj').value    = e.cnpj;
+    document.getElementById('emp-resp').value    = e.resp;
+    document.getElementById('emp-tel').value     = e.tel || '';
+    document.getElementById('emp-email').value   = e.email || '';
+    document.getElementById('modal-empresa').classList.add('open');
+  }
+
+  function fecharModalEmpresa() {
+    document.getElementById('modal-empresa').classList.remove('open');
+  }
+
+  document.getElementById('modal-empresa').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalEmpresa();
+  });
+
+  function salvarEmpresa() {
+    const id      = document.getElementById('emp-id').value;
+    const razao   = document.getElementById('emp-razao').value.trim();
+    const fantasia= document.getElementById('emp-fantasia').value.trim();
+    const cnpj    = document.getElementById('emp-cnpj').value.trim();
+    const resp    = document.getElementById('emp-resp').value.trim();
+    const tel     = document.getElementById('emp-tel').value.trim();
+    const email   = document.getElementById('emp-email').value.trim();
+
+    if (!razao || !cnpj || !resp) {
+      toast('⚠ Preencha os campos obrigatórios: Razão Social, CNPJ e Responsável.');
+      return;
+    }
+
+    let lista = getAllEmpresas();
+
+    if (id) {
+      // edição
+      lista = lista.map(e => e.id === id ? { ...e, razao, fantasia, cnpj, resp, tel, email } : e);
+      toast('✓ Empresa atualizada!');
+    } else {
+      // novo — checar CNPJ duplicado
+      const cnpjLimpo = cnpj.replace(/\D/g, '');
+      if (lista.find(e => e.cnpj.replace(/\D/g, '') === cnpjLimpo)) {
+        toast('⚠ Já existe uma empresa com este CNPJ.'); return;
+      }
+      lista.push({ id: uid(), razao, fantasia, cnpj, resp, tel, email });
+      toast('✓ Empresa cadastrada!');
+    }
+
+    saveAllEmpresas(lista);
+    fecharModalEmpresa();
+    renderEmpresas();
+    // atualiza selects abertos
+    popularSelectEmpresas('f-empresa');
+    popularSelectEmpresas('e-empresa');
+  }
+
+  // ──────────────────────────────────────────────────
+  //  EMPRESAS — LISTAGEM
+  // ──────────────────────────────────────────────────
+  function renderEmpresas() {
+    const q = (document.getElementById('busca-empresas')?.value || '').toLowerCase().trim();
+    let lista = getAllEmpresas();
+    if (q) lista = lista.filter(e =>
+      e.razao.toLowerCase().includes(q) ||
+      (e.fantasia || '').toLowerCase().includes(q) ||
+      e.cnpj.replace(/\D/g,'').includes(q.replace(/\D/g,''))
+    );
+
+    const tbody = document.getElementById('tabela-empresas');
+    const empty = document.getElementById('empresas-empty');
+    tbody.innerHTML = '';
+
+    if (!lista.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    lista.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-name">${e.razao}</td>
+        <td class="td-company">${e.fantasia || '—'}</td>
+        <td class="td-cpf">${e.cnpj}</td>
+        <td>${e.resp}</td>
+        <td>${e.tel || '—'}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirModalEditarEmpresa('${e.id}')">Editar</button>
+            <button class="btn btn-danger" style="padding:5px 12px;font-size:12px;" onclick="excluirEmpresa('${e.id}')">Excluir</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function excluirEmpresa(id) {
+    const vinculados = getAll().filter(t => t.empresaId === id).length;
+    if (vinculados > 0) {
+      toast(`⚠ Esta empresa possui ${vinculados} terceiro(s) vinculado(s). Remova-os primeiro.`);
+      return;
+    }
+    if (!confirm('Deseja excluir esta empresa?')) return;
+    saveAllEmpresas(getAllEmpresas().filter(e => e.id !== id));
+    renderEmpresas();
+    popularSelectEmpresas('f-empresa');
+    popularSelectEmpresas('e-empresa');
+    toast('Empresa removida.');
+  }
+
+  // inicializa select ao carregar
+  popularSelectEmpresas('f-empresa');
+
+
+  // ──────────────────────────────────────────────────
+  //  PORTARIA
+  // ──────────────────────────────────────────────────
+  function consultarPortaria() {
+    const q = document.getElementById('busca-portaria').value.toLowerCase().trim();
+    const result  = document.getElementById('portaria-result');
+    const notFound= document.getElementById('portaria-not-found');
+
+    result.classList.remove('show');
+    notFound.classList.remove('show');
+
+    if (!q) return;
+
+    const lista = getAll();
+    const found = lista.find(t =>
+      t.nome.toLowerCase().includes(q) ||
+      t.cpf.replace(/\D/g,'').includes(q.replace(/\D/g,''))
+    );
+
+    if (!found) { notFound.classList.add('show'); return; }
+
+    const { ok, motivos } = getStatus(found);
+
+    // ícone
+    const icon = document.getElementById('r-icon');
+    const svg  = document.getElementById('r-icon-svg');
+    icon.className = 'status-icon ' + (ok ? 'ok' : 'blocked');
+    svg.innerHTML = ok
+      ? '<polyline points="20 6 9 17 4 12"/>'
+      : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+
+    // status
+    const label = document.getElementById('r-status-label');
+    label.textContent = ok ? 'LIBERADO' : 'BLOQUEADO';
+    label.className = 'status-label ' + (ok ? 'ok' : 'blocked');
+    document.getElementById('r-status-sub').textContent =
+      ok ? 'Documentação em dia — acesso permitido' : 'Acesso não autorizado';
+
+    // dados
+    document.getElementById('r-nome').textContent    = found.nome;
+    document.getElementById('r-empresa').textContent = found.empresa;
+    document.getElementById('r-funcao').textContent  = found.funcao;
+    document.getElementById('r-cpf').textContent     = found.cpf;
+
+    const h = hoje();
+    document.getElementById('r-aso').innerHTML   = fmtData(found.aso)   + (found.aso   < h ? ' <span class="tag-venc">VENCIDO</span>'  : ' <span class="tag-ok">OK</span>');
+    document.getElementById('r-integ').innerHTML = fmtData(found.integ) + (found.integ < h ? ' <span class="tag-venc">VENCIDO</span>'  : ' <span class="tag-ok">OK</span>');
+
+    // motivos
+    const motivosWrap = document.getElementById('r-motivos');
+    const motivosList = document.getElementById('r-motivos-list');
+    if (motivos.length) {
+      motivosList.innerHTML = motivos.map(m => `<li>${m}</li>`).join('');
+      motivosWrap.style.display = 'block';
+    } else {
+      motivosWrap.style.display = 'none';
+    }
+
+    // obs
+    const obsWrap = document.getElementById('r-obs-wrap');
+    if (found.obs) {
+      document.getElementById('r-obs').textContent = found.obs;
+      obsWrap.style.display = 'block';
+    } else {
+      obsWrap.style.display = 'none';
+    }
+
+    result.classList.add('show');
+  }
+</script>
+</body>
+</html>
