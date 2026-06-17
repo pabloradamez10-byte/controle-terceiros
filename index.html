@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -142,6 +141,21 @@
     .stat-ok .stat-value { color: var(--ok); }
     .stat-block .stat-value { color: var(--danger); }
     .stat-company .stat-value { color: var(--accent); }
+    .stat-click { cursor:pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+    .stat-click:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: rgba(21,94,239,.35); }
+    .stat-hint { display:block; margin-top:6px; font-size:11px; color: var(--muted); font-weight:600; }
+
+    .pendency-tabs { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .pendency-pill { border:1px solid var(--border); background: var(--surface); border-radius:999px; padding:8px 12px; font-size:13px; font-weight:700; color:var(--muted); }
+    .pendency-pill.danger { color:var(--danger); background:var(--danger-lt); border-color:rgba(220,38,38,.15); }
+    .pendency-pill.warn { color:var(--warn); background:var(--warn-lt); border-color:rgba(217,119,6,.18); }
+    .pendency-section-title { font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:22px 0 12px; }
+    .pendency-item { display:flex; justify-content:space-between; gap:14px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:10px; }
+    .pendency-item strong { display:block; font-size:15px; margin-bottom:3px; }
+    .pendency-item small { display:block; color:var(--muted); font-size:12px; }
+    .pendency-detail { text-align:right; font-size:12px; font-weight:700; max-width:48%; }
+    .pendency-detail.danger { color:var(--danger); }
+    .pendency-detail.warn { color:var(--warn); }
 
     /* ── CARD ── */
     .card {
@@ -647,7 +661,7 @@
       <div class="stat-card stat-company"><div class="stat-label">Empresas</div><div class="stat-value" id="dash-empresas">0</div></div>
     </div>
     <div class="stats-grid" style="margin-top:14px;">
-      <div class="stat-card stat-block"><div class="stat-label">Pendências de treinamentos</div><div class="stat-value" id="dash-pendencias">0</div></div>
+      <div class="stat-card stat-block stat-click" onclick="showPage('pendencias')"><div class="stat-label">Central de Pendências</div><div class="stat-value" id="dash-pendencias">0</div><span class="stat-hint">Toque para ver vencidos e próximos 7 dias</span></div>
       <div class="stat-card stat-company"><div class="stat-label">Treinamentos cadastrados</div><div class="stat-value" id="dash-treinamentos">0</div></div>
       <div class="stat-card stat-ok"><div class="stat-label">Empresas com exigências</div><div class="stat-value" id="dash-empresas-exigencias">0</div></div>
       <div class="stat-card"><div class="stat-label">Status geral</div><div class="stat-value" id="dash-status-geral">OK</div></div>
@@ -655,6 +669,26 @@
     <div class="card">
       <div class="card-title">Terceiros bloqueados / pendentes</div>
       <div id="dash-lista-bloqueados" class="dashboard-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PENDÊNCIAS ═══════════ -->
+  <div id="page-pendencias" class="page">
+    <div class="page-actions">
+      <h2>Central de Pendências</h2>
+      <button class="btn btn-ghost" onclick="showPage('dashboard')">← Voltar</button>
+    </div>
+    <div class="pendency-tabs">
+      <div class="pendency-pill danger">Vencidos: <span id="pend-count-vencidos">0</span></div>
+      <div class="pendency-pill warn">Vencem em até 7 dias: <span id="pend-count-7dias">0</span></div>
+    </div>
+    <div class="card" style="padding:20px;">
+      <div class="card-title">Documentos e treinamentos vencidos</div>
+      <div id="pendencias-vencidas-list"></div>
+    </div>
+    <div class="card" style="padding:20px;">
+      <div class="card-title">Vencimentos nos próximos 7 dias</div>
+      <div id="pendencias-7dias-list"></div>
     </div>
   </div>
 
@@ -1101,6 +1135,7 @@
     });
     document.getElementById('page-' + name).classList.add('active');
     if (name === 'dashboard') renderDashboard();
+    if (name === 'pendencias') renderPendencias();
     if (name === 'listagem') renderLista();
     if (name === 'empresas') renderEmpresas();
     if (name === 'treinamentos') renderTreinamentos();
@@ -1197,6 +1232,74 @@
     renderTreinosExigidosCadastro();
   }
 
+  function diffDias(iso) {
+    if (!iso) return null;
+    const base = new Date(hoje() + 'T00:00:00');
+    const alvo = new Date(iso + 'T00:00:00');
+    return Math.ceil((alvo - base) / 86400000);
+  }
+
+  function montarPendencias() {
+    const vencidas = [];
+    const proximas = [];
+    getAll().forEach(t => {
+      const addPend = (tipo, item, vencimento, detalheExtra) => {
+        const dias = diffDias(vencimento);
+        const pend = { terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf, tipo, item, vencimento, dias, detalheExtra:detalheExtra || '' };
+        if (dias === null) return;
+        if (dias < 0) vencidas.push(pend);
+        else if (dias <= 7) proximas.push(pend);
+      };
+
+      addPend('ASO', 'ASO', t.aso, 'Documento ocupacional');
+      addPend('Integração', 'Integração', t.integ, 'Integração obrigatória');
+
+      getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
+        const reg = getTreinoRealizado(t, tr.id);
+        if (!reg || !reg.data) {
+          vencidas.push({ terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf, tipo:'Treinamento', item:tr.nome, vencimento:'', dias:null, detalheExtra:'Treinamento obrigatório sem data cadastrada' });
+          return;
+        }
+        const venc = addMonths(reg.data, tr.validade || 12);
+        addPend('Treinamento', tr.nome, venc, `Validade: ${tr.validade || 12} meses`);
+      });
+    });
+    vencidas.sort((a,b) => (a.vencimento || '0000-00-00').localeCompare(b.vencimento || '0000-00-00'));
+    proximas.sort((a,b) => (a.vencimento || '').localeCompare(b.vencimento || ''));
+    return { vencidas, proximas, total: vencidas.length + proximas.length };
+  }
+
+  function renderPendenciaItem(p, classe) {
+    const quando = p.dias === null
+      ? 'Sem data cadastrada'
+      : (p.dias < 0 ? `Venceu em ${fmtData(p.vencimento)} (${Math.abs(p.dias)} dia(s) atrás)` : `Vence em ${fmtData(p.vencimento)} (faltam ${p.dias} dia(s))`);
+    return `
+      <div class="pendency-item">
+        <div>
+          <strong>${p.terceiro}</strong>
+          <small>${p.empresa} • ${p.cpf}</small>
+          <small>${p.tipo}: ${p.item}</small>
+        </div>
+        <div class="pendency-detail ${classe}">${quando}${p.detalheExtra ? '<br>' + p.detalheExtra : ''}</div>
+      </div>`;
+  }
+
+  function renderPendencias() {
+    const dados = montarPendencias();
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('pend-count-vencidos', dados.vencidas.length);
+    set('pend-count-7dias', dados.proximas.length);
+
+    const vencWrap = document.getElementById('pendencias-vencidas-list');
+    const proxWrap = document.getElementById('pendencias-7dias-list');
+    if (vencWrap) vencWrap.innerHTML = dados.vencidas.length
+      ? dados.vencidas.map(p => renderPendenciaItem(p, 'danger')).join('')
+      : '<p style="font-size:14px;color:var(--muted);">Nenhuma pendência vencida encontrada.</p>';
+    if (proxWrap) proxWrap.innerHTML = dados.proximas.length
+      ? dados.proximas.map(p => renderPendenciaItem(p, 'warn')).join('')
+      : '<p style="font-size:14px;color:var(--muted);">Nenhum vencimento nos próximos 7 dias.</p>';
+  }
+
   // ──────────────────────────────────────────────────
   //  RESUMO / STATS
   // ──────────────────────────────────────────────────
@@ -1210,6 +1313,7 @@
       return acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
     }, 0);
     const empresasComExigencias = empresas.filter(e => (e.treinamentosObrigatorios || []).length > 0).length;
+    const pendenciasGerais = montarPendencias().total;
 
     const set = (id, val) => {
       const el = document.getElementById(id);
@@ -1226,7 +1330,7 @@
     set('dash-liberados', liberados);
     set('dash-bloqueados', bloqueados);
     set('dash-empresas', empresas.length);
-    set('dash-pendencias', pendenciasTreino);
+    set('dash-pendencias', pendenciasGerais);
     set('dash-treinamentos', treinamentos.length);
     set('dash-empresas-exigencias', empresasComExigencias);
     set('dash-status-geral', bloqueados === 0 ? 'OK' : 'ATENÇÃO');
