@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Controle de Terceiros</title>
+  <title>Portal Terceiros SST</title>
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#1B4FD8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Portal Terceiros SST" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
 
@@ -2493,7 +2502,18 @@
       <div class="kpi"><div class="card"><b>Total</b><div class="num blue">${terceiros.length}</div></div><div class="card"><b>Liberados</b><div class="num green">${liberados}</div></div><div class="card"><b>Bloqueados/Pendentes</b><div class="num red">${bloqueados}</div></div><div class="card"><b>Empresas</b><div class="num blue">${empresas.length}</div></div></div>
       <h2>Resumo executivo</h2><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>ASOs vencidos</td><td>${resumo.asoVencidos}</td></tr><tr><td>Integrações vencidas</td><td>${resumo.integVencidas}</td></tr><tr><td>Treinamentos pendentes/vencidos</td><td>${resumo.treinosPendentes}</td></tr><tr><td>Contratos vencidos</td><td>${resumo.contratosVencidos}</td></tr></table>
       <h2>Empresas com mais pendências</h2><table><tr><th>Empresa</th><th>Terceiros</th><th>Bloqueados</th><th>Pendências</th></tr>${ranking.map(r=>`<tr><td>${r.empresa.fantasia || r.empresa.razao}</td><td>${r.total}</td><td>${r.bloqueados}</td><td>${r.pendencias}</td></tr>`).join('')}</table>
-      </body></html>`;
+      
+<script>
+  // Registro PWA - mantém o sistema instalável como app no celular
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(function () { console.log('Service Worker registrado.'); })
+        .catch(function (error) { console.warn('Falha ao registrar Service Worker:', error); });
+    });
+  }
+</script>
+</body></html>`;
     const win = window.open('', '_blank');
     if (!win) { toast('Não foi possível abrir o relatório. Verifique bloqueio de pop-up.'); return; }
     win.document.write(html); win.document.close();
