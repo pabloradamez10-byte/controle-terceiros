@@ -151,7 +151,8 @@
     .pendency-pill.warn { color:var(--warn); background:var(--warn-lt); border-color:rgba(217,119,6,.18); }
     .pendency-pill.neutral { color:var(--muted); background:#F8FAFC; border-color:rgba(100,116,139,.18); }
     .pendency-section-title { font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin:22px 0 12px; }
-    .pendency-item { display:flex; justify-content:space-between; gap:14px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:10px; }
+    .pendency-item {
+      cursor: pointer; display:flex; justify-content:space-between; gap:14px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface); margin-bottom:10px; }
     .pendency-item strong { display:block; font-size:15px; margin-bottom:3px; }
     .pendency-item small { display:block; color:var(--muted); font-size:12px; }
     .pendency-detail { text-align:right; font-size:12px; font-weight:700; max-width:48%; }
@@ -586,6 +587,7 @@
     }
 
     .dash-item {
+      cursor: pointer;
       display:flex;
       justify-content:space-between;
       gap:14px;
@@ -1540,7 +1542,7 @@
 
     getAll().forEach(t => {
       const addPend = (tipo, item, vencimento, detalheExtra, origem) => {
-        const pend = { terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo, item, vencimento, dias:null, detalheExtra:detalheExtra || '', origem:origem || '' };
+        const pend = { terceiroId:t.id, terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo, item, vencimento, dias:null, detalheExtra:detalheExtra || '', origem:origem || '' };
         if (!isDataValidaSistema(vencimento)) {
           semData.push(pend);
           return;
@@ -1557,7 +1559,7 @@
         addPend('DP', 'Documentos DP', empresaObj.docDPValidade, 'Documentação sob responsabilidade do DP');
         addPend('SESMT', 'Documentos SESMT da empresa', empresaObj.docSESMTValidade, 'Documentação da empresa sob responsabilidade do SESMT');
       } else {
-        semData.push({ terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'DP', item:'Empresa vinculada', vencimento:'', dias:null, detalheExtra:'Cadastro sem empresa vinculada' });
+        semData.push({ terceiroId:t.id, terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'DP', item:'Empresa vinculada', vencimento:'', dias:null, detalheExtra:'Cadastro sem empresa vinculada' });
       }
 
       addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
@@ -1566,7 +1568,7 @@
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
         const reg = getTreinoRealizado(t, tr.id);
         if (!reg || !isDataValidaSistema(reg.data)) {
-          semData.push({ terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'Treinamento', item:tr.nome, vencimento:'', dias:null, detalheExtra:'Treinamento obrigatório sem data cadastrada' });
+          semData.push({ terceiroId:t.id, terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'Treinamento', item:tr.nome, vencimento:'', dias:null, detalheExtra:'Treinamento obrigatório sem data cadastrada' });
           return;
         }
         const venc = addMonths(reg.data, tr.validade || 12);
@@ -1585,7 +1587,7 @@
       ? 'Sem data cadastrada'
       : (p.dias < 0 ? `Venceu em ${fmtData(p.vencimento)} (${Math.abs(p.dias)} dia(s) atrás)` : `Vence em ${fmtData(p.vencimento)} (faltam ${p.dias} dia(s))`);
     return `
-      <div class="pendency-item">
+      <div class="pendency-item" role="button" tabindex="0" onclick="${p.terceiroId ? `abrirAnalise('${p.terceiroId}')` : ''}" onkeydown="if(event.key==='Enter'||event.key===' '){${p.terceiroId ? `abrirAnalise('${p.terceiroId}')` : ''}}">
         <div>
           <strong>${p.terceiro}</strong>
           <small>${p.empresa} • ${p.cpf}</small>
@@ -1662,8 +1664,8 @@
       return;
     }
     wrap.innerHTML = bloqueados.map(t => `
-      <div class="dash-item">
-        <div><strong>${t.nome}</strong><small>${t.empresa || 'Sem empresa'} • ${t.cpf}</small></div>
+      <div class="dash-item" role="button" tabindex="0" onclick="abrirAnalise('${t.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){abrirAnalise('${t.id}')}">
+        <div><strong>${t.nome}</strong><small>${t.empresa || 'Sem empresa'} • ${t.cpf || 'CPF não informado'}</small></div>
         <div class="dash-motivos">${t.status.motivos.slice(0,3).join('<br>')}</div>
       </div>`).join('');
   }
@@ -2088,7 +2090,10 @@
     saveAllEmpresas(lista);
     fecharModalEmpresa();
     renderEmpresas();
-  
+    popularSelectEmpresas('f-empresa');
+    popularSelectEmpresas('e-empresa');
+    atualizarStats();
+  }
 
   function renderListaMotivos(titulo, status) {
     const itens = status.motivos.length ? status.motivos : (status.avisos.length ? status.avisos : ['Sem pendências']);
@@ -2363,9 +2368,6 @@
   inicializarTreinamentosPadrao();
   popularSelectEmpresas('f-empresa');
   renderTreinosExigidosCadastro();
-    popularSelectEmpresas('e-empresa');
-    atualizarStats();
-  }
 
   function renderEmpresas() {
     atualizarStats();
