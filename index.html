@@ -609,12 +609,47 @@
       margin-left: 4px;
     }
 
+    .tag-warn {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--warn);
+      margin-left: 4px;
+    }
+
     .tag-ok {
       font-size: 11px;
       font-weight: 600;
       color: var(--ok);
       margin-left: 4px;
     }
+  
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .status-panel {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      background: #fff;
+    }
+    .status-panel h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 10px; }
+    .status-panel.ok { border-left: 5px solid var(--ok); }
+    .status-panel.blocked { border-left: 5px solid var(--danger); }
+    .status-panel.warn { border-left: 5px solid var(--warn); }
+    .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .analysis-card { border: 1px solid var(--border); border-radius: 14px; padding: 14px; background: var(--bg-soft); }
+    .analysis-card strong { display:block; margin-bottom:6px; }
+    .analysis-list { list-style: none; padding: 0; margin: 8px 0 0; }
+    .analysis-list li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+    .analysis-list li:last-child { border-bottom: none; }
+    .status-mini.warn { background: var(--warn-lt); color: var(--warn); }
+    .status-mini.neutral { background: var(--accent-lt); color: var(--accent); }
+    @media (max-width: 700px) { .status-strip, .analysis-grid { grid-template-columns: 1fr; } }
+
   </style>
 </head>
 <body>
@@ -780,6 +815,8 @@
               <th>ASO</th>
               <th>Integração</th>
               <th>Treinamentos</th>
+              <th>DP</th>
+              <th>SESMT</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -851,6 +888,11 @@
           </div>
         </div>
 
+        <div class="status-strip" id="r-status-setores" style="display:none;">
+          <div id="r-dp-panel" class="status-panel"><h4>Status DP</h4><div id="r-dp-status"></div><ul id="r-dp-motivos" class="analysis-list"></ul></div>
+          <div id="r-sesmt-panel" class="status-panel"><h4>Status SESMT</h4><div id="r-sesmt-status"></div><ul id="r-sesmt-motivos" class="analysis-list"></ul></div>
+        </div>
+
         <div id="r-treinos-wrap" style="margin-top:16px;display:none;">
           <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Treinamentos obrigatórios</label>
           <div id="r-treinos-list" class="training-tags" style="margin-top:8px;"></div>
@@ -894,6 +936,9 @@
               <th>CNPJ</th>
               <th>Responsável</th>
               <th>Telefone</th>
+              <th>Contrato</th>
+              <th>DP</th>
+              <th>SESMT</th>
               <th>Treinamentos</th>
               <th></th>
             </tr>
@@ -990,6 +1035,10 @@
       <div><label for="emp-resp">Responsável *</label><input id="emp-resp" type="text" placeholder="Nome do responsável"/></div>
       <div><label for="emp-tel">Telefone</label><input id="emp-tel" type="text" placeholder="(00) 00000-0000" maxlength="15"/></div>
       <div><label for="emp-email">E-mail</label><input id="emp-email" type="email" placeholder="contato@empresa.com.br"/></div>
+      <div><label for="emp-contrato-inicio">Início da prestação</label><input id="emp-contrato-inicio" type="date"/></div>
+      <div><label for="emp-contrato-fim">Fim da prestação</label><input id="emp-contrato-fim" type="date"/></div>
+      <div><label for="emp-doc-dp">Validade documentos DP</label><input id="emp-doc-dp" type="date"/></div>
+      <div><label for="emp-doc-sesmt">Validade documentos SESMT</label><input id="emp-doc-sesmt" type="date"/></div>
       <div class="full">
         <label>Treinamentos obrigatórios</label>
         <small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Marque quais treinamentos serão exigidos para terceiros desta empresa.</small>
@@ -1024,6 +1073,24 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModalTreinamento()">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarTreinamento()">Salvar treinamento</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ═══════════ MODAL DE ANÁLISE DO TERCEIRO ═══════════ -->
+<div class="modal-overlay" id="modal-analise">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Análise do Terceiro</span>
+      <button class="modal-close" onclick="fecharModalAnalise()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="analise-conteudo"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModalAnalise()">Fechar</button>
     </div>
   </div>
 </div>
@@ -1091,19 +1158,80 @@
     return { ok:true, label:'OK', motivo:'', vencimento:venc };
   }
 
-  function getStatus(t) {
+  function statusData(iso) {
+    if (!iso) return { classe:'neutral', label:'Não informado', texto:'Não informado', dias:null };
+    const dias = diffDias(iso);
+    if (dias < 0) return { classe:'blocked', label:'Vencido', texto:`Vencido em ${fmtData(iso)}`, dias };
+    if (dias <= 30) return { classe:'warn', label:'Vencendo', texto:`Vence em ${fmtData(iso)} (${dias} dia(s))`, dias };
+    return { classe:'ok', label:'OK', texto:`Válido até ${fmtData(iso)}`, dias };
+  }
+
+  function badgeStatus(label, classe) {
+    const cls = classe === 'blocked' ? 'badge-blocked' : (classe === 'warn' ? 'badge-warn' : 'badge-ok');
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  function tagData(iso) {
+    const st = statusData(iso);
+    const cls = st.classe === 'blocked' ? 'tag-venc' : (st.classe === 'warn' ? 'tag-warn' : 'tag-ok');
+    const label = st.classe === 'blocked' ? 'VENCIDO' : (st.classe === 'warn' ? 'VENCE' : 'OK');
+    return `<span class="${cls}">${label}</span>`;
+  }
+
+  function getStatusDP(t) {
+    const motivos = [];
+    const avisos = [];
+    const empresa = getEmpresaById(t.empresaId);
+    if (!empresa) {
+      motivos.push('Empresa não vinculada ao cadastro');
+      return { ok:false, motivos, avisos };
+    }
+
+    const contrato = statusData(empresa.contratoFim);
+    if (contrato.classe === 'blocked') motivos.push('Fim da prestação de serviço vencido em ' + fmtData(empresa.contratoFim));
+    else if (contrato.classe === 'warn') avisos.push('Fim da prestação de serviço ' + contrato.texto.toLowerCase());
+
+    const docDP = statusData(empresa.docDPValidade);
+    if (docDP.classe === 'blocked') motivos.push('Documentos DP vencidos em ' + fmtData(empresa.docDPValidade));
+    else if (docDP.classe === 'warn') avisos.push('Documentos DP ' + docDP.texto.toLowerCase());
+
+    return { ok: motivos.length === 0, motivos, avisos };
+  }
+
+  function getStatusSESMT(t) {
     const h = hoje();
     const motivos = [];
-    if (t.aso < h)   motivos.push('ASO vencido em ' + fmtData(t.aso));
+    const avisos = [];
+    const empresa = getEmpresaById(t.empresaId);
+
+    if (t.aso < h) motivos.push('ASO vencido em ' + fmtData(t.aso));
+    else if (statusData(t.aso).classe === 'warn') avisos.push('ASO ' + statusData(t.aso).texto.toLowerCase());
+
     if (t.integ < h) motivos.push('Integração vencida em ' + fmtData(t.integ));
+    else if (statusData(t.integ).classe === 'warn') avisos.push('Integração ' + statusData(t.integ).texto.toLowerCase());
+
+    if (empresa) {
+      const docSESMT = statusData(empresa.docSESMTValidade);
+      if (docSESMT.classe === 'blocked') motivos.push('Documentos SESMT vencidos em ' + fmtData(empresa.docSESMTValidade));
+      else if (docSESMT.classe === 'warn') avisos.push('Documentos SESMT ' + docSESMT.texto.toLowerCase());
+    }
 
     const obrigatorios = getTreinosObrigatoriosDaEmpresa(t.empresaId);
     obrigatorios.forEach(tr => {
       const st = getStatusTreinamentoTerceiro(t, tr);
       if (!st.ok) motivos.push(st.motivo);
+      else if (st.vencimento && statusData(st.vencimento).classe === 'warn') avisos.push(`${tr.nome} ${statusData(st.vencimento).texto.toLowerCase()}`);
     });
 
-    return { ok: motivos.length === 0, motivos };
+    return { ok: motivos.length === 0, motivos, avisos };
+  }
+
+  function getStatus(t) {
+    const dp = getStatusDP(t);
+    const sesmt = getStatusSESMT(t);
+    const motivos = [...dp.motivos, ...sesmt.motivos];
+    const avisos = [...dp.avisos, ...sesmt.avisos];
+    return { ok: motivos.length === 0, motivos, avisos, dp, sesmt };
   }
 
   function maskCPF(v) {
@@ -1251,8 +1379,14 @@
         else if (dias <= 7) proximas.push(pend);
       };
 
-      addPend('ASO', 'ASO', t.aso, 'Documento ocupacional');
-      addPend('Integração', 'Integração', t.integ, 'Integração obrigatória');
+      const empresaObj = getEmpresaById(t.empresaId);
+      if (empresaObj) {
+        addPend('DP', 'Fim da prestação de serviço', empresaObj.contratoFim, 'Regra da empresa: bloqueia todos os terceiros vinculados');
+        addPend('DP', 'Documentos DP', empresaObj.docDPValidade, 'Documentação sob responsabilidade do DP');
+        addPend('SESMT', 'Documentos SESMT da empresa', empresaObj.docSESMTValidade, 'Documentação da empresa sob responsabilidade do SESMT');
+      }
+      addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
+      addPend('SESMT', 'Integração', t.integ, 'Integração obrigatória');
 
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
         const reg = getTreinoRealizado(t, tr.id);
@@ -1384,6 +1518,10 @@
       const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
       const pend = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
       const treinoBadge = obrig.length === 0 ? '<span class="badge badge-warn">Sem exigência</span>' : (pend === 0 ? `<span class="badge badge-ok">${obrig.length}/${obrig.length} OK</span>` : `<span class="badge badge-blocked">${pend} pendência(s)</span>`);
+      const stDP = getStatusDP(t);
+      const stSESMT = getStatusSESMT(t);
+      const dpBadge = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP Bloq.</span>';
+      const sesmtBadge = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT Bloq.</span>';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="td-name">${t.nome}</td>
@@ -1392,9 +1530,12 @@
         <td>${fmtData(t.aso)}${asoTag}</td>
         <td>${fmtData(t.integ)}${integTag}</td>
         <td>${treinoBadge}</td>
+        <td>${dpBadge}</td>
+        <td>${sesmtBadge}</td>
         <td>${badge}</td>
         <td>
           <div class="actions">
+            <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirAnalise('${t.id}')">Analisar</button>
             <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirEdicao('${t.id}')">Editar</button>
             <button class="btn btn-danger" style="padding:5px 12px;font-size:12px;" onclick="excluir('${t.id}')">Excluir</button>
           </div>
@@ -1692,7 +1833,7 @@
   function abrirModalNovaEmpresa() {
     document.getElementById('modal-empresa-title').textContent = 'Nova Empresa';
     document.getElementById('emp-id').value = '';
-    ['emp-razao','emp-fantasia','emp-cnpj','emp-resp','emp-tel','emp-email'].forEach(id => {
+    ['emp-razao','emp-fantasia','emp-cnpj','emp-resp','emp-tel','emp-email','emp-contrato-inicio','emp-contrato-fim','emp-doc-dp','emp-doc-sesmt'].forEach(id => {
       document.getElementById(id).value = '';
     });
     renderChecklistTreinamentosEmpresa([]);
@@ -1710,6 +1851,10 @@
     document.getElementById('emp-resp').value     = e.resp;
     document.getElementById('emp-tel').value      = e.tel || '';
     document.getElementById('emp-email').value    = e.email || '';
+    document.getElementById('emp-contrato-inicio').value = e.contratoInicio || '';
+    document.getElementById('emp-contrato-fim').value    = e.contratoFim || '';
+    document.getElementById('emp-doc-dp').value          = e.docDPValidade || '';
+    document.getElementById('emp-doc-sesmt').value       = e.docSESMTValidade || '';
     renderChecklistTreinamentosEmpresa(e.treinamentosObrigatorios || []);
     document.getElementById('modal-empresa').classList.add('open');
   }
@@ -1730,6 +1875,10 @@
     const resp     = document.getElementById('emp-resp').value.trim();
     const tel      = document.getElementById('emp-tel').value.trim();
     const email    = document.getElementById('emp-email').value.trim();
+    const contratoInicio = document.getElementById('emp-contrato-inicio').value;
+    const contratoFim    = document.getElementById('emp-contrato-fim').value;
+    const docDPValidade  = document.getElementById('emp-doc-dp').value;
+    const docSESMTValidade = document.getElementById('emp-doc-sesmt').value;
     const treinamentosObrigatorios = getTreinamentosSelecionadosEmpresa();
 
     if (!razao || !cnpj || !resp) {
@@ -1740,7 +1889,7 @@
     let lista = getAllEmpresas();
 
     if (id) {
-      lista = lista.map(e => e.id === id ? { ...e, razao, fantasia, cnpj, resp, tel, email, treinamentosObrigatorios } : e);
+      lista = lista.map(e => e.id === id ? { ...e, razao, fantasia, cnpj, resp, tel, email, contratoInicio, contratoFim, docDPValidade, docSESMTValidade, treinamentosObrigatorios } : e);
       const terceiros = getAll().map(t => t.empresaId === id ? { ...t, empresa: fantasia ? `${razao} (${fantasia})` : razao } : t);
       saveAll(terceiros);
       toast('✓ Empresa atualizada!');
@@ -1750,7 +1899,7 @@
         toast('⚠ Já existe uma empresa com este CNPJ.');
         return;
       }
-      lista.push({ id: uid(), razao, fantasia, cnpj, resp, tel, email, treinamentosObrigatorios });
+      lista.push({ id: uid(), razao, fantasia, cnpj, resp, tel, email, contratoInicio, contratoFim, docDPValidade, docSESMTValidade, treinamentosObrigatorios });
       toast('✓ Empresa cadastrada!');
     }
 
@@ -1758,11 +1907,64 @@
     fecharModalEmpresa();
     renderEmpresas();
     inicializarTreinamentosPadrao();
-  popularSelectEmpresas('f-empresa');
-  renderTreinosExigidosCadastro();
+    popularSelectEmpresas('f-empresa');
+    renderTreinosExigidosCadastro();
     popularSelectEmpresas('e-empresa');
     atualizarStats();
   }
+
+  function renderListaMotivos(titulo, status) {
+    const itens = status.motivos.length ? status.motivos : (status.avisos.length ? status.avisos : ['Sem pendências']);
+    const classe = status.ok ? 'ok' : 'blocked';
+    return `<div class="analysis-card">
+      <strong>${titulo} ${status.ok ? '<span class="badge badge-ok">LIBERADO</span>' : '<span class="badge badge-blocked">NEGADO</span>'}</strong>
+      <ul class="analysis-list">${itens.map(i => `<li>${i}</li>`).join('')}</ul>
+    </div>`;
+  }
+
+  function abrirAnalise(id) {
+    const t = getAll().find(x => x.id === id);
+    if (!t) return;
+    const empresa = getEmpresaById(t.empresaId);
+    const st = getStatus(t);
+    const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
+    const treinosHtml = obrig.length ? obrig.map(tr => {
+      const ts = getStatusTreinamentoTerceiro(t, tr);
+      const reg = getTreinoRealizado(t, tr.id);
+      return `<li>${ts.ok ? '✅' : '❌'} ${tr.nome} — ${reg?.data ? 'Realizado em ' + fmtData(reg.data) + ' | vence em ' + fmtData(ts.vencimento) : 'Sem data cadastrada'}</li>`;
+    }).join('') : '<li>Empresa sem treinamentos obrigatórios vinculados.</li>';
+
+    document.getElementById('analise-conteudo').innerHTML = `
+      <div class="result-status">
+        <div class="status-icon ${st.ok ? 'ok' : 'blocked'}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${st.ok ? '<polyline points="20 6 9 17 4 12"/>' : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'}</svg></div>
+        <div><div class="status-label ${st.ok ? 'ok' : 'blocked'}">${st.ok ? 'ACESSO LIBERADO' : 'ACESSO NEGADO'}</div><div class="status-sub">${t.nome} • ${t.empresa || 'Sem empresa'}</div></div>
+      </div>
+      <div class="result-info">
+        <div class="info-item"><label>CPF</label><span>${t.cpf}</span></div>
+        <div class="info-item"><label>Função</label><span>${t.funcao || '—'}</span></div>
+        <div class="info-item"><label>Contrato Empresa</label><span>${empresa?.contratoFim ? fmtData(empresa.contratoFim) + ' ' + tagData(empresa.contratoFim) : 'Não informado'}</span></div>
+        <div class="info-item"><label>ASO</label><span>${fmtData(t.aso)} ${tagData(t.aso)}</span></div>
+      </div>
+      <div class="analysis-grid" style="margin-top:16px;">
+        ${renderListaMotivos('DP', st.dp)}
+        ${renderListaMotivos('SESMT', st.sesmt)}
+      </div>
+      <div class="analysis-card" style="margin-top:14px;">
+        <strong>Treinamentos exigidos</strong>
+        <ul class="analysis-list">${treinosHtml}</ul>
+      </div>
+    `;
+    document.getElementById('modal-analise').classList.add('open');
+  }
+
+  function fecharModalAnalise() {
+    document.getElementById('modal-analise').classList.remove('open');
+  }
+
+  document.getElementById('modal-analise').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalAnalise();
+  });
+
 
   function renderEmpresas() {
     atualizarStats();
@@ -1782,6 +1984,12 @@
     empty.style.display = 'none';
 
     lista.forEach(e => {
+      const contratoSt = statusData(e.contratoFim);
+      const dpSt = statusData(e.docDPValidade);
+      const sesmtSt = statusData(e.docSESMTValidade);
+      const contratoBadge = e.contratoFim ? badgeStatus(contratoSt.label, contratoSt.classe) + '<br><small>' + fmtData(e.contratoFim) + '</small>' : '<span class="badge badge-warn">Sem data</span>';
+      const dpBadge = e.docDPValidade ? badgeStatus(dpSt.label, dpSt.classe) : '<span class="badge badge-warn">Sem data</span>';
+      const sesmtBadge = e.docSESMTValidade ? badgeStatus(sesmtSt.label, sesmtSt.classe) : '<span class="badge badge-warn">Sem data</span>';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="td-name">${e.razao}</td>
@@ -1789,6 +1997,9 @@
         <td class="td-cpf">${e.cnpj}</td>
         <td>${e.resp}</td>
         <td>${e.tel || '—'}</td>
+        <td>${contratoBadge}</td>
+        <td>${dpBadge}</td>
+        <td>${sesmtBadge}</td>
         <td><span class="badge badge-warn">${(e.treinamentosObrigatorios || []).length} exigido(s)</span></td>
         <td>
           <div class="actions">
@@ -1842,7 +2053,8 @@
 
     if (!found) { notFound.classList.add('show'); return; }
 
-    const { ok, motivos } = getStatus(found);
+    const statusCompleto = getStatus(found);
+    const { ok, motivos } = statusCompleto;
 
     // ícone
     const icon = document.getElementById('r-icon');
@@ -1866,8 +2078,21 @@
     document.getElementById('r-cpf').textContent     = found.cpf;
 
     const h = hoje();
-    document.getElementById('r-aso').innerHTML   = fmtData(found.aso)   + (found.aso   < h ? ' <span class="tag-venc">VENCIDO</span>'  : ' <span class="tag-ok">OK</span>');
-    document.getElementById('r-integ').innerHTML = fmtData(found.integ) + (found.integ < h ? ' <span class="tag-venc">VENCIDO</span>'  : ' <span class="tag-ok">OK</span>');
+    document.getElementById('r-aso').innerHTML   = fmtData(found.aso)   + tagData(found.aso);
+    document.getElementById('r-integ').innerHTML = fmtData(found.integ) + tagData(found.integ);
+
+    const setorWrap = document.getElementById('r-status-setores');
+    const dpPanel = document.getElementById('r-dp-panel');
+    const sesmtPanel = document.getElementById('r-sesmt-panel');
+    const dp = statusCompleto.dp;
+    const sesmt = statusCompleto.sesmt;
+    if (setorWrap) setorWrap.style.display = 'grid';
+    if (dpPanel) dpPanel.className = 'status-panel ' + (dp.ok ? 'ok' : 'blocked');
+    if (sesmtPanel) sesmtPanel.className = 'status-panel ' + (sesmt.ok ? 'ok' : 'blocked');
+    document.getElementById('r-dp-status').innerHTML = dp.ok ? '<span class="badge badge-ok">ACESSO LIBERADO</span>' : '<span class="badge badge-blocked">ACESSO NEGADO</span>';
+    document.getElementById('r-sesmt-status').innerHTML = sesmt.ok ? '<span class="badge badge-ok">ACESSO LIBERADO</span>' : '<span class="badge badge-blocked">ACESSO NEGADO</span>';
+    document.getElementById('r-dp-motivos').innerHTML = (dp.motivos.length ? dp.motivos : (dp.avisos.length ? dp.avisos : ['Sem pendências do DP'])).map(m => `<li>${m}</li>`).join('');
+    document.getElementById('r-sesmt-motivos').innerHTML = (sesmt.motivos.length ? sesmt.motivos : (sesmt.avisos.length ? sesmt.avisos : ['Sem pendências SESMT'])).map(m => `<li>${m}</li>`).join('');
 
     const rTreinosWrap = document.getElementById('r-treinos-wrap');
     const rTreinosList = document.getElementById('r-treinos-list');
