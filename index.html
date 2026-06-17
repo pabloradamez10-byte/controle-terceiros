@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -523,6 +524,58 @@
     .switch-wrap { display:inline-flex; align-items:center; gap:7px; }
     .switch-wrap input { width:auto; accent-color: var(--accent); }
 
+
+
+    .training-date-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .training-date-card {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .training-date-card strong { display:block; font-size:13px; margin-bottom:6px; }
+    .training-date-card small { color: var(--muted); font-size:11px; display:block; margin-top:4px; }
+
+    .status-mini {
+      display:inline-flex;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 4px;
+      white-space: nowrap;
+    }
+    .status-mini.ok { background: var(--ok-lt); color: var(--ok); }
+    .status-mini.blocked { background: var(--danger-lt); color: var(--danger); }
+    .status-mini.warn { background: var(--warn-lt); color: var(--warn); }
+
+    .dashboard-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .dash-item {
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:12px 14px;
+      background: var(--surface);
+    }
+
+    .dash-item strong { display:block; font-size:14px; }
+    .dash-item small { display:block; color: var(--muted); margin-top:3px; }
+    .dash-motivos { color: var(--danger); font-size:12px; max-width:55%; text-align:right; }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
@@ -563,7 +616,8 @@
     Controle de Terceiros
   </div>
   <nav>
-    <button class="active" onclick="showPage('cadastro')">Cadastro</button>
+    <button class="active" onclick="showPage('dashboard')">Dashboard</button>
+    <button onclick="showPage('cadastro')">Cadastro</button>
     <button onclick="showPage('listagem')">Terceiros</button>
     <button onclick="showPage('empresas')">Empresas</button>
     <button onclick="showPage('treinamentos')">Treinamentos</button>
@@ -580,8 +634,32 @@
     </div>
   </section>
 
+  <!-- ═══════════ DASHBOARD ═══════════ -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-actions">
+      <h2>Dashboard</h2>
+      <button class="btn btn-primary" onclick="showPage('cadastro')">+ Novo Terceiro</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total de terceiros</div><div class="stat-value" id="dash-total">0</div></div>
+      <div class="stat-card stat-ok"><div class="stat-label">Liberados</div><div class="stat-value" id="dash-liberados">0</div></div>
+      <div class="stat-card stat-block"><div class="stat-label">Bloqueados</div><div class="stat-value" id="dash-bloqueados">0</div></div>
+      <div class="stat-card stat-company"><div class="stat-label">Empresas</div><div class="stat-value" id="dash-empresas">0</div></div>
+    </div>
+    <div class="stats-grid" style="margin-top:14px;">
+      <div class="stat-card stat-block"><div class="stat-label">Pendências de treinamentos</div><div class="stat-value" id="dash-pendencias">0</div></div>
+      <div class="stat-card stat-company"><div class="stat-label">Treinamentos cadastrados</div><div class="stat-value" id="dash-treinamentos">0</div></div>
+      <div class="stat-card stat-ok"><div class="stat-label">Empresas com exigências</div><div class="stat-value" id="dash-empresas-exigencias">0</div></div>
+      <div class="stat-card"><div class="stat-label">Status geral</div><div class="stat-value" id="dash-status-geral">OK</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Terceiros bloqueados / pendentes</div>
+      <div id="dash-lista-bloqueados" class="dashboard-list"></div>
+    </div>
+  </div>
+
   <!-- ═══════════ CADASTRO ═══════════ -->
-  <div id="page-cadastro" class="page active">
+  <div id="page-cadastro" class="page">
     <h2>Novo Terceiro</h2>
     <div class="card">
       <div class="card-title">Dados pessoais</div>
@@ -648,6 +726,7 @@
       <div class="stat-card stat-ok"><div class="stat-label">Liberados</div><div class="stat-value" id="stat-liberados">0</div></div>
       <div class="stat-card stat-block"><div class="stat-label">Bloqueados</div><div class="stat-value" id="stat-bloqueados">0</div></div>
       <div class="stat-card stat-company"><div class="stat-label">Empresas</div><div class="stat-value" id="stat-empresas">0</div></div>
+      <div class="stat-card stat-block"><div class="stat-label">Pendências treino</div><div class="stat-value" id="stat-pendencias-treino">0</div></div>
     </div>
     <div class="card" style="padding:18px 20px;">
       <div class="search-row">
@@ -666,6 +745,7 @@
               <th>Empresa</th>
               <th>ASO</th>
               <th>Integração</th>
+              <th>Treinamentos</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -735,6 +815,11 @@
             <label>Validade Integração</label>
             <span id="r-integ"></span>
           </div>
+        </div>
+
+        <div id="r-treinos-wrap" style="margin-top:16px;display:none;">
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Treinamentos obrigatórios</label>
+          <div id="r-treinos-list" class="training-tags" style="margin-top:8px;"></div>
         </div>
 
         <div id="r-motivos" class="motivos" style="display:none;">
@@ -843,6 +928,7 @@
       <div><label for="e-funcao">Função *</label><input id="e-funcao" type="text"/></div>
       <div><label for="e-aso">Validade do ASO *</label><input id="e-aso" type="date"/></div>
       <div><label for="e-integ">Validade da Integração *</label><input id="e-integ" type="date"/></div>
+      <div class="full"><label>Treinamentos do terceiro</label><small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Informe a data de realização/conclusão dos treinamentos exigidos pela empresa selecionada.</small><div id="e-treinos-box" class="training-date-grid"></div></div>
       <div class="full"><label for="e-obs">Observação</label><textarea id="e-obs"></textarea></div>
     </div>
     <input type="hidden" id="e-id"/>
@@ -936,11 +1022,53 @@
     return `${d}/${m}/${y}`;
   }
 
+  function addMonths(iso, months) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    d.setMonth(d.getMonth() + Number(months || 12));
+    return d.toISOString().split('T')[0];
+  }
+
+  function getEmpresaById(id) {
+    return (typeof getAllEmpresas === 'function' ? getAllEmpresas() : []).find(e => e.id === id);
+  }
+
+  function getTreinamentoById(id) {
+    return (typeof getAllTreinamentos === 'function' ? getAllTreinamentos() : []).find(t => t.id === id);
+  }
+
+  function getTreinosObrigatoriosDaEmpresa(empresaId) {
+    const empresa = getEmpresaById(empresaId);
+    const ids = empresa?.treinamentosObrigatorios || [];
+    return (typeof getAllTreinamentos === 'function' ? getAllTreinamentos() : [])
+      .filter(tr => ids.includes(tr.id) && tr.ativo !== false);
+  }
+
+  function getTreinoRealizado(terceiro, treinamentoId) {
+    const lista = terceiro?.treinamentosRealizados || [];
+    return lista.find(x => x.treinamentoId === treinamentoId);
+  }
+
+  function getStatusTreinamentoTerceiro(terceiro, treinamento) {
+    const reg = getTreinoRealizado(terceiro, treinamento.id);
+    if (!reg || !reg.data) return { ok:false, label:'Pendente', motivo:`${treinamento.nome} não cadastrado` };
+    const venc = addMonths(reg.data, treinamento.validade || 12);
+    if (venc < hoje()) return { ok:false, label:'Vencido', motivo:`${treinamento.nome} vencido em ${fmtData(venc)}`, vencimento:venc };
+    return { ok:true, label:'OK', motivo:'', vencimento:venc };
+  }
+
   function getStatus(t) {
     const h = hoje();
     const motivos = [];
     if (t.aso < h)   motivos.push('ASO vencido em ' + fmtData(t.aso));
     if (t.integ < h) motivos.push('Integração vencida em ' + fmtData(t.integ));
+
+    const obrigatorios = getTreinosObrigatoriosDaEmpresa(t.empresaId);
+    obrigatorios.forEach(tr => {
+      const st = getStatusTreinamentoTerceiro(t, tr);
+      if (!st.ok) motivos.push(st.motivo);
+    });
+
     return { ok: motivos.length === 0, motivos };
   }
 
@@ -968,10 +1096,11 @@
   function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('nav button').forEach((b, i) => {
-      const pages = ['cadastro','listagem','empresas','treinamentos','portaria'];
+      const pages = ['dashboard','cadastro','listagem','empresas','treinamentos','portaria'];
       b.classList.toggle('active', pages[i] === name);
     });
     document.getElementById('page-' + name).classList.add('active');
+    if (name === 'dashboard') renderDashboard();
     if (name === 'listagem') renderLista();
     if (name === 'empresas') renderEmpresas();
     if (name === 'treinamentos') renderTreinamentos();
@@ -988,6 +1117,44 @@
     this.value = maskCPF(this.value);
   });
   document.getElementById('f-empresa').addEventListener('change', renderTreinosExigidosCadastro);
+  document.getElementById('e-empresa').addEventListener('change', function(){ renderTreinosEdicao(); });
+
+
+
+  function coletarTreinamentosDoFormulario(prefixo) {
+    return Array.from(document.querySelectorAll(`.${prefixo}-treino-data`))
+      .map(input => ({ treinamentoId: input.dataset.treinamentoId, data: input.value }))
+      .filter(x => x.treinamentoId && x.data);
+  }
+
+  function renderCamposTreinamentos(containerId, empresaId, realizados, classeInput) {
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    const obrigatorios = getTreinosObrigatoriosDaEmpresa(empresaId);
+    realizados = realizados || [];
+
+    if (!empresaId) {
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Selecione uma empresa para visualizar os treinamentos exigidos.</p>';
+      return;
+    }
+
+    if (!obrigatorios.length) {
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Esta empresa não possui treinamentos obrigatórios vinculados.</p>';
+      return;
+    }
+
+    wrap.innerHTML = obrigatorios.map(tr => {
+      const reg = realizados.find(x => x.treinamentoId === tr.id) || {};
+      const venc = reg.data ? addMonths(reg.data, tr.validade || 12) : '';
+      const status = !reg.data ? '<span class="status-mini warn">Pendente</span>' : (venc < hoje() ? '<span class="status-mini blocked">Vencido</span>' : '<span class="status-mini ok">OK</span>');
+      return `
+        <div class="training-date-card">
+          <strong>${tr.nome} ${status}</strong>
+          <input type="date" class="${classeInput}" data-treinamento-id="${tr.id}" value="${reg.data || ''}">
+          <small>Validade: ${tr.validade || 12} meses${venc ? ' | Vence em ' + fmtData(venc) : ''}</small>
+        </div>`;
+    }).join('');
+  }
 
   // ──────────────────────────────────────────────────
   //  CADASTRO
@@ -1002,6 +1169,7 @@
     const aso    = document.getElementById('f-aso').value;
     const integ  = document.getElementById('f-integ').value;
     const obs    = document.getElementById('f-obs').value.trim();
+    const treinamentosRealizados = coletarTreinamentosDoFormulario('f');
 
     if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.');
@@ -1016,7 +1184,7 @@
       return;
     }
 
-    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs });
+    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados });
     saveAll(lista);
     limparForm();
     toast('✓ Terceiro cadastrado com sucesso!');
@@ -1026,6 +1194,7 @@
     ['f-nome','f-cpf','f-empresa','f-funcao','f-aso','f-integ','f-obs'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    renderTreinosExigidosCadastro();
   }
 
   // ──────────────────────────────────────────────────
@@ -1034,8 +1203,13 @@
   function atualizarStats() {
     const terceiros = getAll();
     const empresas = (typeof getAllEmpresas === 'function') ? getAllEmpresas() : [];
+    const treinamentos = (typeof getAllTreinamentos === 'function') ? getAllTreinamentos() : [];
     const liberados = terceiros.filter(t => getStatus(t).ok).length;
     const bloqueados = terceiros.length - liberados;
+    const pendenciasTreino = terceiros.reduce((acc, t) => {
+      return acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
+    }, 0);
+    const empresasComExigencias = empresas.filter(e => (e.treinamentosObrigatorios || []).length > 0).length;
 
     const set = (id, val) => {
       const el = document.getElementById(id);
@@ -1046,6 +1220,32 @@
     set('stat-liberados', liberados);
     set('stat-bloqueados', bloqueados);
     set('stat-empresas', empresas.length);
+    set('stat-pendencias-treino', pendenciasTreino);
+
+    set('dash-total', terceiros.length);
+    set('dash-liberados', liberados);
+    set('dash-bloqueados', bloqueados);
+    set('dash-empresas', empresas.length);
+    set('dash-pendencias', pendenciasTreino);
+    set('dash-treinamentos', treinamentos.length);
+    set('dash-empresas-exigencias', empresasComExigencias);
+    set('dash-status-geral', bloqueados === 0 ? 'OK' : 'ATENÇÃO');
+  }
+
+  function renderDashboard() {
+    atualizarStats();
+    const wrap = document.getElementById('dash-lista-bloqueados');
+    if (!wrap) return;
+    const bloqueados = getAll().map(t => ({...t, status:getStatus(t)})).filter(t => !t.status.ok);
+    if (!bloqueados.length) {
+      wrap.innerHTML = '<p style="font-size:14px;color:var(--muted);">Nenhum terceiro bloqueado ou pendente no momento.</p>';
+      return;
+    }
+    wrap.innerHTML = bloqueados.map(t => `
+      <div class="dash-item">
+        <div><strong>${t.nome}</strong><small>${t.empresa || 'Sem empresa'} • ${t.cpf}</small></div>
+        <div class="dash-motivos">${t.status.motivos.slice(0,3).join('<br>')}</div>
+      </div>`).join('');
   }
 
   // ──────────────────────────────────────────────────
@@ -1077,6 +1277,9 @@
       const h = hoje();
       const asoTag  = t.aso  < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
       const integTag= t.integ< h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
+      const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
+      const pend = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
+      const treinoBadge = obrig.length === 0 ? '<span class="badge badge-warn">Sem exigência</span>' : (pend === 0 ? `<span class="badge badge-ok">${obrig.length}/${obrig.length} OK</span>` : `<span class="badge badge-blocked">${pend} pendência(s)</span>`);
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="td-name">${t.nome}</td>
@@ -1084,6 +1287,7 @@
         <td class="td-company">${t.empresa}</td>
         <td>${fmtData(t.aso)}${asoTag}</td>
         <td>${fmtData(t.integ)}${integTag}</td>
+        <td>${treinoBadge}</td>
         <td>${badge}</td>
         <td>
           <div class="actions">
@@ -1121,11 +1325,19 @@
     document.getElementById('e-aso').value    = t.aso;
     document.getElementById('e-integ').value  = t.integ;
     document.getElementById('e-obs').value    = t.obs;
+    renderTreinosEdicao(t);
     document.getElementById('modal').classList.add('open');
   }
 
   function fecharModal() {
     document.getElementById('modal').classList.remove('open');
+  }
+
+  function renderTreinosEdicao(terceiro) {
+    const sel = document.getElementById('e-empresa');
+    const empresaId = sel ? sel.value : '';
+    const realizados = terceiro?.treinamentosRealizados || [];
+    renderCamposTreinamentos('e-treinos-box', empresaId, realizados, 'e-treino-data');
   }
 
   function salvarEdicao() {
@@ -1139,12 +1351,13 @@
     const aso    = document.getElementById('e-aso').value;
     const integ  = document.getElementById('e-integ').value;
     const obs    = document.getElementById('e-obs').value.trim();
+    const treinamentosRealizados = coletarTreinamentosDoFormulario('e');
 
     if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.'); return;
     }
 
-    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf, empresaId, empresa, funcao, aso, integ, obs } : t);
+    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf, empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados } : t);
     saveAll(lista);
     fecharModal();
     renderLista();
@@ -1316,18 +1529,15 @@
     const box = document.getElementById('treinos-exigidos-box');
     const list = document.getElementById('treinos-exigidos-list');
     if (!sel || !box || !list) return;
-    const empresa = getAllEmpresas().find(e => e.id === sel.value);
-    const ids = empresa?.treinamentosObrigatorios || [];
-    const treinamentos = getAllTreinamentos().filter(t => ids.includes(t.id) && t.ativo !== false);
 
-    if (!empresa || treinamentos.length === 0) {
+    if (!sel.value) {
       box.classList.remove('show');
       list.innerHTML = '';
       return;
     }
 
-    list.innerHTML = treinamentos.map(t => `<span class="training-tag">✓ ${t.nome}</span>`).join('');
     box.classList.add('show');
+    renderCamposTreinamentos('treinos-exigidos-list', sel.value, [], 'f-treino-data');
   }
 
   // ──────────────────────────────────────────────────
@@ -1505,6 +1715,7 @@
   inicializarTreinamentosPadrao();
   popularSelectEmpresas('f-empresa');
   renderTreinosExigidosCadastro();
+  renderDashboard();
 
   // ──────────────────────────────────────────────────
   //  PORTARIA
@@ -1553,6 +1764,23 @@
     const h = hoje();
     document.getElementById('r-aso').innerHTML   = fmtData(found.aso)   + (found.aso   < h ? ' <span class="tag-venc">VENCIDO</span>'  : ' <span class="tag-ok">OK</span>');
     document.getElementById('r-integ').innerHTML = fmtData(found.integ) + (found.integ < h ? ' <span class="tag-venc">VENCIDO</span>'  : ' <span class="tag-ok">OK</span>');
+
+    const rTreinosWrap = document.getElementById('r-treinos-wrap');
+    const rTreinosList = document.getElementById('r-treinos-list');
+    const obrigatorios = getTreinosObrigatoriosDaEmpresa(found.empresaId);
+    if (obrigatorios.length) {
+      rTreinosList.innerHTML = obrigatorios.map(tr => {
+        const st = getStatusTreinamentoTerceiro(found, tr);
+        const cls = st.ok ? 'status-mini ok' : 'status-mini blocked';
+        const reg = getTreinoRealizado(found, tr.id);
+        const detalhe = reg?.data ? `Realizado: ${fmtData(reg.data)}` : 'Sem data cadastrada';
+        return `<span class="training-tag">${tr.nome} <span class="${cls}">${st.label}</span><small style="display:block;color:var(--muted);margin-top:3px;">${detalhe}</small></span>`;
+      }).join('');
+      rTreinosWrap.style.display = 'block';
+    } else {
+      rTreinosWrap.style.display = 'none';
+      rTreinosList.innerHTML = '';
+    }
 
     // motivos
     const motivosWrap = document.getElementById('r-motivos');
