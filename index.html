@@ -466,6 +466,63 @@
       .btn { justify-content: center; }
     }
 
+
+
+    /* ── TREINAMENTOS ── */
+    .training-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .check-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: 9px;
+      padding: 10px 11px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+
+    .check-card:hover { border-color: var(--accent); background: #fff; }
+    .check-card input { width: auto; margin-top: 2px; accent-color: var(--accent); }
+    .check-card strong { display:block; font-size: 13px; line-height: 1.2; }
+    .check-card small { display:block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+    .required-training-box {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #F8FAFC;
+      display: none;
+    }
+
+    .required-training-box.show { display: block; }
+    .required-training-title { font-weight: 700; font-size: 13px; margin-bottom: 8px; color: var(--text); }
+    .training-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+    .training-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--accent-lt);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .switch-wrap { display:inline-flex; align-items:center; gap:7px; }
+    .switch-wrap input { width:auto; accent-color: var(--accent); }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
@@ -509,6 +566,7 @@
     <button class="active" onclick="showPage('cadastro')">Cadastro</button>
     <button onclick="showPage('listagem')">Terceiros</button>
     <button onclick="showPage('empresas')">Empresas</button>
+    <button onclick="showPage('treinamentos')">Treinamentos</button>
     <button onclick="showPage('portaria')">Portaria</button>
   </nav>
 </header>
@@ -518,7 +576,7 @@
   <section class="hero">
     <div>
       <h1>Controle de Terceiros</h1>
-      <p>Base inicial para cadastro de empresas, terceiros, validade de ASO, integração e consulta rápida para portaria.</p>
+      <p>Base inicial para cadastro de empresas, terceiros, treinamentos obrigatórios, validade de ASO, integração e consulta rápida para portaria.</p>
     </div>
   </section>
 
@@ -548,6 +606,11 @@
           <input id="f-funcao" type="text" placeholder="Ex.: Eletricista" />
         </div>
       </div>
+    </div>
+
+    <div id="treinos-exigidos-box" class="required-training-box">
+      <div class="required-training-title">Treinamentos exigidos para esta empresa</div>
+      <div id="treinos-exigidos-list" class="training-tags"></div>
     </div>
 
     <div class="card">
@@ -712,6 +775,7 @@
               <th>CNPJ</th>
               <th>Responsável</th>
               <th>Telefone</th>
+              <th>Treinamentos</th>
               <th></th>
             </tr>
           </thead>
@@ -720,6 +784,42 @@
         <div id="empresas-empty" class="empty-state" style="display:none;">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
           <p>Nenhuma empresa cadastrada.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ═══════════ TREINAMENTOS ═══════════ -->
+  <div id="page-treinamentos" class="page">
+    <div class="page-actions">
+      <h2>Catálogo de Treinamentos</h2>
+      <button class="btn btn-primary" onclick="abrirModalNovoTreinamento()">+ Novo Treinamento</button>
+    </div>
+
+    <div class="card" style="padding:18px 20px;">
+      <div class="search-row">
+        <div class="search-wrap" style="flex:1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="busca-treinamentos" placeholder="Buscar treinamento…" oninput="renderTreinamentos()" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Treinamento</th>
+              <th>Validade</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabela-treinamentos"></tbody>
+        </table>
+        <div id="treinamentos-empty" class="empty-state" style="display:none;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>
+          <p>Nenhum treinamento encontrado.</p>
         </div>
       </div>
     </div>
@@ -770,11 +870,40 @@
       <div><label for="emp-resp">Responsável *</label><input id="emp-resp" type="text" placeholder="Nome do responsável"/></div>
       <div><label for="emp-tel">Telefone</label><input id="emp-tel" type="text" placeholder="(00) 00000-0000" maxlength="15"/></div>
       <div><label for="emp-email">E-mail</label><input id="emp-email" type="email" placeholder="contato@empresa.com.br"/></div>
+      <div class="full">
+        <label>Treinamentos obrigatórios</label>
+        <small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Marque quais treinamentos serão exigidos para terceiros desta empresa.</small>
+        <div id="emp-treinamentos-checklist" class="training-grid"></div>
+      </div>
     </div>
     <input type="hidden" id="emp-id"/>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModalEmpresa()">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarEmpresa()">Salvar empresa</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ═══════════ MODAL DE TREINAMENTOS ═══════════ -->
+<div class="modal-overlay" id="modal-treinamento">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-treinamento-title">Novo Treinamento</span>
+      <button class="modal-close" onclick="fecharModalTreinamento()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-grid">
+      <div class="full"><label for="tr-nome">Nome do treinamento *</label><input id="tr-nome" type="text" placeholder="Ex.: NR 35 - Trabalho em Altura"/></div>
+      <div><label for="tr-validade">Validade em meses *</label><input id="tr-validade" type="number" min="1" max="120" value="12"/></div>
+      <div><label for="tr-ativo">Status</label><select id="tr-ativo"><option value="sim">Ativo</option><option value="nao">Inativo</option></select></div>
+    </div>
+    <input type="hidden" id="tr-id"/>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModalTreinamento()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTreinamento()">Salvar treinamento</button>
     </div>
   </div>
 </div>
@@ -839,13 +968,14 @@
   function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('nav button').forEach((b, i) => {
-      const pages = ['cadastro','listagem','empresas','portaria'];
+      const pages = ['cadastro','listagem','empresas','treinamentos','portaria'];
       b.classList.toggle('active', pages[i] === name);
     });
     document.getElementById('page-' + name).classList.add('active');
     if (name === 'listagem') renderLista();
     if (name === 'empresas') renderEmpresas();
-    if (name === 'cadastro') popularSelectEmpresas('f-empresa');
+    if (name === 'treinamentos') renderTreinamentos();
+    if (name === 'cadastro') { popularSelectEmpresas('f-empresa'); renderTreinosExigidosCadastro(); }
   }
 
   // ──────────────────────────────────────────────────
@@ -857,6 +987,7 @@
   document.getElementById('e-cpf').addEventListener('input', function() {
     this.value = maskCPF(this.value);
   });
+  document.getElementById('f-empresa').addEventListener('change', renderTreinosExigidosCadastro);
 
   // ──────────────────────────────────────────────────
   //  CADASTRO
@@ -1026,6 +1157,179 @@
   });
 
 
+
+  // ──────────────────────────────────────────────────
+  //  TREINAMENTOS — CATÁLOGO PADRÃO
+  // ──────────────────────────────────────────────────
+  const TREINAMENTOS_PADRAO = [
+    'Integração', 'Política de SST', 'Uso de EPIs', 'NR 01', 'NR 05 - CIPA', 'NR 06 - EPI',
+    'NR 10 Básico', 'NR 10 SEP', 'NR 11 - Empilhadeira', 'NR 11 - Ponte Rolante',
+    'NR 12 - Máquinas e Equipamentos', 'NR 13 - Caldeiras e Vasos de Pressão',
+    'NR 18 - Construção Civil', 'NR 20 - Inflamáveis e Combustíveis',
+    'NR 23 - Combate a Incêndio', 'NR 33 - Trabalhador Autorizado', 'NR 33 - Vigia',
+    'NR 33 - Supervisor', 'NR 35 - Trabalho em Altura', 'Brigada de Incêndio',
+    'Primeiros Socorros', 'Direção Defensiva', 'Operador de PTA', 'Operador de Munck',
+    'Operador de Guindaste', 'Operador de Retroescavadeira', 'Operador de Escavadeira',
+    'Soldagem', 'Trabalho a Quente'
+  ];
+
+  function getAllTreinamentos() {
+    return JSON.parse(localStorage.getItem('treinamentos') || '[]');
+  }
+
+  function saveAllTreinamentos(data) {
+    localStorage.setItem('treinamentos', JSON.stringify(data));
+  }
+
+  function inicializarTreinamentosPadrao() {
+    const atuais = getAllTreinamentos();
+    if (atuais.length) return;
+    const padrao = TREINAMENTOS_PADRAO.map(nome => ({ id: uid(), nome, validade: 12, ativo: true }));
+    saveAllTreinamentos(padrao);
+  }
+
+  function treinamentosAtivos() {
+    return getAllTreinamentos().filter(t => t.ativo !== false);
+  }
+
+  function abrirModalNovoTreinamento() {
+    document.getElementById('modal-treinamento-title').textContent = 'Novo Treinamento';
+    document.getElementById('tr-id').value = '';
+    document.getElementById('tr-nome').value = '';
+    document.getElementById('tr-validade').value = 12;
+    document.getElementById('tr-ativo').value = 'sim';
+    document.getElementById('modal-treinamento').classList.add('open');
+  }
+
+  function abrirModalEditarTreinamento(id) {
+    const t = getAllTreinamentos().find(t => t.id === id);
+    if (!t) return;
+    document.getElementById('modal-treinamento-title').textContent = 'Editar Treinamento';
+    document.getElementById('tr-id').value = t.id;
+    document.getElementById('tr-nome').value = t.nome;
+    document.getElementById('tr-validade').value = t.validade || 12;
+    document.getElementById('tr-ativo').value = t.ativo === false ? 'nao' : 'sim';
+    document.getElementById('modal-treinamento').classList.add('open');
+  }
+
+  function fecharModalTreinamento() {
+    document.getElementById('modal-treinamento').classList.remove('open');
+  }
+
+  document.getElementById('modal-treinamento').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalTreinamento();
+  });
+
+  function salvarTreinamento() {
+    const id = document.getElementById('tr-id').value;
+    const nome = document.getElementById('tr-nome').value.trim();
+    const validade = parseInt(document.getElementById('tr-validade').value, 10);
+    const ativo = document.getElementById('tr-ativo').value === 'sim';
+
+    if (!nome || !validade || validade < 1) {
+      toast('⚠ Informe nome e validade do treinamento.');
+      return;
+    }
+
+    let lista = getAllTreinamentos();
+    const nomeNorm = nome.toLowerCase();
+    const duplicado = lista.find(t => t.nome.toLowerCase() === nomeNorm && t.id !== id);
+    if (duplicado) {
+      toast('⚠ Já existe um treinamento com este nome.');
+      return;
+    }
+
+    if (id) {
+      lista = lista.map(t => t.id === id ? { ...t, nome, validade, ativo } : t);
+      toast('✓ Treinamento atualizado!');
+    } else {
+      lista.push({ id: uid(), nome, validade, ativo });
+      toast('✓ Treinamento cadastrado!');
+    }
+    saveAllTreinamentos(lista);
+    fecharModalTreinamento();
+    renderTreinamentos();
+    renderChecklistTreinamentosEmpresa();
+    renderTreinosExigidosCadastro();
+  }
+
+  function alternarTreinamento(id) {
+    const lista = getAllTreinamentos().map(t => t.id === id ? { ...t, ativo: !(t.ativo !== false) } : t);
+    saveAllTreinamentos(lista);
+    renderTreinamentos();
+    renderChecklistTreinamentosEmpresa();
+    renderTreinosExigidosCadastro();
+  }
+
+  function renderTreinamentos() {
+    const q = (document.getElementById('busca-treinamentos')?.value || '').toLowerCase().trim();
+    let lista = getAllTreinamentos();
+    if (q) lista = lista.filter(t => t.nome.toLowerCase().includes(q));
+
+    const tbody = document.getElementById('tabela-treinamentos');
+    const empty = document.getElementById('treinamentos-empty');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!lista.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    lista.forEach(t => {
+      const ativo = t.ativo !== false;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-name">${t.nome}</td>
+        <td>${t.validade || 12} meses</td>
+        <td>${ativo ? '<span class="badge badge-ok">Ativo</span>' : '<span class="badge badge-blocked">Inativo</span>'}</td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirModalEditarTreinamento('${t.id}')">Editar</button>
+            <button class="btn ${ativo ? 'btn-danger' : 'btn-ghost'}" style="padding:5px 12px;font-size:12px;" onclick="alternarTreinamento('${t.id}')">${ativo ? 'Desativar' : 'Ativar'}</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderChecklistTreinamentosEmpresa(selectedIds) {
+    const wrap = document.getElementById('emp-treinamentos-checklist');
+    if (!wrap) return;
+    selectedIds = selectedIds || [];
+    const lista = treinamentosAtivos();
+    if (!lista.length) {
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Nenhum treinamento ativo encontrado.</p>';
+      return;
+    }
+    wrap.innerHTML = lista.map(t => `
+      <label class="check-card">
+        <input type="checkbox" class="emp-treino-check" value="${t.id}" ${selectedIds.includes(t.id) ? 'checked' : ''}>
+        <span><strong>${t.nome}</strong><small>Validade padrão: ${t.validade || 12} meses</small></span>
+      </label>`).join('');
+  }
+
+  function getTreinamentosSelecionadosEmpresa() {
+    return Array.from(document.querySelectorAll('.emp-treino-check:checked')).map(c => c.value);
+  }
+
+  function renderTreinosExigidosCadastro() {
+    const sel = document.getElementById('f-empresa');
+    const box = document.getElementById('treinos-exigidos-box');
+    const list = document.getElementById('treinos-exigidos-list');
+    if (!sel || !box || !list) return;
+    const empresa = getAllEmpresas().find(e => e.id === sel.value);
+    const ids = empresa?.treinamentosObrigatorios || [];
+    const treinamentos = getAllTreinamentos().filter(t => ids.includes(t.id) && t.ativo !== false);
+
+    if (!empresa || treinamentos.length === 0) {
+      box.classList.remove('show');
+      list.innerHTML = '';
+      return;
+    }
+
+    list.innerHTML = treinamentos.map(t => `<span class="training-tag">✓ ${t.nome}</span>`).join('');
+    box.classList.add('show');
+  }
+
   // ──────────────────────────────────────────────────
   //  EMPRESAS — STORAGE
   // ──────────────────────────────────────────────────
@@ -1077,6 +1381,7 @@
     ['emp-razao','emp-fantasia','emp-cnpj','emp-resp','emp-tel','emp-email'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    renderChecklistTreinamentosEmpresa([]);
     document.getElementById('modal-empresa').classList.add('open');
   }
 
@@ -1091,6 +1396,7 @@
     document.getElementById('emp-resp').value     = e.resp;
     document.getElementById('emp-tel').value      = e.tel || '';
     document.getElementById('emp-email').value    = e.email || '';
+    renderChecklistTreinamentosEmpresa(e.treinamentosObrigatorios || []);
     document.getElementById('modal-empresa').classList.add('open');
   }
 
@@ -1110,6 +1416,7 @@
     const resp     = document.getElementById('emp-resp').value.trim();
     const tel      = document.getElementById('emp-tel').value.trim();
     const email    = document.getElementById('emp-email').value.trim();
+    const treinamentosObrigatorios = getTreinamentosSelecionadosEmpresa();
 
     if (!razao || !cnpj || !resp) {
       toast('⚠ Preencha Razão Social, CNPJ e Responsável.');
@@ -1119,7 +1426,7 @@
     let lista = getAllEmpresas();
 
     if (id) {
-      lista = lista.map(e => e.id === id ? { ...e, razao, fantasia, cnpj, resp, tel, email } : e);
+      lista = lista.map(e => e.id === id ? { ...e, razao, fantasia, cnpj, resp, tel, email, treinamentosObrigatorios } : e);
       const terceiros = getAll().map(t => t.empresaId === id ? { ...t, empresa: fantasia ? `${razao} (${fantasia})` : razao } : t);
       saveAll(terceiros);
       toast('✓ Empresa atualizada!');
@@ -1129,14 +1436,16 @@
         toast('⚠ Já existe uma empresa com este CNPJ.');
         return;
       }
-      lista.push({ id: uid(), razao, fantasia, cnpj, resp, tel, email });
+      lista.push({ id: uid(), razao, fantasia, cnpj, resp, tel, email, treinamentosObrigatorios });
       toast('✓ Empresa cadastrada!');
     }
 
     saveAllEmpresas(lista);
     fecharModalEmpresa();
     renderEmpresas();
-    popularSelectEmpresas('f-empresa');
+    inicializarTreinamentosPadrao();
+  popularSelectEmpresas('f-empresa');
+  renderTreinosExigidosCadastro();
     popularSelectEmpresas('e-empresa');
     atualizarStats();
   }
@@ -1166,6 +1475,7 @@
         <td class="td-cpf">${e.cnpj}</td>
         <td>${e.resp}</td>
         <td>${e.tel || '—'}</td>
+        <td><span class="badge badge-warn">${(e.treinamentosObrigatorios || []).length} exigido(s)</span></td>
         <td>
           <div class="actions">
             <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirModalEditarEmpresa('${e.id}')">Editar</button>
@@ -1185,12 +1495,16 @@
     if (!confirm('Deseja excluir esta empresa?')) return;
     saveAllEmpresas(getAllEmpresas().filter(e => e.id !== id));
     renderEmpresas();
-    popularSelectEmpresas('f-empresa');
+    inicializarTreinamentosPadrao();
+  popularSelectEmpresas('f-empresa');
+  renderTreinosExigidosCadastro();
     popularSelectEmpresas('e-empresa');
     toast('Empresa removida.');
   }
 
+  inicializarTreinamentosPadrao();
   popularSelectEmpresas('f-empresa');
+  renderTreinosExigidosCadastro();
 
   // ──────────────────────────────────────────────────
   //  PORTARIA
