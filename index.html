@@ -717,6 +717,33 @@
     .suggestion-tag { padding:7px 10px; border-radius:999px; background:var(--accent-lt); color:var(--accent); font-size:12px; font-weight:700; }
     .report-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 
+
+    /* V16 - documentos digitais e dashboard inteligente */
+    .v16-smart-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:14px 0; }
+    .v16-card { background:#fff; border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:var(--shadow); cursor:pointer; }
+    .v16-card:hover { border-color:var(--accent); box-shadow:0 0 0 3px rgba(21,94,239,.10); }
+    .v16-card .label { font-size:12px; color:var(--muted); text-transform:uppercase; font-weight:900; letter-spacing:.08em; }
+    .v16-card .value { font-size:32px; font-weight:900; margin-top:8px; }
+    .v16-card .hint { font-size:12px; color:var(--muted); margin-top:6px; display:block; }
+    .v16-warning .value { color:var(--warn); }
+    .v16-danger .value { color:var(--danger); }
+    .v16-ok .value { color:var(--ok); }
+    .v16-blue .value { color:var(--accent); }
+    .v16-doc-form { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px; }
+    .v16-doc-form .full { grid-column:1 / -1; }
+    .v16-doc-list { display:grid; gap:10px; margin-top:12px; }
+    .v16-doc-item { border:1px solid var(--border); border-radius:14px; padding:12px; background:var(--bg-soft); display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .v16-doc-item strong { display:block; }
+    .v16-doc-item small { display:block; color:var(--muted); margin-top:3px; }
+    .v16-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .v16-chip { padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; background:var(--accent-lt); color:var(--accent); }
+    .v16-list { display:grid; gap:10px; }
+    .v16-list-item { border:1px solid var(--border); border-radius:14px; background:#fff; padding:12px; cursor:pointer; }
+    .v16-list-item:hover { border-color:var(--accent); }
+    .v16-list-item strong { display:block; }
+    .v16-list-item small { color:var(--muted); display:block; margin-top:4px; }
+    @media (max-width:700px){ .v16-smart-grid{grid-template-columns:1fr;} .v16-doc-form{grid-template-columns:1fr;} .v16-doc-item{display:block;} }
+
   </style>
 </head>
 <body>
@@ -3431,6 +3458,402 @@
     if (id) abrirAnalise(id);
   });
 
+  // ──────────────────────────────────────────────────
+  //  V13.1 — Cards verticais + exceção com data até
+  // ──────────────────────────────────────────────────
+  (function configurarV131(){
+    const css = document.createElement('style');
+    css.textContent = `
+      .terceiro-card-row td { padding: 10px 0 !important; background: transparent !important; }
+      .terceiro-card { border: 1px solid var(--border); border-radius: 18px; background: #fff; padding: 16px; cursor: pointer; display: grid; gap: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+      .terceiro-card:hover { border-color: var(--accent); box-shadow: 0 6px 18px rgba(21,94,239,.10); }
+      .terceiro-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+      .terceiro-card-name { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.15; }
+      .terceiro-card-meta { color: var(--muted); font-size: 13px; margin-top:4px; line-height:1.35; }
+      .terceiro-card-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .terceiro-card-info { background: var(--bg-soft, #F8FAFC); border:1px solid var(--border); border-radius:12px; padding:10px; }
+      .terceiro-card-info label { font-size: 11px; text-transform: uppercase; letter-spacing:.5px; color:var(--muted); font-weight:700; margin:0 0 4px; }
+      .terceiro-card-info div { font-size: 14px; color:var(--text); font-weight:600; }
+      .terceiro-card-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+      .terceiro-card-hint { margin-left:auto; font-size:12px; color:var(--muted); }
+      .exception-validity { background:#FEF3C7; border:1px solid #FBBF24; color:#92400E; border-radius:10px; padding:8px 10px; margin-top:8px; font-size:13px; }
+      @media (max-width: 680px) {
+        #page-listagem table thead { display:none; }
+        #page-listagem table, #page-listagem tbody, #page-listagem tr, #page-listagem td { display:block; width:100%; }
+        .terceiro-card-grid { grid-template-columns: 1fr; }
+        .terceiro-card-top { flex-direction:column; }
+        .terceiro-card-hint { margin-left:0; }
+      }
+    `;
+    document.head.appendChild(css);
+  })();
+
+  function escapeHtmlSafeV131(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  // Exceção só libera quando está ativa e ainda está dentro da data "até".
+  getExcecaoTerceiro = function(id) {
+    const all = getAllExcecoes();
+    const ex = all[id];
+    if (!ex || !ex.ativo) return null;
+    if (ex.dataAte && ex.dataAte < hoje()) return null;
+    return ex;
+  };
+
+  salvarLiberacaoExcecao = function(id) {
+    const t = getAll().find(x => x.id === id);
+    if (!t) return;
+
+    const dataLiberacao = document.getElementById('exc-data')?.value || '';
+    const dataAte = document.getElementById('exc-data-ate')?.value || '';
+    const aprovador = document.getElementById('exc-aprovador')?.value.trim() || '';
+    const cargo = document.getElementById('exc-cargo')?.value || '';
+    const motivo = document.getElementById('exc-motivo')?.value || '';
+    const obs = document.getElementById('exc-obs')?.value.trim() || '';
+
+    if (!dataLiberacao || !dataAte || !aprovador || !cargo || !motivo) {
+      toast('⚠ Preencha data da liberação, liberado até, aprovador, cargo e motivo.');
+      return;
+    }
+    if (dataLiberacao < hoje()) {
+      toast('⚠ A data da liberação não pode ser retroativa.');
+      return;
+    }
+    if (dataAte < hoje()) {
+      toast('⚠ A data "liberado até" não pode ser retroativa.');
+      return;
+    }
+    if (dataAte < dataLiberacao) {
+      toast('⚠ A data "liberado até" não pode ser menor que a data da liberação.');
+      return;
+    }
+
+    const all = getAllExcecoes();
+    all[id] = {
+      id: uid(),
+      terceiroId: id,
+      terceiro: t.nome || '',
+      empresa: t.empresa || '',
+      cpf: t.cpf || '',
+      ativo: true,
+      dataLiberacao,
+      dataAte,
+      aprovador,
+      cargo,
+      motivo,
+      obs,
+      criadoEm: new Date().toISOString()
+    };
+    saveAllExcecoes(all);
+    registrarHistorico('terceiro', id, `Liberação por exceção registrada por ${aprovador} (${cargo}). Motivo: ${motivo}. De ${fmtData(dataLiberacao)} até ${fmtData(dataAte)}.`);
+    toast('✓ Liberação por exceção registrada.');
+    abrirAnalise(id);
+    renderDashboard();
+    if (document.getElementById('page-listagem')?.classList.contains('active')) renderLista();
+  };
+
+  renderExcecaoBox = function(id) {
+    const ex = getExcecaoTerceiro(id);
+    if (ex) {
+      return `
+        <div class="exception-box">
+          <strong>🟡 Liberado por Exceção</strong>
+          <div class="exception-active">
+            <b>Data da liberação:</b> ${fmtData(ex.dataLiberacao)}<br>
+            <b>Liberado até:</b> ${ex.dataAte ? fmtData(ex.dataAte) : 'Não informado'}<br>
+            <b>Aprovador:</b> ${escapeHtmlSafeV131(ex.aprovador)}<br>
+            <b>Cargo:</b> ${escapeHtmlSafeV131(ex.cargo)}<br>
+            <b>Motivo:</b> ${escapeHtmlSafeV131(ex.motivo)}<br>
+            ${ex.obs ? `<b>Observação:</b> ${escapeHtmlSafeV131(ex.obs)}<br>` : ''}
+            <small>Registrado em ${new Date(ex.criadoEm).toLocaleString('pt-BR')}</small>
+          </div>
+          <div style="margin-top:10px;"><button class="btn btn-danger" onclick="cancelarLiberacaoExcecao('${id}')">Cancelar exceção</button></div>
+        </div>`;
+    }
+    return `
+      <div class="exception-box">
+        <strong>Liberação por Exceção</strong>
+        <p style="font-size:13px;color:#92400E;margin-top:6px;">Use somente quando houver autorização formal para entrada mesmo com pendências. As datas não podem ser retroativas.</p>
+        <div class="exception-grid">
+          <div><label>Data da liberação *</label><input id="exc-data" type="date" min="${hoje()}" value="${hoje()}"></div>
+          <div><label>Liberado até *</label><input id="exc-data-ate" type="date" min="${hoje()}" value="${hoje()}"></div>
+          <div><label>Cargo do aprovador *</label><select id="exc-cargo"><option value="">Selecione...</option><option>Gerente da Planta</option><option>Supervisor Industrial</option><option>Coordenador Industrial</option><option>Outro</option></select></div>
+          <div><label>Motivo *</label><select id="exc-motivo"><option value="">Selecione...</option><option>ASO pendente</option><option>Integração pendente</option><option>Treinamento pendente</option><option>Documento DP pendente</option><option>Emergência operacional</option><option>Outro</option></select></div>
+          <div class="full"><label>Nome do aprovador *</label><input id="exc-aprovador" placeholder="Ex.: João da Silva"></div>
+          <div class="full"><label>Observação</label><textarea id="exc-obs" placeholder="Explique a autorização..."></textarea></div>
+        </div>
+        <div class="exception-validity"><b>Regra:</b> o terceiro ficará como liberado por exceção somente até a data informada acima.</div>
+        <div style="margin-top:12px;"><button class="btn btn-primary" onclick="salvarLiberacaoExcecao('${id}')">Liberar por Exceção</button></div>
+      </div>`;
+  };
+
+  // Listagem em cards verticais clicáveis, própria para celular.
+  renderLista = function() {
+    atualizarStats();
+    const buscaEl = document.getElementById('busca-lista');
+    const filtroEl = document.getElementById('filtro-empresa-lista');
+    const q = (buscaEl?.value || '').toLowerCase().trim();
+    const empresaFiltro = filtroEl?.value || '';
+    let lista = getAll();
+
+    if (q) lista = lista.filter(t =>
+      (t.nome || '').toLowerCase().includes(q) ||
+      (t.cpf || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')) ||
+      (t.empresa || '').toLowerCase().includes(q)
+    );
+    if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
+
+    const tbody = document.getElementById('tabela-body');
+    const empty = document.getElementById('lista-empty');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!lista.length) {
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    lista.forEach(t => {
+      const st = getStatus(t);
+      const stDP = getStatusDP(t);
+      const stSESMT = getStatusSESMT(t);
+      const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
+      const pendTreinos = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
+      const badgeStatus = st.excecao
+        ? '<span class="badge badge-exception">🟡 Exceção</span>'
+        : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
+      const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
+      const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
+      const badgeTreino = obrig.length === 0 ? '<span class="badge badge-warn">Sem treinos</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const ex = getExcecaoTerceiro(t.id);
+
+      const tr = document.createElement('tr');
+      tr.className = 'terceiro-card-row';
+      tr.innerHTML = `
+        <td colspan="10">
+          <div class="terceiro-card" role="button" tabindex="0" data-terceiro-id="${t.id}" onclick="abrirAnalise('${t.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){abrirAnalise('${t.id}')}">
+            <div class="terceiro-card-top">
+              <div>
+                <div class="terceiro-card-name">${escapeHtmlSafeV131(t.nome || 'Sem nome')}</div>
+                <div class="terceiro-card-meta">${escapeHtmlSafeV131(t.empresa || 'Empresa não vinculada')} • ${escapeHtmlSafeV131(t.cpf || 'CPF não informado')}</div>
+              </div>
+              <div>${badgeStatus}</div>
+            </div>
+            <div class="terceiro-card-grid">
+              <div class="terceiro-card-info"><label>Função</label><div>${escapeHtmlSafeV131(t.funcao || 'Não informada')}</div></div>
+              <div class="terceiro-card-info"><label>ASO</label><div>${fmtData(t.aso)} ${tagData(t.aso)}</div></div>
+              <div class="terceiro-card-info"><label>Integração</label><div>${fmtData(t.integ)} ${tagData(t.integ)}</div></div>
+              <div class="terceiro-card-info"><label>Liberação</label><div>${ex ? 'Até ' + fmtData(ex.dataAte) : 'Sem exceção ativa'}</div></div>
+            </div>
+            <div class="terceiro-card-actions">
+              ${badgeDP} ${badgeSESMT} ${badgeTreino}
+              <span class="terceiro-card-hint">Toque para abrir ficha vertical</span>
+            </div>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  };
+
+  // Reforço: cards antigos também abrem a ficha.
+  document.addEventListener('click', function(e) {
+    const card = e.target.closest('[data-terceiro-id]');
+    if (!card) return;
+    const id = card.getAttribute('data-terceiro-id');
+    if (id && !e.target.closest('button, a, input, select, textarea')) abrirAnalise(id);
+  });
+
+  // Portaria mostra também "liberado até" quando houver exceção.
+  const _preencherResultadoPortariaV131 = preencherResultadoPortaria;
+  preencherResultadoPortaria = function(found) {
+    _preencherResultadoPortariaV131(found);
+    const st = getStatus(found);
+    if (!st.excecao) return;
+    const motivosList = document.getElementById('r-motivos-list');
+    if (motivosList && st.excecaoDados?.dataAte) {
+      motivosList.insertAdjacentHTML('afterbegin', `<li><b>Liberado até:</b> ${fmtData(st.excecaoDados.dataAte)}</li>`);
+    }
+  };
+
+  // Dashboard de exceções considera somente exceções ainda válidas.
+  renderExcecoesDashboard = function() {
+    const wrap = document.getElementById('dash-excecoes-list');
+    if (!wrap) return;
+    const all = getAllExcecoes();
+    const itens = Object.values(all).filter(x => x && x.ativo && (!x.dataAte || x.dataAte >= hoje())).sort((a,b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+    if (!itens.length) {
+      wrap.innerHTML = '<p style="font-size:14px;color:var(--muted);">Nenhuma liberação por exceção ativa.</p>';
+      return;
+    }
+    wrap.innerHTML = itens.slice(0, 20).map(ex => `
+      <div class="exception-item" role="button" tabindex="0" data-terceiro-id="${ex.terceiroId}" style="cursor:pointer;">
+        <div><strong>${escapeHtmlSafeV131(ex.terceiro || 'Terceiro')}</strong><small>${escapeHtmlSafeV131(ex.empresa || 'Empresa não informada')} • ${escapeHtmlSafeV131(ex.cpf || 'CPF não informado')}</small><small>${escapeHtmlSafeV131(ex.motivo)} — ${fmtData(ex.dataLiberacao)} até ${ex.dataAte ? fmtData(ex.dataAte) : 'sem data final'}</small></div>
+        <div><span class="badge badge-exception">EXCEÇÃO</span></div>
+      </div>`).join('');
+  };
+
+  if (document.getElementById('page-listagem')?.classList.contains('active')) renderLista();
+
+
+  // ──────────────────────────────────────────────────
+  //  V16 — Upload de documentos + Dashboard inteligente
+  // ──────────────────────────────────────────────────
+  function v16EnsureDashboard() {
+    const dash = document.getElementById('page-dashboard');
+    if (!dash || document.getElementById('v16-smart-dashboard')) return;
+    const stats = dash.querySelector('.stats-grid');
+    if (!stats) return;
+    stats.insertAdjacentHTML('afterend', `
+      <div id="v16-smart-dashboard" class="v16-smart-grid">
+        <div class="v16-card v16-warning" onclick="showPage('pendencias')"><div class="label">Vencem em 30 dias</div><div class="value" id="v16-vencem30">0</div><span class="hint">ASO, integração, contrato e treinos</span></div>
+        <div class="v16-card v16-danger" onclick="showPage('pendencias')"><div class="label">Sem data informada</div><div class="value" id="v16-semdata">0</div><span class="hint">Itens que precisam regularizar data</span></div>
+        <div class="v16-card v16-warning" onclick="document.getElementById('dash-excecoes-list')?.scrollIntoView({behavior:'smooth'})"><div class="label">Exceções ativas</div><div class="value" id="v16-excecoes">0</div><span class="hint">Terceiros liberados por exceção</span></div>
+        <div class="v16-card v16-blue" onclick="showPage('empresas')"><div class="label">Empresas sem contrato</div><div class="value" id="v16-empresas-sem-contrato">0</div><span class="hint">Contrato/fim prestação sem data</span></div>
+      </div>
+    `);
+    const ranking = document.getElementById('dash-ranking-empresas')?.closest('.card');
+    if (ranking && !document.getElementById('v16-proximos30-list')) {
+      ranking.insertAdjacentHTML('beforebegin', `
+        <div class="card">
+          <div class="card-title">Vencimentos próximos 30 dias</div>
+          <div id="v16-proximos30-list" class="v16-list"></div>
+        </div>
+      `);
+    }
+  }
+
+  function v16ParseDate(d) { return isDataValidaSistema(d) ? new Date(d + 'T00:00:00') : null; }
+  function v16DaysUntil(d) {
+    const dt = v16ParseDate(d); if (!dt) return null;
+    const h = new Date(hoje() + 'T00:00:00');
+    return Math.round((dt - h) / 86400000);
+  }
+  function v16AddDateItem(list, t, tipo, data) {
+    const dias = v16DaysUntil(data);
+    if (dias !== null && dias >= 0 && dias <= 30) list.push({terceiroId:t.id, nome:t.nome, empresa:t.empresa, cpf:t.cpf, tipo, data, dias});
+  }
+
+  function v16CalcularIndicadores() {
+    const terceiros = getAll();
+    const empresas = getAllEmpresas();
+    const proximos = [];
+    let semData = 0;
+    terceiros.forEach(t => {
+      const emp = empresas.find(e => e.id === t.empresaId) || null;
+      ['aso','integ'].forEach(k => { if (!isDataValidaSistema(t[k])) semData++; });
+      v16AddDateItem(proximos, t, 'ASO', t.aso);
+      v16AddDateItem(proximos, t, 'Integração', t.integ);
+      if (emp) v16AddDateItem(proximos, t, 'Fim prestação/contrato empresa', emp.contratoFim || emp.fimPrestacao || emp.contratoValidade);
+      getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
+        const st = getStatusTreinamentoTerceiro(t, tr);
+        if (!isDataValidaSistema(st.data)) semData++;
+        v16AddDateItem(proximos, t, tr.nome || 'Treinamento', st.data);
+      });
+    });
+    const excecoes = Object.values(getAllExcecoes ? getAllExcecoes() : {}).filter(x => x && x.ativo && (!x.dataAte || x.dataAte >= hoje())).length;
+    const empresasSemContrato = empresas.filter(e => !isDataValidaSistema(e.contratoFim || e.fimPrestacao || e.contratoValidade)).length;
+    return { proximos: proximos.sort((a,b)=>a.dias-b.dias).slice(0,20), semData, excecoes, empresasSemContrato };
+  }
+
+  function v16RenderDashboard() {
+    v16EnsureDashboard();
+    const ind = v16CalcularIndicadores();
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('v16-vencem30', ind.proximos.length);
+    set('v16-semdata', ind.semData);
+    set('v16-excecoes', ind.excecoes);
+    set('v16-empresas-sem-contrato', ind.empresasSemContrato);
+    const list = document.getElementById('v16-proximos30-list');
+    if (list) {
+      if (!ind.proximos.length) list.innerHTML = '<p style="font-size:14px;color:var(--muted);">Nenhum vencimento nos próximos 30 dias.</p>';
+      else list.innerHTML = ind.proximos.map(p => `
+        <div class="v16-list-item" data-terceiro-id="${p.terceiroId}" onclick="abrirAnalise('${p.terceiroId}')">
+          <strong>${escapeHtmlSafeV131(p.nome || 'Sem nome')}</strong>
+          <small>${escapeHtmlSafeV131(p.empresa || 'Empresa não informada')} • ${escapeHtmlSafeV131(p.cpf || 'CPF não informado')}</small>
+          <div class="v16-chip-row"><span class="v16-chip">${escapeHtmlSafeV131(p.tipo)}</span><span class="v16-chip">${fmtData(p.data)}</span><span class="v16-chip">Faltam ${p.dias} dia(s)</span></div>
+        </div>`).join('');
+    }
+  }
+
+  const _renderDashboardV16 = renderDashboard;
+  renderDashboard = function() { _renderDashboardV16(); v16RenderDashboard(); };
+
+  function getArquivosTerceiroV16(id) {
+    return JSON.parse(localStorage.getItem('arquivosTerceirosV16') || '{}')[id] || [];
+  }
+  function saveArquivosTerceiroV16(id, arquivos) {
+    const all = JSON.parse(localStorage.getItem('arquivosTerceirosV16') || '{}');
+    all[id] = arquivos;
+    localStorage.setItem('arquivosTerceirosV16', JSON.stringify(all));
+  }
+  function adicionarArquivoTerceiroV16(id) {
+    const tipo = document.getElementById('v16-doc-tipo')?.value || 'Documento';
+    const validade = document.getElementById('v16-doc-validade')?.value || '';
+    const obs = document.getElementById('v16-doc-obs')?.value.trim() || '';
+    const input = document.getElementById('v16-doc-file');
+    const file = input?.files?.[0];
+    if (!file) { toast('Selecione um arquivo para anexar.'); return; }
+    if (file.size > 900000) { toast('Arquivo muito grande. Para este teste, use arquivo até 900 KB.'); return; }
+    const reader = new FileReader();
+    reader.onload = function() {
+      const arquivos = getArquivosTerceiroV16(id);
+      arquivos.unshift({ id: uid(), tipo, validade, obs, nome: file.name, tamanho: file.size, mime: file.type || 'application/octet-stream', dataUrl: reader.result, criadoEm: new Date().toISOString() });
+      saveArquivosTerceiroV16(id, arquivos);
+      registrarHistorico('terceiro', id, `Documento anexado: ${tipo} - ${file.name}${validade ? ' | validade ' + fmtData(validade) : ''}.`);
+      toast('Documento anexado.');
+      abrirAnalise(id);
+    };
+    reader.readAsDataURL(file);
+  }
+  function removerArquivoTerceiroV16(id, arqId) {
+    if (!confirm('Remover este documento anexado?')) return;
+    saveArquivosTerceiroV16(id, getArquivosTerceiroV16(id).filter(a => a.id !== arqId));
+    registrarHistorico('terceiro', id, 'Documento anexado removido.');
+    abrirAnalise(id);
+  }
+  function baixarArquivoTerceiroV16(id, arqId) {
+    const a = getArquivosTerceiroV16(id).find(x => x.id === arqId);
+    if (!a) return;
+    const link = document.createElement('a');
+    link.href = a.dataUrl;
+    link.download = a.nome || 'documento';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  const _abrirAnaliseV16 = abrirAnalise;
+  abrirAnalise = function(id) {
+    _abrirAnaliseV16(id);
+    const box = document.getElementById('analise-conteudo');
+    if (!box || document.getElementById('v16-doc-section')) return;
+    const arquivos = getArquivosTerceiroV16(id);
+    box.insertAdjacentHTML('beforeend', `
+      <div class="analysis-section" id="v16-doc-section">
+        <strong>Documentos digitais anexados</strong>
+        <p style="font-size:13px;color:var(--muted);margin-top:6px;">Use para anexar ASO, integração, certificados de NR, ficha de EPI, contrato/ficha de registro e outros documentos. Nesta versão, os arquivos ficam salvos no navegador.</p>
+        <div class="v16-doc-form">
+          <div><label>Tipo de documento</label><select id="v16-doc-tipo"><option>ASO</option><option>Integração</option><option>Certificado NR</option><option>Ficha EPI</option><option>Contrato/Ficha Registro</option><option>CNH</option><option>Documento DP</option><option>Outro</option></select></div>
+          <div><label>Validade, se houver</label><input id="v16-doc-validade" type="date"></div>
+          <div class="full"><label>Arquivo</label><input class="file-input" id="v16-doc-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"></div>
+          <div class="full"><label>Observação</label><input id="v16-doc-obs" placeholder="Ex.: ASO renovado conforme solicitação do SESMT"></div>
+          <div class="full"><button class="btn btn-primary" onclick="adicionarArquivoTerceiroV16('${id}')">Anexar documento</button></div>
+        </div>
+        <div class="v16-doc-list">
+          ${arquivos.length ? arquivos.map(a => `
+            <div class="v16-doc-item">
+              <div><strong>${escapeHtmlSafeV131(a.tipo)} — ${escapeHtmlSafeV131(a.nome)}</strong><small>${a.validade ? 'Validade: ' + fmtData(a.validade) + ' • ' : ''}Anexado em ${new Date(a.criadoEm).toLocaleString('pt-BR')}</small>${a.obs ? `<small>${escapeHtmlSafeV131(a.obs)}</small>` : ''}</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="baixarArquivoTerceiroV16('${id}','${a.id}')">Baixar</button><button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="removerArquivoTerceiroV16('${id}','${a.id}')">Remover</button></div>
+            </div>`).join('') : '<p style="font-size:13px;color:var(--muted);margin-top:8px;">Nenhum documento digital anexado ainda.</p>'}
+        </div>
+      </div>
+    `);
+  };
+
+  // Atualiza o dashboard inteligente ao carregar.
+  setTimeout(function(){ try { if (document.getElementById('page-dashboard')?.classList.contains('active')) { renderDashboard(); } } catch(e) { console.warn('V16 dashboard:', e); } }, 80);
 
 
   // Registro PWA - instala como app no celular sem interferir nas funções do sistema
