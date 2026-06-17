@@ -10,39 +10,45 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #F0F2F5;
+      --bg:        #EEF2F7;
+      --bg-soft:   #F8FAFC;
       --surface:   #FFFFFF;
-      --border:    #DDE1E9;
-      --text:      #1A1D23;
-      --muted:     #6B7280;
-      --accent:    #1B4FD8;
-      --accent-lt: #EEF2FF;
+      --border:    #DDE5F0;
+      --text:      #111827;
+      --muted:     #667085;
+      --accent:    #155EEF;
+      --accent-2:  #0F3D99;
+      --accent-lt: #EAF1FF;
       --ok:        #16A34A;
       --ok-lt:     #DCFCE7;
       --danger:    #DC2626;
       --danger-lt: #FEE2E2;
       --warn:      #D97706;
       --warn-lt:   #FEF3C7;
-      --radius:    10px;
-      --shadow:    0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+      --radius:    14px;
+      --shadow:    0 8px 30px rgba(15, 23, 42, .08);
+      --shadow-sm: 0 2px 10px rgba(15, 23, 42, .06);
     }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(circle at top left, rgba(21,94,239,.12), transparent 32%),
+        linear-gradient(180deg, #F8FAFC 0%, var(--bg) 100%);
       color: var(--text);
       min-height: 100vh;
     }
 
     /* ── NAV ── */
     header {
-      background: var(--surface);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border);
       padding: 0 24px;
       display: flex;
       align-items: center;
-      gap: 32px;
-      height: 58px;
+      gap: 28px;
+      min-height: 64px;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -50,7 +56,7 @@
 
     .brand {
       font-weight: 700;
-      font-size: 15px;
+      font-size: 16px;
       letter-spacing: -.3px;
       color: var(--accent);
       display: flex;
@@ -61,14 +67,15 @@
 
     .brand svg { flex-shrink: 0; }
 
-    nav { display: flex; gap: 4px; }
+    nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
 
     nav button {
       background: none;
       border: none;
       cursor: pointer;
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 9px 16px;
+      border-radius: 999px;
       font-size: 14px;
       font-family: 'Inter', sans-serif;
       font-weight: 500;
@@ -80,20 +87,68 @@
     nav button.active { background: var(--accent-lt); color: var(--accent); }
 
     /* ── LAYOUT ── */
-    main { max-width: 1000px; margin: 0 auto; padding: 32px 16px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 56px; }
 
     .page { display: none; }
     .page.active { display: block; }
 
-    h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    h2 { font-size: 28px; font-weight: 800; margin-bottom: 22px; letter-spacing: -.6px; }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      color: #fff;
+      border-radius: 22px;
+      padding: 26px;
+      margin-bottom: 24px;
+      box-shadow: 0 16px 42px rgba(21,94,239,.22);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 190px; height: 190px;
+      border-radius: 50%;
+      right: -65px; top: -65px;
+      background: rgba(255,255,255,.14);
+    }
+
+    .hero h1 { font-size: 26px; margin-bottom: 6px; position: relative; z-index: 1; }
+    .hero p { color: rgba(255,255,255,.82); font-size: 14px; line-height: 1.45; max-width: 650px; position: relative; z-index: 1; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+    .stat-value { font-size: 28px; font-weight: 800; margin-top: 8px; letter-spacing: -.6px; }
+    .stat-ok .stat-value { color: var(--ok); }
+    .stat-block .stat-value { color: var(--danger); }
+    .stat-company .stat-value { color: var(--accent); }
 
     /* ── CARD ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 18px;
       box-shadow: var(--shadow);
-      padding: 24px;
+      padding: 26px;
       margin-bottom: 20px;
     }
 
@@ -119,18 +174,18 @@
 
     input, textarea, select {
       width: 100%;
-      padding: 9px 12px;
+      padding: 12px 14px;
       border: 1px solid var(--border);
-      border-radius: 7px;
+      border-radius: 12px;
       font-size: 14px;
       font-family: 'Inter', sans-serif;
       color: var(--text);
-      background: var(--bg);
+      background: var(--bg-soft);
       transition: border-color .15s, box-shadow .15s;
       outline: none;
     }
 
-    input:focus, textarea:focus, select:focus {
+    input:focus, textarea:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(27,79,216,.12);
       background: #fff;
@@ -143,8 +198,8 @@
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      padding: 9px 20px;
-      border-radius: 7px;
+      padding: 11px 20px;
+      border-radius: 12px;
       font-size: 14px;
       font-family: 'Inter', sans-serif;
       font-weight: 600;
@@ -154,7 +209,7 @@
     }
 
     .btn:active { transform: scale(.97); }
-    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; box-shadow: 0 8px 18px rgba(21,94,239,.18); }
     .btn-primary:hover { opacity: .88; }
     .btn-danger  { background: var(--danger-lt); color: var(--danger); }
     .btn-danger:hover  { opacity: .8; }
@@ -193,7 +248,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13.5px;
+      font-size: 14px;
     }
 
     thead th {
@@ -247,8 +302,8 @@
     .portaria-search button { padding: 12px 22px; font-size: 15px; }
 
     .result-card {
-      border-radius: var(--radius);
-      padding: 28px;
+      border-radius: 22px;
+      padding: 30px;
       border: 2px solid var(--border);
       background: var(--surface);
       display: none;
@@ -278,7 +333,7 @@
     .status-icon.ok      { background: var(--ok-lt);     color: var(--ok); }
     .status-icon.blocked { background: var(--danger-lt);  color: var(--danger); }
 
-    .status-label { font-size: 26px; font-weight: 800; line-height: 1; }
+    .status-label { font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -.8px; }
     .status-label.ok      { color: var(--ok); }
     .status-label.blocked { color: var(--danger); }
 
@@ -396,9 +451,29 @@
       to   { transform: translateX(0);    opacity: 1; }
     }
 
+    .page-actions { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:18px; }
+
+    @media (max-width: 860px) {
+      header { align-items: flex-start; flex-direction: column; height: auto; gap: 10px; padding: 14px 16px; }
+      nav { width: 100%; padding-bottom: 2px; }
+      main { padding: 22px 14px 44px; }
+      .hero { padding: 22px; border-radius: 18px; }
+      .hero h1 { font-size: 22px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      h2 { font-size: 24px; }
+      .search-row, .portaria-search { flex-direction: column; align-items: stretch; }
+      .search-wrap { width: 100%; }
+      .btn { justify-content: center; }
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .card { padding: 20px; }
+      tbody td, thead th { padding: 10px 12px; }
+      .actions { flex-direction: column; }
+      .status-label { font-size: 30px; }
       .result-info { grid-template-columns: 1fr; }
       nav button { padding: 6px 10px; font-size: 13px; }
     }
@@ -433,12 +508,18 @@
   <nav>
     <button class="active" onclick="showPage('cadastro')">Cadastro</button>
     <button onclick="showPage('listagem')">Terceiros</button>
-    <button onclick="showPage('empresas')">Empresas</button>
     <button onclick="showPage('portaria')">Portaria</button>
   </nav>
 </header>
 
 <main>
+
+  <section class="hero">
+    <div>
+      <h1>Controle de Terceiros</h1>
+      <p>Base inicial para cadastro de empresas, terceiros, validade de ASO, integração e consulta rápida para portaria.</p>
+    </div>
+  </section>
 
   <!-- ═══════════ CADASTRO ═══════════ -->
   <div id="page-cadastro" class="page active">
@@ -456,9 +537,7 @@
         </div>
         <div>
           <label for="f-empresa">Empresa *</label>
-          <select id="f-empresa">
-            <option value="">Selecione uma empresa…</option>
-          </select>
+          <input id="f-empresa" type="text" placeholder="Ex.: Construtora ABC" />
         </div>
         <div>
           <label for="f-funcao">Função *</label>
@@ -497,7 +576,13 @@
   <!-- ═══════════ LISTAGEM ═══════════ -->
   <div id="page-listagem" class="page">
     <h2>Terceiros Cadastrados</h2>
-    <div class="card" style="padding:16px 20px;">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total de terceiros</div><div class="stat-value" id="stat-total">0</div></div>
+      <div class="stat-card stat-ok"><div class="stat-label">Liberados</div><div class="stat-value" id="stat-liberados">0</div></div>
+      <div class="stat-card stat-block"><div class="stat-label">Bloqueados</div><div class="stat-value" id="stat-bloqueados">0</div></div>
+      <div class="stat-card stat-company"><div class="stat-label">Empresas</div><div class="stat-value" id="stat-empresas">0</div></div>
+    </div>
+    <div class="card" style="padding:18px 20px;">
       <div class="search-row">
         <div class="search-wrap" style="flex:1">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -598,39 +683,6 @@
     </div>
   </div>
 
-  <!-- ═══════════ EMPRESAS ═══════════ -->
-  <div id="page-empresas" class="page">
-    <h2>Empresas Cadastradas</h2>
-    <div class="card" style="padding:16px 20px;">
-      <div class="search-row">
-        <div class="search-wrap" style="flex:1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="busca-empresas" placeholder="Buscar por razão social, fantasia ou CNPJ…" oninput="renderEmpresas()" />
-        </div>
-        <button class="btn btn-primary" onclick="abrirModalNovaEmpresa()">+ Nova Empresa</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Razão Social</th>
-              <th>Nome Fantasia</th>
-              <th>CNPJ</th>
-              <th>Responsável</th>
-              <th>Telefone</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tabela-empresas"></tbody>
-        </table>
-        <div id="empresas-empty" class="empty-state" style="display:none;">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-          <p>Nenhuma empresa cadastrada.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </main>
 
 <!-- ═══════════ MODAL DE EDIÇÃO ═══════════ -->
@@ -645,7 +697,7 @@
     <div class="form-grid">
       <div><label for="e-nome">Nome completo *</label><input id="e-nome" type="text"/></div>
       <div><label for="e-cpf">CPF *</label><input id="e-cpf" type="text" maxlength="14"/></div>
-      <div><label for="e-empresa">Empresa *</label><select id="e-empresa"><option value="">Selecione uma empresa…</option></select></div>
+      <div><label for="e-empresa">Empresa *</label><input id="e-empresa" type="text"/></div>
       <div><label for="e-funcao">Função *</label><input id="e-funcao" type="text"/></div>
       <div><label for="e-aso">Validade do ASO *</label><input id="e-aso" type="date"/></div>
       <div><label for="e-integ">Validade da Integração *</label><input id="e-integ" type="date"/></div>
@@ -659,32 +711,7 @@
   </div>
 </div>
 
-<!-- ═══════════ MODAL DE EMPRESAS ═══════════ -->
-<div class="modal-overlay" id="modal-empresa">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-empresa-title">Nova Empresa</span>
-      <button class="modal-close" onclick="fecharModalEmpresa()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="form-grid">
-      <div class="full"><label for="emp-razao">Razão Social *</label><input id="emp-razao" type="text" placeholder="Ex.: Construtora ABC Ltda"/></div>
-      <div><label for="emp-fantasia">Nome Fantasia</label><input id="emp-fantasia" type="text" placeholder="Ex.: ABC Construções"/></div>
-      <div><label for="emp-cnpj">CNPJ *</label><input id="emp-cnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18"/></div>
-      <div><label for="emp-resp">Responsável *</label><input id="emp-resp" type="text" placeholder="Nome do responsável"/></div>
-      <div><label for="emp-tel">Telefone</label><input id="emp-tel" type="text" placeholder="(00) 00000-0000" maxlength="15"/></div>
-      <div><label for="emp-email">E-mail</label><input id="emp-email" type="email" placeholder="contato@empresa.com.br"/></div>
-    </div>
-    <input type="hidden" id="emp-id"/>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModalEmpresa()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarEmpresa()">Salvar empresa</button>
-    </div>
-  </div>
-</div>
-
-
+<!-- ═══════════ TOAST ═══════════ -->
 <div id="toast-container"></div>
 
 <script>
@@ -744,13 +771,11 @@
   function showPage(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('nav button').forEach((b, i) => {
-      const pages = ['cadastro','listagem','empresas','portaria'];
+      const pages = ['cadastro','listagem','portaria'];
       b.classList.toggle('active', pages[i] === name);
     });
     document.getElementById('page-' + name).classList.add('active');
     if (name === 'listagem') renderLista();
-    if (name === 'empresas') renderEmpresas();
-    if (name === 'cadastro') popularSelectEmpresas();
   }
 
   // ──────────────────────────────────────────────────
@@ -767,17 +792,15 @@
   //  CADASTRO
   // ──────────────────────────────────────────────────
   function salvarTerceiro() {
-    const nome    = document.getElementById('f-nome').value.trim();
-    const cpf     = document.getElementById('f-cpf').value.trim();
-    const empSel  = document.getElementById('f-empresa');
-    const empresaId = empSel.value;
-    const empresa = empSel.options[empSel.selectedIndex]?.text || '';
-    const funcao  = document.getElementById('f-funcao').value.trim();
-    const aso     = document.getElementById('f-aso').value;
-    const integ   = document.getElementById('f-integ').value;
-    const obs     = document.getElementById('f-obs').value.trim();
+    const nome   = document.getElementById('f-nome').value.trim();
+    const cpf    = document.getElementById('f-cpf').value.trim();
+    const empresa= document.getElementById('f-empresa').value.trim();
+    const funcao = document.getElementById('f-funcao').value.trim();
+    const aso    = document.getElementById('f-aso').value;
+    const integ  = document.getElementById('f-integ').value;
+    const obs    = document.getElementById('f-obs').value.trim();
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+    if (!nome || !cpf || !empresa || !funcao || !aso || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.');
       return;
     }
@@ -790,23 +813,43 @@
       return;
     }
 
-    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs });
+    lista.push({ id: uid(), nome, cpf, empresa, funcao, aso, integ, obs });
     saveAll(lista);
     limparForm();
     toast('✓ Terceiro cadastrado com sucesso!');
   }
 
   function limparForm() {
-    ['f-nome','f-cpf','f-funcao','f-aso','f-integ','f-obs'].forEach(id => {
+    ['f-nome','f-cpf','f-empresa','f-funcao','f-aso','f-integ','f-obs'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('f-empresa').value = '';
+  }
+
+  // ──────────────────────────────────────────────────
+  //  RESUMO / STATS
+  // ──────────────────────────────────────────────────
+  function atualizarStats() {
+    const terceiros = getAll();
+    const empresas = getAllEmpresas ? getAllEmpresas() : [];
+    const liberados = terceiros.filter(t => getStatus(t).ok).length;
+    const bloqueados = terceiros.length - liberados;
+
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+
+    set('stat-total', terceiros.length);
+    set('stat-liberados', liberados);
+    set('stat-bloqueados', bloqueados);
+    set('stat-empresas', empresas.length);
   }
 
   // ──────────────────────────────────────────────────
   //  LISTAGEM
   // ──────────────────────────────────────────────────
   function renderLista() {
+    atualizarStats();
     const q = document.getElementById('busca-lista').value.toLowerCase().trim();
     let lista = getAll();
     if (q) lista = lista.filter(t =>
@@ -862,10 +905,10 @@
   function abrirEdicao(id) {
     const t = getAll().find(t => t.id === id);
     if (!t) return;
-    popularSelectEmpresas('e-empresa', t.empresaId || '');
     document.getElementById('e-id').value     = t.id;
     document.getElementById('e-nome').value   = t.nome;
     document.getElementById('e-cpf').value    = t.cpf;
+    document.getElementById('e-empresa').value= t.empresa;
     document.getElementById('e-funcao').value = t.funcao;
     document.getElementById('e-aso').value    = t.aso;
     document.getElementById('e-integ').value  = t.integ;
@@ -877,211 +920,31 @@
     document.getElementById('modal').classList.remove('open');
   }
 
-  // fechar modal ao clicar fora
-  document.getElementById('modal').addEventListener('click', function(e) {
-    if (e.target === this) fecharModal();
-  });
-
   function salvarEdicao() {
-    const id      = document.getElementById('e-id').value;
-    const nome    = document.getElementById('e-nome').value.trim();
-    const cpf     = document.getElementById('e-cpf').value.trim();
-    const empSel  = document.getElementById('e-empresa');
-    const empresaId = empSel.value;
-    const empresa = empSel.options[empSel.selectedIndex]?.text || '';
-    const funcao  = document.getElementById('e-funcao').value.trim();
-    const aso     = document.getElementById('e-aso').value;
-    const integ   = document.getElementById('e-integ').value;
-    const obs     = document.getElementById('e-obs').value.trim();
+    const id     = document.getElementById('e-id').value;
+    const nome   = document.getElementById('e-nome').value.trim();
+    const cpf    = document.getElementById('e-cpf').value.trim();
+    const empresa= document.getElementById('e-empresa').value.trim();
+    const funcao = document.getElementById('e-funcao').value.trim();
+    const aso    = document.getElementById('e-aso').value;
+    const integ  = document.getElementById('e-integ').value;
+    const obs    = document.getElementById('e-obs').value.trim();
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+    if (!nome || !cpf || !empresa || !funcao || !aso || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.'); return;
     }
 
-    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf, empresaId, empresa, funcao, aso, integ, obs } : t);
+    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf, empresa, funcao, aso, integ, obs } : t);
     saveAll(lista);
     fecharModal();
     renderLista();
     toast('✓ Alterações salvas!');
   }
 
-  // ──────────────────────────────────────────────────
-  //  EMPRESAS — STORAGE
-  // ──────────────────────────────────────────────────
-  function getAllEmpresas() {
-    return JSON.parse(localStorage.getItem('empresas') || '[]');
-  }
-
-  function saveAllEmpresas(data) {
-    localStorage.setItem('empresas', JSON.stringify(data));
-  }
-
-  // ──────────────────────────────────────────────────
-  //  EMPRESAS — SELECT HELPER
-  // ──────────────────────────────────────────────────
-  function popularSelectEmpresas(selectId, selectedId) {
-    const sel = document.getElementById(selectId || 'f-empresa');
-    if (!sel) return;
-    const empresas = getAllEmpresas();
-    sel.innerHTML = '<option value="">Selecione uma empresa…</option>';
-    empresas.forEach(e => {
-      const opt = document.createElement('option');
-      opt.value = e.id;
-      opt.textContent = e.fantasia ? `${e.razao} (${e.fantasia})` : e.razao;
-      if (selectedId && e.id === selectedId) opt.selected = true;
-      sel.appendChild(opt);
-    });
-  }
-
-  // ──────────────────────────────────────────────────
-  //  EMPRESAS — MASK CNPJ / TELEFONE
-  // ──────────────────────────────────────────────────
-  function maskCNPJ(v) {
-    v = v.replace(/\D/g, '').slice(0, 14);
-    if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})$/, '$1.$2.$3/$4-$5');
-    else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})$/, '$1.$2.$3/$4');
-    else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{1,3})$/, '$1.$2.$3');
-    else if (v.length > 2) v = v.replace(/^(\d{2})(\d{1,3})$/, '$1.$2');
-    return v;
-  }
-
-  function maskTel(v) {
-    v = v.replace(/\D/g, '').slice(0, 11);
-    if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-    else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
-    else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,5})$/, '($1) $2');
-    return v;
-  }
-
-  document.getElementById('emp-cnpj').addEventListener('input', function() { this.value = maskCNPJ(this.value); });
-  document.getElementById('emp-tel').addEventListener('input',  function() { this.value = maskTel(this.value); });
-
-  // ──────────────────────────────────────────────────
-  //  EMPRESAS — MODAL
-  // ──────────────────────────────────────────────────
-  function abrirModalNovaEmpresa() {
-    document.getElementById('modal-empresa-title').textContent = 'Nova Empresa';
-    document.getElementById('emp-id').value = '';
-    ['emp-razao','emp-fantasia','emp-cnpj','emp-resp','emp-tel','emp-email'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    document.getElementById('modal-empresa').classList.add('open');
-  }
-
-  function abrirModalEditarEmpresa(id) {
-    const e = getAllEmpresas().find(e => e.id === id);
-    if (!e) return;
-    document.getElementById('modal-empresa-title').textContent = 'Editar Empresa';
-    document.getElementById('emp-id').value      = e.id;
-    document.getElementById('emp-razao').value   = e.razao;
-    document.getElementById('emp-fantasia').value= e.fantasia || '';
-    document.getElementById('emp-cnpj').value    = e.cnpj;
-    document.getElementById('emp-resp').value    = e.resp;
-    document.getElementById('emp-tel').value     = e.tel || '';
-    document.getElementById('emp-email').value   = e.email || '';
-    document.getElementById('modal-empresa').classList.add('open');
-  }
-
-  function fecharModalEmpresa() {
-    document.getElementById('modal-empresa').classList.remove('open');
-  }
-
-  document.getElementById('modal-empresa').addEventListener('click', function(e) {
-    if (e.target === this) fecharModalEmpresa();
+  // fechar modal ao clicar fora
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
   });
-
-  function salvarEmpresa() {
-    const id      = document.getElementById('emp-id').value;
-    const razao   = document.getElementById('emp-razao').value.trim();
-    const fantasia= document.getElementById('emp-fantasia').value.trim();
-    const cnpj    = document.getElementById('emp-cnpj').value.trim();
-    const resp    = document.getElementById('emp-resp').value.trim();
-    const tel     = document.getElementById('emp-tel').value.trim();
-    const email   = document.getElementById('emp-email').value.trim();
-
-    if (!razao || !cnpj || !resp) {
-      toast('⚠ Preencha os campos obrigatórios: Razão Social, CNPJ e Responsável.');
-      return;
-    }
-
-    let lista = getAllEmpresas();
-
-    if (id) {
-      // edição
-      lista = lista.map(e => e.id === id ? { ...e, razao, fantasia, cnpj, resp, tel, email } : e);
-      toast('✓ Empresa atualizada!');
-    } else {
-      // novo — checar CNPJ duplicado
-      const cnpjLimpo = cnpj.replace(/\D/g, '');
-      if (lista.find(e => e.cnpj.replace(/\D/g, '') === cnpjLimpo)) {
-        toast('⚠ Já existe uma empresa com este CNPJ.'); return;
-      }
-      lista.push({ id: uid(), razao, fantasia, cnpj, resp, tel, email });
-      toast('✓ Empresa cadastrada!');
-    }
-
-    saveAllEmpresas(lista);
-    fecharModalEmpresa();
-    renderEmpresas();
-    // atualiza selects abertos
-    popularSelectEmpresas('f-empresa');
-    popularSelectEmpresas('e-empresa');
-  }
-
-  // ──────────────────────────────────────────────────
-  //  EMPRESAS — LISTAGEM
-  // ──────────────────────────────────────────────────
-  function renderEmpresas() {
-    const q = (document.getElementById('busca-empresas')?.value || '').toLowerCase().trim();
-    let lista = getAllEmpresas();
-    if (q) lista = lista.filter(e =>
-      e.razao.toLowerCase().includes(q) ||
-      (e.fantasia || '').toLowerCase().includes(q) ||
-      e.cnpj.replace(/\D/g,'').includes(q.replace(/\D/g,''))
-    );
-
-    const tbody = document.getElementById('tabela-empresas');
-    const empty = document.getElementById('empresas-empty');
-    tbody.innerHTML = '';
-
-    if (!lista.length) { empty.style.display = 'block'; return; }
-    empty.style.display = 'none';
-
-    lista.forEach(e => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="td-name">${e.razao}</td>
-        <td class="td-company">${e.fantasia || '—'}</td>
-        <td class="td-cpf">${e.cnpj}</td>
-        <td>${e.resp}</td>
-        <td>${e.tel || '—'}</td>
-        <td>
-          <div class="actions">
-            <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirModalEditarEmpresa('${e.id}')">Editar</button>
-            <button class="btn btn-danger" style="padding:5px 12px;font-size:12px;" onclick="excluirEmpresa('${e.id}')">Excluir</button>
-          </div>
-        </td>`;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function excluirEmpresa(id) {
-    const vinculados = getAll().filter(t => t.empresaId === id).length;
-    if (vinculados > 0) {
-      toast(`⚠ Esta empresa possui ${vinculados} terceiro(s) vinculado(s). Remova-os primeiro.`);
-      return;
-    }
-    if (!confirm('Deseja excluir esta empresa?')) return;
-    saveAllEmpresas(getAllEmpresas().filter(e => e.id !== id));
-    renderEmpresas();
-    popularSelectEmpresas('f-empresa');
-    popularSelectEmpresas('e-empresa');
-    toast('Empresa removida.');
-  }
-
-  // inicializa select ao carregar
-  popularSelectEmpresas('f-empresa');
-
 
   // ──────────────────────────────────────────────────
   //  PORTARIA
