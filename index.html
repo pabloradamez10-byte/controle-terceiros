@@ -785,10 +785,10 @@
       <div class="report-actions"><button class="btn btn-ghost" onclick="gerarRelatorioExecutivo()">Exportar relatório</button><button class="btn btn-primary" onclick="showPage('cadastro')">+ Novo Terceiro</button></div>
     </div>
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Total de terceiros</div><div class="stat-value" id="dash-total">0</div></div>
-      <div class="stat-card stat-ok"><div class="stat-label">Liberados</div><div class="stat-value" id="dash-liberados">0</div></div>
-      <div class="stat-card stat-block"><div class="stat-label">Bloqueados</div><div class="stat-value" id="dash-bloqueados">0</div></div>
-      <div class="stat-card stat-company"><div class="stat-label">Empresas</div><div class="stat-value" id="dash-empresas">0</div></div>
+      <div class="stat-card stat-click" onclick="abrirListaPorStatus('todos')"><div class="stat-label">Total de terceiros</div><div class="stat-value" id="dash-total">0</div><span class="stat-hint">Toque para ver todos</span></div>
+      <div class="stat-card stat-ok stat-click" onclick="abrirListaPorStatus('liberados')"><div class="stat-label">Liberados</div><div class="stat-value" id="dash-liberados">0</div><span class="stat-hint">Toque para ver liberados</span></div>
+      <div class="stat-card stat-block stat-click" onclick="abrirListaPorStatus('bloqueados')"><div class="stat-label">Bloqueados</div><div class="stat-value" id="dash-bloqueados">0</div><span class="stat-hint">Toque para ver bloqueados</span></div>
+      <div class="stat-card stat-company stat-click" onclick="showPage('empresas')"><div class="stat-label">Empresas</div><div class="stat-value" id="dash-empresas">0</div><span class="stat-hint">Toque para ver empresas</span></div>
     </div>
     <div class="stats-grid" style="margin-top:14px;">
       <div class="stat-card stat-block stat-click" onclick="showPage('pendencias')"><div class="stat-label">Central de Pendências</div><div class="stat-value" id="dash-pendencias">0</div><span class="stat-hint">Toque para ver vencidos e próximos 7 dias</span></div>
@@ -909,7 +909,13 @@
 
   <!-- ═══════════ LISTAGEM ═══════════ -->
   <div id="page-listagem" class="page">
-    <h2>Terceiros Cadastrados</h2>
+    <h2 id="titulo-listagem-terceiros">Terceiros Cadastrados</h2>
+    <div id="status-filter-banner" class="card" style="display:none;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div><strong id="status-filter-title">Filtro ativo</strong><br><small id="status-filter-sub" style="color:var(--muted);">Mostrando apenas os terceiros deste status.</small></div>
+        <button class="btn btn-ghost" onclick="limparFiltroStatusDashboard()">Limpar filtro</button>
+      </div>
+    </div>
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-label">Total de terceiros</div><div class="stat-value" id="stat-total">0</div></div>
       <div class="stat-card stat-ok"><div class="stat-label">Liberados</div><div class="stat-value" id="stat-liberados">0</div></div>
@@ -3232,12 +3238,14 @@
     const primeiroGrid = document.querySelector('#page-dashboard .stats-grid');
     if (primeiroGrid && !document.getElementById('dash-excecoes')) {
       const card = document.createElement('div');
-      card.className = 'stat-card stat-exception';
-      card.innerHTML = '<div class="stat-label">Liberados por Exceção</div><div class="stat-value" id="dash-excecoes">0</div>';
+      card.className = 'stat-card stat-exception stat-click';
+      card.setAttribute('onclick', "abrirListaPorStatus('excecoes')");
+      card.innerHTML = '<div class="stat-label">Liberados por Exceção</div><div class="stat-value" id="dash-excecoes">0</div><span class="stat-hint">Toque para ver exceções</span>';
       primeiroGrid.appendChild(card);
       const cardPend = document.createElement('div');
-      cardPend.className = 'stat-card stat-pending';
-      cardPend.innerHTML = '<div class="stat-label">Pendentes</div><div class="stat-value" id="dash-pendentes">0</div>';
+      cardPend.className = 'stat-card stat-pending stat-click';
+      cardPend.setAttribute('onclick', "abrirListaPorStatus('pendentes')");
+      cardPend.innerHTML = '<div class="stat-label">Pendentes</div><div class="stat-value" id="dash-pendentes">0</div><span class="stat-hint">Toque para ver pendentes</span>';
       primeiroGrid.appendChild(cardPend);
     }
 
@@ -3896,6 +3904,149 @@
 
 
   // Registro PWA - instala como app no celular sem interferir nas funções do sistema
+
+
+  // ──────────────────────────────────────────────────
+  //  V19 — Dashboard interativo por status
+  // ──────────────────────────────────────────────────
+  window.filtroStatusDashboard = window.filtroStatusDashboard || '';
+
+  function labelFiltroStatus(status) {
+    const labels = {
+      todos: 'Todos os terceiros',
+      liberados: 'Terceiros liberados',
+      bloqueados: 'Terceiros bloqueados',
+      excecoes: 'Liberados por exceção',
+      pendentes: 'Terceiros pendentes'
+    };
+    return labels[status] || 'Terceiros cadastrados';
+  }
+
+  function aplicarFiltroStatusLista(lista) {
+    const filtro = window.filtroStatusDashboard || '';
+    if (!filtro || filtro === 'todos') return lista;
+    return lista.filter(t => {
+      const st = getStatus(t);
+      if (filtro === 'liberados') return st.ok && !st.excecao && !st.pendente && !st.bloqueado;
+      if (filtro === 'bloqueados') return st.bloqueado && !st.excecao;
+      if (filtro === 'excecoes') return !!st.excecao;
+      if (filtro === 'pendentes') return st.pendente && !st.excecao && !st.bloqueado;
+      return true;
+    });
+  }
+
+  function atualizarBannerFiltroStatus() {
+    const filtro = window.filtroStatusDashboard || '';
+    const banner = document.getElementById('status-filter-banner');
+    const title = document.getElementById('status-filter-title');
+    const sub = document.getElementById('status-filter-sub');
+    const titulo = document.getElementById('titulo-listagem-terceiros');
+    if (!banner) return;
+    if (!filtro || filtro === 'todos') {
+      banner.style.display = 'none';
+      if (titulo) titulo.textContent = 'Terceiros Cadastrados';
+      return;
+    }
+    const label = labelFiltroStatus(filtro);
+    banner.style.display = 'block';
+    if (title) title.textContent = label;
+    if (sub) sub.textContent = 'Filtro aberto pelo Dashboard. Use limpar filtro para voltar à lista completa.';
+    if (titulo) titulo.textContent = label;
+  }
+
+  function abrirListaPorStatus(status) {
+    window.filtroStatusDashboard = status || 'todos';
+    showPage('listagem');
+    setTimeout(() => {
+      const busca = document.getElementById('busca-lista');
+      if (busca) busca.value = '';
+      atualizarBannerFiltroStatus();
+      renderLista();
+    }, 50);
+  }
+
+  function limparFiltroStatusDashboard() {
+    window.filtroStatusDashboard = '';
+    atualizarBannerFiltroStatus();
+    renderLista();
+  }
+
+  const _renderListaV19 = renderLista;
+  renderLista = function() {
+    atualizarBannerFiltroStatus();
+    const filtroStatus = window.filtroStatusDashboard || '';
+    if (!filtroStatus || filtroStatus === 'todos') {
+      return _renderListaV19();
+    }
+
+    atualizarStats();
+    const buscaEl = document.getElementById('busca-lista');
+    const filtroEl = document.getElementById('filtro-empresa-lista');
+    const q = (buscaEl?.value || '').toLowerCase().trim();
+    const empresaFiltro = filtroEl?.value || '';
+    let lista = getAll();
+
+    if (q) lista = lista.filter(t =>
+      (t.nome || '').toLowerCase().includes(q) ||
+      (t.cpf || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')) ||
+      (t.empresa || '').toLowerCase().includes(q)
+    );
+    if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
+    lista = aplicarFiltroStatusLista(lista);
+
+    const tbody = document.getElementById('tabela-body');
+    const empty = document.getElementById('lista-empty');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!lista.length) {
+      if (empty) { empty.style.display = 'block'; empty.querySelector('p') && (empty.querySelector('p').textContent = 'Nenhum terceiro encontrado para este filtro.'); }
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    lista.forEach(t => {
+      const st = getStatus(t);
+      const stDP = getStatusDP(t);
+      const stSESMT = getStatusSESMT(t);
+      const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
+      const pendTreinos = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
+      const badgeStatus = st.excecao
+        ? '<span class="badge badge-exception">🟡 Exceção</span>'
+        : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
+      const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
+      const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
+      const badgeTreino = obrig.length === 0 ? '<span class="badge badge-warn">Sem treinos</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const ex = getExcecaoTerceiro(t.id);
+
+      const tr = document.createElement('tr');
+      tr.className = 'terceiro-card-row';
+      tr.innerHTML = `
+        <td colspan="10">
+          <div class="terceiro-card" role="button" tabindex="0" data-terceiro-id="${t.id}" onclick="abrirAnalise('${t.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){abrirAnalise('${t.id}')}">
+            <div class="terceiro-card-top">
+              <div>
+                <div class="terceiro-card-name">${escapeHtmlSafeV131(t.nome || 'Sem nome')}</div>
+                <div class="terceiro-card-meta">${escapeHtmlSafeV131(t.empresa || 'Empresa não vinculada')} • ${escapeHtmlSafeV131(t.cpf || 'CPF não informado')}</div>
+              </div>
+              <div>${badgeStatus}</div>
+            </div>
+            <div class="terceiro-card-grid">
+              <div class="terceiro-card-info"><label>Função</label><div>${escapeHtmlSafeV131(t.funcao || 'Não informada')}</div></div>
+              <div class="terceiro-card-info"><label>ASO</label><div>${fmtData(t.aso)} ${tagData(t.aso)}</div></div>
+              <div class="terceiro-card-info"><label>Integração</label><div>${fmtData(t.integ)} ${tagData(t.integ)}</div></div>
+              <div class="terceiro-card-info"><label>Liberação</label><div>${ex ? 'Até ' + fmtData(ex.dataAte) : 'Sem exceção ativa'}</div></div>
+            </div>
+            <div class="terceiro-card-actions">
+              ${badgeDP} ${badgeSESMT} ${badgeTreino}
+              <span class="terceiro-card-hint">Toque para abrir ficha vertical</span>
+            </div>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  };
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('./service-worker.js')
