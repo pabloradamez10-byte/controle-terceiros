@@ -1661,25 +1661,74 @@
       </div>`;
   }
 
-  function renderPendencias() {
+  // V20 - Central de Pendências otimizada para celular.
+  // Antes o sistema renderizava todas as pendências de uma vez, o que travava com bases grandes.
+  const PENDENCIAS_PAGE_SIZE = 50;
+  let pendenciasLimites = { vencidas: PENDENCIAS_PAGE_SIZE, proximas: PENDENCIAS_PAGE_SIZE, semData: PENDENCIAS_PAGE_SIZE };
+
+  function resetPendenciasLimites() {
+    pendenciasLimites = { vencidas: PENDENCIAS_PAGE_SIZE, proximas: PENDENCIAS_PAGE_SIZE, semData: PENDENCIAS_PAGE_SIZE };
+  }
+
+  function carregarMaisPendencias(tipo) {
+    if (!pendenciasLimites[tipo]) pendenciasLimites[tipo] = PENDENCIAS_PAGE_SIZE;
+    pendenciasLimites[tipo] += PENDENCIAS_PAGE_SIZE;
+    renderPendencias(false);
+  }
+
+  function renderPendenciaLista(wrap, lista, classe, tipo, emptyText) {
+    if (!wrap) return;
+    if (!lista.length) {
+      wrap.innerHTML = `<p style="font-size:14px;color:var(--muted);">${emptyText}</p>`;
+      return;
+    }
+
+    const limite = pendenciasLimites[tipo] || PENDENCIAS_PAGE_SIZE;
+    const visiveis = lista.slice(0, limite);
+    const restante = Math.max(0, lista.length - visiveis.length);
+
+    let html = visiveis.map(p => renderPendenciaItem(p, classe)).join('');
+    if (restante > 0) {
+      html += `
+        <div style="display:flex;justify-content:center;margin-top:14px;">
+          <button class="btn btn-ghost" onclick="carregarMaisPendencias('${tipo}')">
+            Carregar mais ${Math.min(PENDENCIAS_PAGE_SIZE, restante)} de ${restante}
+          </button>
+        </div>`;
+    }
+    html += `<p style="font-size:12px;color:var(--muted);margin-top:10px;text-align:center;">Mostrando ${visiveis.length} de ${lista.length} registros.</p>`;
+    wrap.innerHTML = html;
+  }
+
+  function renderPendencias(reset = true) {
+    if (reset) resetPendenciasLimites();
     const dados = montarPendencias();
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('pend-count-vencidos', dados.vencidas.length);
     set('pend-count-7dias', dados.proximas.length);
     set('pend-count-semdata', dados.semData.length);
 
-    const vencWrap = document.getElementById('pendencias-vencidas-list');
-    const proxWrap = document.getElementById('pendencias-7dias-list');
-    const semDataWrap = document.getElementById('pendencias-semdata-list');
-    if (vencWrap) vencWrap.innerHTML = dados.vencidas.length
-      ? dados.vencidas.map(p => renderPendenciaItem(p, 'danger')).join('')
-      : '<p style="font-size:14px;color:var(--muted);">Nenhuma pendência vencida encontrada.</p>';
-    if (proxWrap) proxWrap.innerHTML = dados.proximas.length
-      ? dados.proximas.map(p => renderPendenciaItem(p, 'warn')).join('')
-      : '<p style="font-size:14px;color:var(--muted);">Nenhum vencimento nos próximos 7 dias.</p>';
-    if (semDataWrap) semDataWrap.innerHTML = dados.semData.length
-      ? dados.semData.map(p => renderPendenciaItem(p, 'neutral')).join('')
-      : '<p style="font-size:14px;color:var(--muted);">Nenhum cadastro com data não informada.</p>';
+    renderPendenciaLista(
+      document.getElementById('pendencias-vencidas-list'),
+      dados.vencidas,
+      'danger',
+      'vencidas',
+      'Nenhuma pendência vencida encontrada.'
+    );
+    renderPendenciaLista(
+      document.getElementById('pendencias-7dias-list'),
+      dados.proximas,
+      'warn',
+      'proximas',
+      'Nenhum vencimento nos próximos 7 dias.'
+    );
+    renderPendenciaLista(
+      document.getElementById('pendencias-semdata-list'),
+      dados.semData,
+      'neutral',
+      'semData',
+      'Nenhum cadastro com data não informada.'
+    );
   }
 
   // ──────────────────────────────────────────────────
