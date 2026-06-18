@@ -1405,12 +1405,12 @@
     }
 
     const contrato = statusData(empresa.contratoFim);
-    if (contrato.semData) motivos.push('Fim da prestação de serviço sem data informada');
+    if (contrato.semData) avisos.push('Fim da prestação de serviço sem data informada');
     else if (contrato.classe === 'blocked') motivos.push('Fim da prestação de serviço vencido em ' + fmtData(empresa.contratoFim));
     else if (contrato.classe === 'warn') avisos.push('Fim da prestação de serviço ' + contrato.texto.toLowerCase());
 
     const docDP = statusData(empresa.docDPValidade);
-    if (docDP.semData) motivos.push('Documentos DP sem data informada');
+    if (docDP.semData) avisos.push('Documentos DP sem data informada');
     else if (docDP.classe === 'blocked') motivos.push('Documentos DP vencidos em ' + fmtData(empresa.docDPValidade));
     else if (docDP.classe === 'warn') avisos.push('Documentos DP ' + docDP.texto.toLowerCase());
 
@@ -1424,18 +1424,18 @@
     const empresa = getEmpresaById(t.empresaId);
 
     const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) motivos.push('ASO sem data informada');
+    if (asoStatus.semData) avisos.push('ASO sem data informada');
     else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
     else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
 
     const integStatus = statusData(t.integ);
-    if (integStatus.semData) motivos.push('Integração sem data informada');
+    if (integStatus.semData) avisos.push('Integração sem data informada');
     else if (integStatus.classe === 'blocked') motivos.push('Integração vencida em ' + fmtData(t.integ));
     else if (integStatus.classe === 'warn') avisos.push('Integração ' + integStatus.texto.toLowerCase());
 
     if (empresa) {
       const docSESMT = statusData(empresa.docSESMTValidade);
-      if (docSESMT.semData) motivos.push('Documentos SESMT sem data informada');
+      if (docSESMT.semData) avisos.push('Documentos SESMT sem data informada');
       else if (docSESMT.classe === 'blocked') motivos.push('Documentos SESMT vencidos em ' + fmtData(empresa.docSESMTValidade));
       else if (docSESMT.classe === 'warn') avisos.push('Documentos SESMT ' + docSESMT.texto.toLowerCase());
     }
@@ -1443,7 +1443,8 @@
     const obrigatorios = getTreinosObrigatoriosDaEmpresa(t.empresaId);
     obrigatorios.forEach(tr => {
       const st = getStatusTreinamentoTerceiro(t, tr);
-      if (!st.ok) motivos.push(st.motivo);
+      if (!st.ok && st.semData) avisos.push(st.motivo);
+      else if (!st.ok) motivos.push(st.motivo);
       else if (st.vencimento && statusData(st.vencimento).classe === 'warn') avisos.push(`${tr.nome} ${statusData(st.vencimento).texto.toLowerCase()}`);
     });
 
@@ -2982,6 +2983,9 @@
         const idxAso = localizarColuna(headers, ['aso', 'documentos sesmt']);
         const idxInteg = localizarColuna(headers, ['integracao', 'integração', 'validade treinamento']);
         const idxFim = localizarColuna(headers, ['fim prestacao', 'fim prestação', 'fim contrato', 'prestacao servico']);
+        const idxSituacaoAcesso = localizarColuna(headers, ['situação acesso', 'situacao acesso', 'acesso', 'status acesso']);
+        const idxSituacaoDP = localizarColuna(headers, ['situação dp', 'situacao dp', 'situação gestão', 'situacao gestao', 'gestão de pessoas', 'gestao de pessoas']);
+        const idxSituacaoSESMT = localizarColuna(headers, ['situação sesmt', 'situacao sesmt', 'sesmt']);
 
         if (idxEmpresa < 0 || idxProf < 0) {
           throw new Error('Não encontrei as colunas mínimas: Empresa e Nome do Profissional.');
@@ -3018,6 +3022,9 @@
           const funcao = valorCelula(row, idxFuncao).toString().trim();
           const aso = dataParaISO(valorCelula(row, idxAso));
           const integ = dataParaISO(valorCelula(row, idxInteg));
+          const situacaoAcessoImportada = idxSituacaoAcesso >= 0 ? valorCelula(row, idxSituacaoAcesso).toString().trim() : '';
+          const situacaoDPImportada = idxSituacaoDP >= 0 ? valorCelula(row, idxSituacaoDP).toString().trim() : '';
+          const situacaoSESMTImportada = idxSituacaoSESMT >= 0 ? valorCelula(row, idxSituacaoSESMT).toString().trim() : '';
           const cpfLimpo = cpf.replace(/\D/g,'');
 
           let terc = terceiros.find(t =>
@@ -3028,7 +3035,8 @@
           if (!terc) {
             terceiros.push({
               id: uid(), nome: profissional, cpf: cpf || '', empresaId: emp.id, empresa: emp.fantasia ? `${emp.razao} (${emp.fantasia})` : emp.razao,
-              funcao: funcao || '', aso: aso || '', integ: integ || '', obs: 'Importado de planilha', treinamentosRealizados: []
+              funcao: funcao || '', aso: aso || '', integ: integ || '', obs: 'Importado de planilha', treinamentosRealizados: [],
+              situacaoAcessoImportada, situacaoDPImportada, situacaoSESMTImportada
             });
             novosTerceiros++;
           } else {
@@ -3039,6 +3047,9 @@
             terc.funcao = funcao || terc.funcao;
             terc.aso = aso || terc.aso;
             terc.integ = integ || terc.integ;
+            terc.situacaoAcessoImportada = situacaoAcessoImportada || terc.situacaoAcessoImportada || '';
+            terc.situacaoDPImportada = situacaoDPImportada || terc.situacaoDPImportada || '';
+            terc.situacaoSESMTImportada = situacaoSESMTImportada || terc.situacaoSESMTImportada || '';
             atualizados++;
           }
         }
@@ -3050,7 +3061,7 @@
         renderDashboard();
         renderDados();
 
-        const msg = `Importação concluída.\nArquivo: ${file.name}\nLinhas lidas: ${Math.max(rows.length - headerIdx - 1, 0)}\nEmpresas novas: ${novasEmpresas}\nTerceiros novos: ${novosTerceiros}\nTerceiros atualizados: ${atualizados}\nLinhas ignoradas: ${ignorados}\n\nObservação: confira os campos de ASO, Integração e Fim Prestação Serviço após importar, pois planilhas com cabeçalhos mesclados podem exigir ajuste manual.`;
+        const msg = `Importação concluída.\nArquivo: ${file.name}\nLinhas lidas: ${Math.max(rows.length - headerIdx - 1, 0)}\nEmpresas novas: ${novasEmpresas}\nTerceiros novos: ${novosTerceiros}\nTerceiros atualizados: ${atualizados}\nLinhas ignoradas: ${ignorados}\n\nObservação: se existir coluna Situação Acesso, o sistema usará ACESSO LIBERADO para manter terceiros liberados conforme a planilha original. Confira ASO, Integração e Fim Prestação Serviço após importar.`;
         document.getElementById('import-log').textContent = msg;
         toast('✓ Planilha importada.');
       } catch (err) {
@@ -3199,6 +3210,9 @@
     const css = document.createElement('style');
     css.textContent = `
       .badge-exception { background:#FEF3C7; color:#B45309; }
+      .badge-imported { background:#DBEAFE; color:#1D4ED8; }
+      .status-mini.imported { background:#DBEAFE; color:#1D4ED8; }
+
       .stat-exception .stat-value { color:#D97706; }
       .stat-pending .stat-value { color:#D97706; }
       .status-icon.exception { background:var(--warn-lt); color:var(--warn); }
@@ -3260,9 +3274,22 @@
     return { ok: !bloqueado, bloqueado, pendente, excecao:false, motivos, avisos, dp, sesmt };
   }
 
+  function statusImportadoLiberado(t) {
+    const raw = (t.situacaoAcessoImportada || t.situacaoAcesso || t.statusAcesso || '').toString();
+    const norm = normalizarTexto(raw);
+    return norm.includes('acesso liberado') || norm === 'liberado' || norm.includes('liberado');
+  }
+
+  function statusImportadoNegado(t) {
+    const raw = (t.situacaoAcessoImportada || t.situacaoAcesso || t.statusAcesso || '').toString();
+    const norm = normalizarTexto(raw);
+    return norm.includes('acesso negado') || norm === 'bloqueado' || norm.includes('negado');
+  }
+
   getStatus = function(t) {
     const base = getStatusBaseSemExcecao(t);
     const ex = getExcecaoTerceiro(t.id);
+
     if (ex && (base.bloqueado || base.pendente)) {
       return {
         ...base,
@@ -3274,6 +3301,18 @@
         statusTexto: 'LIBERADO POR EXCEÇÃO'
       };
     }
+
+    if (statusImportadoLiberado(t)) {
+      return {
+        ...base,
+        ok: true,
+        bloqueado: false,
+        pendente: false,
+        liberadoImportado: true,
+        statusTexto: 'LIBERADO'
+      };
+    }
+
     return { ...base, statusTexto: base.ok && !base.pendente ? 'LIBERADO' : (base.pendente ? 'PENDENTE' : 'BLOQUEADO') };
   };
 
