@@ -4163,6 +4163,40 @@
     link.remove();
   }
 
+  function visualizarArquivoTerceiroV16(id, arqId) {
+    const a = getArquivosTerceiroV16(id).find(x => x.id === arqId);
+    if (!a) { toast('Documento não encontrado.'); return; }
+    const mime = (a.mime || '').toLowerCase();
+    const nome = a.nome || 'documento';
+
+    if (mime.startsWith('image/')) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.86);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;';
+      overlay.innerHTML = `
+        <div style="background:#fff;border-radius:22px;max-width:960px;width:100%;max-height:92vh;overflow:auto;padding:14px;box-shadow:0 24px 80px rgba(0,0,0,.35);">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+            <strong style="font-size:16px;color:#111827;">${escapeHtmlSafeV131(nome)}</strong>
+            <button class="btn btn-ghost" style="padding:8px 12px;" onclick="this.closest('[data-doc-viewer]').remove()">Fechar</button>
+          </div>
+          <img src="${a.dataUrl}" alt="${escapeHtmlSafeV131(nome)}" style="display:block;width:100%;height:auto;border-radius:16px;border:1px solid #e5e7eb;" />
+        </div>`;
+      overlay.setAttribute('data-doc-viewer', 'true');
+      overlay.addEventListener('click', function(ev){ if (ev.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+      return;
+    }
+
+    if (mime === 'application/pdf' || nome.toLowerCase().endsWith('.pdf')) {
+      const win = window.open('', '_blank');
+      if (!win) { toast('Não foi possível abrir o PDF. Verifique bloqueio de pop-up.'); return; }
+      win.document.write(`<iframe src="${a.dataUrl}" style="border:0;width:100%;height:100vh;"></iframe>`);
+      win.document.close();
+      return;
+    }
+
+    toast('Este tipo de arquivo não abre no navegador. Use Baixar.');
+  }
+
   const _abrirAnaliseV16 = abrirAnalise;
   abrirAnalise = function(id) {
     _abrirAnaliseV16(id);
@@ -4184,7 +4218,7 @@
           ${arquivos.length ? arquivos.map(a => `
             <div class="v16-doc-item">
               <div><strong>${escapeHtmlSafeV131(a.tipo)} — ${escapeHtmlSafeV131(a.nome)}</strong><small>${a.validade ? 'Validade: ' + fmtData(a.validade) + ' • ' : ''}Anexado em ${new Date(a.criadoEm).toLocaleString('pt-BR')}</small>${a.obs ? `<small>${escapeHtmlSafeV131(a.obs)}</small>` : ''}</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="baixarArquivoTerceiroV16('${id}','${a.id}')">Baixar</button><button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="removerArquivoTerceiroV16('${id}','${a.id}')">Remover</button></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="visualizarArquivoTerceiroV16('${id}','${a.id}')">Ver</button><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="baixarArquivoTerceiroV16('${id}','${a.id}')">Baixar</button><button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="removerArquivoTerceiroV16('${id}','${a.id}')">Remover</button></div>
             </div>`).join('') : '<p style="font-size:13px;color:var(--muted);margin-top:8px;">Nenhum documento digital anexado ainda.</p>'}
         </div>
       </div>
