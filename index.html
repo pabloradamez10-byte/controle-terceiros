@@ -2586,244 +2586,7 @@
       '<h1>Relatório de Controle de Terceiros</h1><p>Gerado em '+data+'</p>',
       '<div class="kpi"><div class="card"><b>Total</b><div class="num blue">'+terceiros.length+'</div></div><div class="card"><b>Liberados</b><div class="num green">'+liberados+'</div></div><div class="card"><b>Bloqueados/Pendentes</b><div class="num red">'+bloqueados+'</div></div><div class="card"><b>Empresas</b><div class="num blue">'+empresas.length+'</div></div></div>',
       '<h2>Resumo executivo</h2><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>ASOs vencidos</td><td>'+resumo.asoVencidos+'</td></tr><tr><td>Integrações vencidas</td><td>'+resumo.integVencidas+'</td></tr><tr><td>Treinamentos pendentes/vencidos</td><td>'+resumo.treinosPendentes+'</td></tr><tr><td>Contratos vencidos</td><td>'+resumo.contratosVencidos+'</td></tr></table>',
-      '
-
-<!-- V26 - Ponte Supabase: banco real com sincronização manual -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function(){
-  const SUPABASE_URL = 'https://obzycbtfbadjwwwfpsed.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
-  let sb = null;
-
-  function avisar(msg){
-    if (typeof toast === 'function') toast(msg);
-    const el = document.getElementById('supabase-status');
-    if (el) el.textContent = msg;
-    console.log('[Supabase]', msg);
-  }
-
-  function getSB(){
-    if (sb) return sb;
-    if (!window.supabase || !window.supabase.createClient) {
-      avisar('Supabase ainda não carregou. Aguarde e tente de novo.');
-      return null;
-    }
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return sb;
-  }
-
-  function asISO(v){
-    if (!v) return null;
-    if (typeof v !== 'string') v = String(v);
-    v = v.trim();
-    if (!v) return null;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-    return null;
-  }
-
-  function soNumero(v){ return String(v || '').replace(/\D/g,''); }
-
-  function chunk(arr, size){
-    const out = [];
-    for (let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size));
-    return out;
-  }
-
-  function empresaNome(e){ return (e.razao || e.razao_social || e.nome || e.empresa || e.fantasia || '').trim(); }
-  function empresaFantasia(e){ return (e.fantasia || e.nome_fantasia || '').trim(); }
-  function empresaResp(e){ return (e.resp || e.responsavel || '').trim(); }
-  function empresaTel(e){ return (e.tel || e.telefone || '').trim(); }
-  function terceiroStatus(t){
-    const importado = String(t.situacaoAcessoImportada || t.status || '').toUpperCase();
-    if (importado.includes('LIBERADO')) return 'LIBERADO';
-    if (importado.includes('NEGADO') || importado.includes('BLOQUEADO')) return 'BLOQUEADO';
-    return 'PENDENTE';
-  }
-
-  async function deleteAllFrom(table){
-    const client = getSB();
-    const { error } = await client.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) throw new Error(`Erro ao limpar ${table}: ${error.message}`);
-  }
-
-  window.enviarDadosParaSupabase = async function(){
-    const client = getSB();
-    if (!client) return;
-    const empresas = (typeof getAllEmpresas === 'function' ? getAllEmpresas() : JSON.parse(localStorage.getItem('empresas') || '[]')) || [];
-    const terceiros = (typeof getAll === 'function' ? getAll() : JSON.parse(localStorage.getItem('terceiros') || '[]')) || [];
-    const treinamentos = (typeof getAllTreinamentos === 'function' ? getAllTreinamentos() : JSON.parse(localStorage.getItem('treinamentos') || '[]')) || [];
-
-    if (!confirm(`Enviar dados locais para o Supabase?\n\nEmpresas: ${empresas.length}\nTerceiros: ${terceiros.length}\nTreinamentos base: ${treinamentos.length}\n\nIsso vai substituir os dados do banco por esta base local.`)) return;
-
-    try {
-      avisar('Sincronizando: limpando banco...');
-      await deleteAllFrom('historico');
-      await deleteAllFrom('excecoes');
-      await deleteAllFrom('treinamentos');
-      await deleteAllFrom('terceiros');
-      await deleteAllFrom('empresas');
-
-      avisar('Sincronizando empresas...');
-      const empresasPayload = empresas.map(e => ({
-        razao_social: empresaNome(e) || 'Empresa sem nome',
-        nome_fantasia: empresaFantasia(e) || null,
-        cnpj: e.cnpj || null,
-        responsavel: empresaResp(e) || null,
-        telefone: empresaTel(e) || null,
-        contrato_fim: asISO(e.contratoFim || e.contrato_fim),
-        doc_dp_validade: asISO(e.docDPValidade || e.doc_dp_validade),
-        doc_sesmt_validade: asISO(e.docSESMTValidade || e.doc_sesmt_validade)
-      }));
-      let empresasCriadas = [];
-      for (const parte of chunk(empresasPayload, 100)) {
-        const { data, error } = await client.from('empresas').insert(parte).select('id,razao_social,cnpj');
-        if (error) throw new Error('Erro ao inserir empresas: ' + error.message);
-        empresasCriadas = empresasCriadas.concat(data || []);
-      }
-      const empresaMap = {};
-      empresas.forEach((e, i) => { if (empresasCriadas[i]) empresaMap[e.id] = empresasCriadas[i].id; });
-
-      avisar('Sincronizando terceiros...');
-      const terceirosPayload = terceiros.map(t => ({
-        empresa_id: empresaMap[t.empresaId] || null,
-        nome: t.nome || 'Terceiro sem nome',
-        cpf: t.cpf || null,
-        funcao: t.funcao || null,
-        aso_validade: asISO(t.aso || t.aso_validade),
-        integracao_validade: asISO(t.integ || t.integracao_validade),
-        status: terceiroStatus(t),
-        observacoes: t.obs || t.observacoes || null
-      }));
-      let terceirosCriados = [];
-      for (const parte of chunk(terceirosPayload, 100)) {
-        const { data, error } = await client.from('terceiros').insert(parte).select('id,nome,cpf');
-        if (error) throw new Error('Erro ao inserir terceiros: ' + error.message);
-        terceirosCriados = terceirosCriados.concat(data || []);
-      }
-      const terceiroMap = {};
-      terceiros.forEach((t, i) => { if (terceirosCriados[i]) terceiroMap[t.id] = terceirosCriados[i].id; });
-
-      avisar('Sincronizando treinamentos dos terceiros...');
-      const treinosPayload = [];
-      terceiros.forEach(t => {
-        const tid = terceiroMap[t.id];
-        if (!tid) return;
-        const lista = Array.isArray(t.treinamentosRealizados) ? t.treinamentosRealizados : [];
-        lista.forEach(tr => {
-          if (typeof tr === 'string') treinosPayload.push({ terceiro_id: tid, nome_treinamento: tr, validade: null });
-          else treinosPayload.push({ terceiro_id: tid, nome_treinamento: tr.nome || tr.titulo || tr.treinamento || 'Treinamento', validade: asISO(tr.validade) });
-        });
-      });
-      for (const parte of chunk(treinosPayload, 100)) {
-        const { error } = await client.from('treinamentos').insert(parte);
-        if (error) throw new Error('Erro ao inserir treinamentos: ' + error.message);
-      }
-
-      avisar(`✓ Supabase atualizado. Empresas: ${empresas.length} | Terceiros: ${terceiros.length}`);
-    } catch (err) {
-      console.error(err);
-      avisar('⚠ ' + err.message);
-    }
-  };
-
-  window.baixarDadosDoSupabase = async function(){
-    const client = getSB();
-    if (!client) return;
-    if (!confirm('Baixar dados do Supabase para este aparelho?\n\nIsso vai substituir os dados locais deste navegador.')) return;
-    try {
-      avisar('Baixando empresas...');
-      const { data: emp, error: empErr } = await client.from('empresas').select('*').order('razao_social', { ascending: true });
-      if (empErr) throw new Error('Erro ao baixar empresas: ' + empErr.message);
-
-      avisar('Baixando terceiros...');
-      const { data: ter, error: terErr } = await client.from('terceiros').select('*').order('nome', { ascending: true });
-      if (terErr) throw new Error('Erro ao baixar terceiros: ' + terErr.message);
-
-      const empresasLocais = (emp || []).map(e => ({
-        id: e.id,
-        razao: e.razao_social || '',
-        fantasia: e.nome_fantasia || '',
-        cnpj: e.cnpj || '',
-        resp: e.responsavel || '',
-        tel: e.telefone || '',
-        email: '',
-        contratoInicio: '',
-        contratoFim: e.contrato_fim || '',
-        docDPValidade: e.doc_dp_validade || '',
-        docSESMTValidade: e.doc_sesmt_validade || '',
-        treinamentosObrigatorios: []
-      }));
-      const empById = {};
-      empresasLocais.forEach(e => { empById[e.id] = e; });
-
-      const terceirosLocais = (ter || []).map(t => ({
-        id: t.id,
-        empresaId: t.empresa_id || '',
-        empresa: empById[t.empresa_id] ? empById[t.empresa_id].razao : '',
-        nome: t.nome || '',
-        cpf: t.cpf || '',
-        funcao: t.funcao || '',
-        aso: t.aso_validade || '',
-        integ: t.integracao_validade || '',
-        obs: t.observacoes || '',
-        situacaoAcessoImportada: t.status === 'LIBERADO' ? 'ACESSO LIBERADO' : (t.status === 'BLOQUEADO' ? 'ACESSO NEGADO' : ''),
-        treinamentosRealizados: []
-      }));
-
-      if (typeof saveAllEmpresas === 'function') saveAllEmpresas(empresasLocais); else localStorage.setItem('empresas', JSON.stringify(empresasLocais));
-      if (typeof saveAll === 'function') saveAll(terceirosLocais); else localStorage.setItem('terceiros', JSON.stringify(terceirosLocais));
-
-      if (typeof popularSelectEmpresas === 'function') {
-        popularSelectEmpresas('f-empresa');
-        popularSelectEmpresas('e-empresa');
-      }
-      if (typeof renderDashboard === 'function') renderDashboard();
-      if (typeof renderTerceiros === 'function') renderTerceiros();
-      if (typeof renderEmpresas === 'function') renderEmpresas();
-      avisar(`✓ Dados baixados. Empresas: ${empresasLocais.length} | Terceiros: ${terceirosLocais.length}`);
-    } catch (err) {
-      console.error(err);
-      avisar('⚠ ' + err.message);
-    }
-  };
-
-  function painelSupabaseHTML(){
-    return `
-      <section class="card" id="supabase-panel" style="margin-top:18px;border:1px solid #bfdbfe;">
-        <div class="section-title">BANCO DE DADOS SUPABASE</div>
-        <p class="muted-note">Primeira versão com backend real. Use <strong>Enviar para Supabase</strong> depois de importar/conferir a base no app.</p>
-        <div style="display:grid;gap:10px;margin-top:12px;">
-          <button class="btn primary" type="button" onclick="enviarDadosParaSupabase()">Enviar dados para Supabase</button>
-          <button class="btn secondary" type="button" onclick="baixarDadosDoSupabase()">Baixar dados do Supabase</button>
-        </div>
-        <div id="supabase-status" class="muted-note" style="margin-top:12px;">Conectado ao projeto controle-terceiros-sst.</div>
-      </section>`;
-  }
-
-  function instalarPainelSupabase(){
-    if (document.getElementById('supabase-panel')) return;
-    const page = document.querySelector('#page-dashboard') || document.querySelector('[data-page="dashboard"]') || document.querySelector('main') || document.body;
-    if (!page) return;
-    page.insertAdjacentHTML('beforeend', painelSupabaseHTML());
-  }
-
-  const oldRenderDashboard = window.renderDashboard;
-  if (typeof oldRenderDashboard === 'function' && !window.__supabaseBridgeV26) {
-    window.__supabaseBridgeV26 = true;
-    window.renderDashboard = function(){
-      oldRenderDashboard.apply(this, arguments);
-      setTimeout(instalarPainelSupabase, 80);
-    };
-  }
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(instalarPainelSupabase, 500); });
-  setTimeout(instalarPainelSupabase, 1200);
-})();
-</script>
-
-</body></html>'
+      '</body></html>'
     ];
     const win = window.open('', '_blank');
     if (!win) { toast('Não foi possível abrir o relatório. Verifique bloqueio de pop-up.'); return; }
@@ -4163,40 +3926,6 @@
     link.remove();
   }
 
-  function visualizarArquivoTerceiroV16(id, arqId) {
-    const a = getArquivosTerceiroV16(id).find(x => x.id === arqId);
-    if (!a) { toast('Documento não encontrado.'); return; }
-    const mime = (a.mime || '').toLowerCase();
-    const nome = a.nome || 'documento';
-
-    if (mime.startsWith('image/')) {
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.86);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;';
-      overlay.innerHTML = `
-        <div style="background:#fff;border-radius:22px;max-width:960px;width:100%;max-height:92vh;overflow:auto;padding:14px;box-shadow:0 24px 80px rgba(0,0,0,.35);">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
-            <strong style="font-size:16px;color:#111827;">${escapeHtmlSafeV131(nome)}</strong>
-            <button class="btn btn-ghost" style="padding:8px 12px;" onclick="this.closest('[data-doc-viewer]').remove()">Fechar</button>
-          </div>
-          <img src="${a.dataUrl}" alt="${escapeHtmlSafeV131(nome)}" style="display:block;width:100%;height:auto;border-radius:16px;border:1px solid #e5e7eb;" />
-        </div>`;
-      overlay.setAttribute('data-doc-viewer', 'true');
-      overlay.addEventListener('click', function(ev){ if (ev.target === overlay) overlay.remove(); });
-      document.body.appendChild(overlay);
-      return;
-    }
-
-    if (mime === 'application/pdf' || nome.toLowerCase().endsWith('.pdf')) {
-      const win = window.open('', '_blank');
-      if (!win) { toast('Não foi possível abrir o PDF. Verifique bloqueio de pop-up.'); return; }
-      win.document.write(`<iframe src="${a.dataUrl}" style="border:0;width:100%;height:100vh;"></iframe>`);
-      win.document.close();
-      return;
-    }
-
-    toast('Este tipo de arquivo não abre no navegador. Use Baixar.');
-  }
-
   const _abrirAnaliseV16 = abrirAnalise;
   abrirAnalise = function(id) {
     _abrirAnaliseV16(id);
@@ -4218,7 +3947,7 @@
           ${arquivos.length ? arquivos.map(a => `
             <div class="v16-doc-item">
               <div><strong>${escapeHtmlSafeV131(a.tipo)} — ${escapeHtmlSafeV131(a.nome)}</strong><small>${a.validade ? 'Validade: ' + fmtData(a.validade) + ' • ' : ''}Anexado em ${new Date(a.criadoEm).toLocaleString('pt-BR')}</small>${a.obs ? `<small>${escapeHtmlSafeV131(a.obs)}</small>` : ''}</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="visualizarArquivoTerceiroV16('${id}','${a.id}')">Ver</button><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="baixarArquivoTerceiroV16('${id}','${a.id}')">Baixar</button><button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="removerArquivoTerceiroV16('${id}','${a.id}')">Remover</button></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="visualizarArquivoTerceiroV26('${id}','${a.id}')">Ver</button><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="baixarArquivoTerceiroV16('${id}','${a.id}')">Baixar</button><button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="removerArquivoTerceiroV16('${id}','${a.id}')">Remover</button></div>
             </div>`).join('') : '<p style="font-size:13px;color:var(--muted);margin-top:8px;">Nenhum documento digital anexado ainda.</p>'}
         </div>
       </div>
@@ -6612,10 +6341,33 @@
 
 
 
-<!-- V26 - Ponte Supabase: banco real com sincronização manual -->
+<!-- V26.2 - Visualização de documentos + Ponte Supabase corrigida -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
+  window.visualizarArquivoTerceiroV26 = function(id, arqId){
+    try {
+      const a = getArquivosTerceiroV16(id).find(x => x.id === arqId);
+      if (!a) { if (typeof toast === 'function') toast('Documento não encontrado.'); return; }
+      if (!a.dataUrl) { if (typeof toast === 'function') toast('Arquivo sem dados para visualizar.'); return; }
+      const mime = String(a.mime || '').toLowerCase();
+      const nome = String(a.nome || '').toLowerCase();
+      const isImg = mime.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(nome);
+      const isPdf = mime.includes('pdf') || nome.endsWith('.pdf');
+      if (isImg) {
+        const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>${a.nome || 'Documento'}</title><style>body{margin:0;background:#0f172a;color:white;font-family:Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;padding:16px;box-sizing:border-box}img{max-width:100%;max-height:82vh;border-radius:14px;background:white}.bar{width:100%;max-width:900px;display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:12px}.btn{padding:10px 14px;border-radius:12px;background:#2563eb;color:white;text-decoration:none;font-weight:700}</style></head><body><div class="bar"><strong>${a.nome || 'Documento'}</strong><a class="btn" href="${a.dataUrl}" download="${a.nome || 'documento'}">Baixar</a></div><img src="${a.dataUrl}" alt="Documento"></body></html>`;
+        const w = window.open('', '_blank');
+        if (!w) { window.location.href = a.dataUrl; return; }
+        w.document.write(html); w.document.close();
+        return;
+      }
+      window.open(a.dataUrl, '_blank');
+    } catch (e) {
+      console.error(e);
+      if (typeof toast === 'function') toast('Não foi possível visualizar o documento.');
+    }
+  };
+
   const SUPABASE_URL = 'https://obzycbtfbadjwwwfpsed.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
   let sb = null;
@@ -6648,8 +6400,6 @@
     return null;
   }
 
-  function soNumero(v){ return String(v || '').replace(/\D/g,''); }
-
   function chunk(arr, size){
     const out = [];
     for (let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size));
@@ -6678,29 +6428,12 @@
     if (!client) return;
     const empresas = (typeof getAllEmpresas === 'function' ? getAllEmpresas() : JSON.parse(localStorage.getItem('empresas') || '[]')) || [];
     const terceiros = (typeof getAll === 'function' ? getAll() : JSON.parse(localStorage.getItem('terceiros') || '[]')) || [];
-    const treinamentos = (typeof getAllTreinamentos === 'function' ? getAllTreinamentos() : JSON.parse(localStorage.getItem('treinamentos') || '[]')) || [];
-
-    if (!confirm(`Enviar dados locais para o Supabase?\n\nEmpresas: ${empresas.length}\nTerceiros: ${terceiros.length}\nTreinamentos base: ${treinamentos.length}\n\nIsso vai substituir os dados do banco por esta base local.`)) return;
-
+    if (!confirm(`Enviar dados locais para o Supabase?\n\nEmpresas: ${empresas.length}\nTerceiros: ${terceiros.length}\n\nIsso vai substituir os dados do banco por esta base local.`)) return;
     try {
       avisar('Sincronizando: limpando banco...');
-      await deleteAllFrom('historico');
-      await deleteAllFrom('excecoes');
-      await deleteAllFrom('treinamentos');
-      await deleteAllFrom('terceiros');
-      await deleteAllFrom('empresas');
-
+      await deleteAllFrom('historico'); await deleteAllFrom('excecoes'); await deleteAllFrom('treinamentos'); await deleteAllFrom('terceiros'); await deleteAllFrom('empresas');
       avisar('Sincronizando empresas...');
-      const empresasPayload = empresas.map(e => ({
-        razao_social: empresaNome(e) || 'Empresa sem nome',
-        nome_fantasia: empresaFantasia(e) || null,
-        cnpj: e.cnpj || null,
-        responsavel: empresaResp(e) || null,
-        telefone: empresaTel(e) || null,
-        contrato_fim: asISO(e.contratoFim || e.contrato_fim),
-        doc_dp_validade: asISO(e.docDPValidade || e.doc_dp_validade),
-        doc_sesmt_validade: asISO(e.docSESMTValidade || e.doc_sesmt_validade)
-      }));
+      const empresasPayload = empresas.map(e => ({ razao_social: empresaNome(e) || 'Empresa sem nome', nome_fantasia: empresaFantasia(e) || null, cnpj: e.cnpj || null, responsavel: empresaResp(e) || null, telefone: empresaTel(e) || null, contrato_fim: asISO(e.contratoFim || e.contrato_fim), doc_dp_validade: asISO(e.docDPValidade || e.doc_dp_validade), doc_sesmt_validade: asISO(e.docSESMTValidade || e.doc_sesmt_validade) }));
       let empresasCriadas = [];
       for (const parte of chunk(empresasPayload, 100)) {
         const { data, error } = await client.from('empresas').insert(parte).select('id,razao_social,cnpj');
@@ -6709,18 +6442,8 @@
       }
       const empresaMap = {};
       empresas.forEach((e, i) => { if (empresasCriadas[i]) empresaMap[e.id] = empresasCriadas[i].id; });
-
       avisar('Sincronizando terceiros...');
-      const terceirosPayload = terceiros.map(t => ({
-        empresa_id: empresaMap[t.empresaId] || null,
-        nome: t.nome || 'Terceiro sem nome',
-        cpf: t.cpf || null,
-        funcao: t.funcao || null,
-        aso_validade: asISO(t.aso || t.aso_validade),
-        integracao_validade: asISO(t.integ || t.integracao_validade),
-        status: terceiroStatus(t),
-        observacoes: t.obs || t.observacoes || null
-      }));
+      const terceirosPayload = terceiros.map(t => ({ empresa_id: empresaMap[t.empresaId] || null, nome: t.nome || 'Terceiro sem nome', cpf: t.cpf || null, funcao: t.funcao || null, aso_validade: asISO(t.aso || t.aso_validade), integracao_validade: asISO(t.integ || t.integracao_validade), status: terceiroStatus(t), observacoes: t.obs || t.observacoes || null }));
       let terceirosCriados = [];
       for (const parte of chunk(terceirosPayload, 100)) {
         const { data, error } = await client.from('terceiros').insert(parte).select('id,nome,cpf');
@@ -6729,123 +6452,51 @@
       }
       const terceiroMap = {};
       terceiros.forEach((t, i) => { if (terceirosCriados[i]) terceiroMap[t.id] = terceirosCriados[i].id; });
-
-      avisar('Sincronizando treinamentos dos terceiros...');
+      avisar('Sincronizando treinamentos...');
       const treinosPayload = [];
-      terceiros.forEach(t => {
-        const tid = terceiroMap[t.id];
-        if (!tid) return;
-        const lista = Array.isArray(t.treinamentosRealizados) ? t.treinamentosRealizados : [];
-        lista.forEach(tr => {
-          if (typeof tr === 'string') treinosPayload.push({ terceiro_id: tid, nome_treinamento: tr, validade: null });
-          else treinosPayload.push({ terceiro_id: tid, nome_treinamento: tr.nome || tr.titulo || tr.treinamento || 'Treinamento', validade: asISO(tr.validade) });
-        });
-      });
-      for (const parte of chunk(treinosPayload, 100)) {
-        const { error } = await client.from('treinamentos').insert(parte);
-        if (error) throw new Error('Erro ao inserir treinamentos: ' + error.message);
-      }
-
+      terceiros.forEach(t => { const tid = terceiroMap[t.id]; if (!tid) return; const lista = Array.isArray(t.treinamentosRealizados) ? t.treinamentosRealizados : []; lista.forEach(tr => { if (typeof tr === 'string') treinosPayload.push({ terceiro_id: tid, nome_treinamento: tr, validade: null }); else treinosPayload.push({ terceiro_id: tid, nome_treinamento: tr.nome || tr.titulo || tr.treinamento || 'Treinamento', validade: asISO(tr.validade) }); }); });
+      for (const parte of chunk(treinosPayload, 100)) { const { error } = await client.from('treinamentos').insert(parte); if (error) throw new Error('Erro ao inserir treinamentos: ' + error.message); }
       avisar(`✓ Supabase atualizado. Empresas: ${empresas.length} | Terceiros: ${terceiros.length}`);
-    } catch (err) {
-      console.error(err);
-      avisar('⚠ ' + err.message);
-    }
+    } catch (err) { console.error(err); avisar('⚠ ' + err.message); }
   };
 
   window.baixarDadosDoSupabase = async function(){
-    const client = getSB();
-    if (!client) return;
+    const client = getSB(); if (!client) return;
     if (!confirm('Baixar dados do Supabase para este aparelho?\n\nIsso vai substituir os dados locais deste navegador.')) return;
     try {
       avisar('Baixando empresas...');
       const { data: emp, error: empErr } = await client.from('empresas').select('*').order('razao_social', { ascending: true });
       if (empErr) throw new Error('Erro ao baixar empresas: ' + empErr.message);
-
       avisar('Baixando terceiros...');
       const { data: ter, error: terErr } = await client.from('terceiros').select('*').order('nome', { ascending: true });
       if (terErr) throw new Error('Erro ao baixar terceiros: ' + terErr.message);
-
-      const empresasLocais = (emp || []).map(e => ({
-        id: e.id,
-        razao: e.razao_social || '',
-        fantasia: e.nome_fantasia || '',
-        cnpj: e.cnpj || '',
-        resp: e.responsavel || '',
-        tel: e.telefone || '',
-        email: '',
-        contratoInicio: '',
-        contratoFim: e.contrato_fim || '',
-        docDPValidade: e.doc_dp_validade || '',
-        docSESMTValidade: e.doc_sesmt_validade || '',
-        treinamentosObrigatorios: []
-      }));
-      const empById = {};
-      empresasLocais.forEach(e => { empById[e.id] = e; });
-
-      const terceirosLocais = (ter || []).map(t => ({
-        id: t.id,
-        empresaId: t.empresa_id || '',
-        empresa: empById[t.empresa_id] ? empById[t.empresa_id].razao : '',
-        nome: t.nome || '',
-        cpf: t.cpf || '',
-        funcao: t.funcao || '',
-        aso: t.aso_validade || '',
-        integ: t.integracao_validade || '',
-        obs: t.observacoes || '',
-        situacaoAcessoImportada: t.status === 'LIBERADO' ? 'ACESSO LIBERADO' : (t.status === 'BLOQUEADO' ? 'ACESSO NEGADO' : ''),
-        treinamentosRealizados: []
-      }));
-
+      const empresasLocais = (emp || []).map(e => ({ id: e.id, razao: e.razao_social || '', fantasia: e.nome_fantasia || '', cnpj: e.cnpj || '', resp: e.responsavel || '', tel: e.telefone || '', email: '', contratoInicio: '', contratoFim: e.contrato_fim || '', docDPValidade: e.doc_dp_validade || '', docSESMTValidade: e.doc_sesmt_validade || '', treinamentosObrigatorios: [] }));
+      const empById = {}; empresasLocais.forEach(e => { empById[e.id] = e; });
+      const terceirosLocais = (ter || []).map(t => ({ id: t.id, empresaId: t.empresa_id || '', empresa: empById[t.empresa_id] ? empById[t.empresa_id].razao : '', nome: t.nome || '', cpf: t.cpf || '', funcao: t.funcao || '', aso: t.aso_validade || '', integ: t.integracao_validade || '', obs: t.observacoes || '', situacaoAcessoImportada: t.status === 'LIBERADO' ? 'ACESSO LIBERADO' : (t.status === 'BLOQUEADO' ? 'ACESSO NEGADO' : ''), treinamentosRealizados: [] }));
       if (typeof saveAllEmpresas === 'function') saveAllEmpresas(empresasLocais); else localStorage.setItem('empresas', JSON.stringify(empresasLocais));
       if (typeof saveAll === 'function') saveAll(terceirosLocais); else localStorage.setItem('terceiros', JSON.stringify(terceirosLocais));
-
-      if (typeof popularSelectEmpresas === 'function') {
-        popularSelectEmpresas('f-empresa');
-        popularSelectEmpresas('e-empresa');
-      }
-      if (typeof renderDashboard === 'function') renderDashboard();
-      if (typeof renderTerceiros === 'function') renderTerceiros();
-      if (typeof renderEmpresas === 'function') renderEmpresas();
+      if (typeof popularSelectEmpresas === 'function') { popularSelectEmpresas('f-empresa'); popularSelectEmpresas('e-empresa'); }
+      if (typeof renderDashboard === 'function') renderDashboard(); if (typeof renderTerceiros === 'function') renderTerceiros(); if (typeof renderEmpresas === 'function') renderEmpresas();
       avisar(`✓ Dados baixados. Empresas: ${empresasLocais.length} | Terceiros: ${terceirosLocais.length}`);
-    } catch (err) {
-      console.error(err);
-      avisar('⚠ ' + err.message);
-    }
+    } catch (err) { console.error(err); avisar('⚠ ' + err.message); }
   };
 
   function painelSupabaseHTML(){
-    return `
-      <section class="card" id="supabase-panel" style="margin-top:18px;border:1px solid #bfdbfe;">
-        <div class="section-title">BANCO DE DADOS SUPABASE</div>
-        <p class="muted-note">Primeira versão com backend real. Use <strong>Enviar para Supabase</strong> depois de importar/conferir a base no app.</p>
-        <div style="display:grid;gap:10px;margin-top:12px;">
-          <button class="btn primary" type="button" onclick="enviarDadosParaSupabase()">Enviar dados para Supabase</button>
-          <button class="btn secondary" type="button" onclick="baixarDadosDoSupabase()">Baixar dados do Supabase</button>
-        </div>
-        <div id="supabase-status" class="muted-note" style="margin-top:12px;">Conectado ao projeto controle-terceiros-sst.</div>
-      </section>`;
+    return `<section class="card" id="supabase-panel" style="margin-top:18px;border:1px solid #bfdbfe;"><div class="section-title">BANCO DE DADOS SUPABASE</div><p class="muted-note">Primeira versão com backend real. Use <strong>Enviar para Supabase</strong> depois de importar/conferir a base no app.</p><div style="display:grid;gap:10px;margin-top:12px;"><button class="btn primary" type="button" onclick="enviarDadosParaSupabase()">Enviar dados para Supabase</button><button class="btn secondary" type="button" onclick="baixarDadosDoSupabase()">Baixar dados do Supabase</button></div><div id="supabase-status" class="muted-note" style="margin-top:12px;">Conectado ao projeto controle-terceiros-sst.</div></section>`;
   }
-
   function instalarPainelSupabase(){
     if (document.getElementById('supabase-panel')) return;
     const page = document.querySelector('#page-dashboard') || document.querySelector('[data-page="dashboard"]') || document.querySelector('main') || document.body;
-    if (!page) return;
-    page.insertAdjacentHTML('beforeend', painelSupabaseHTML());
+    if (!page) return; page.insertAdjacentHTML('beforeend', painelSupabaseHTML());
   }
-
   const oldRenderDashboard = window.renderDashboard;
-  if (typeof oldRenderDashboard === 'function' && !window.__supabaseBridgeV26) {
-    window.__supabaseBridgeV26 = true;
-    window.renderDashboard = function(){
-      oldRenderDashboard.apply(this, arguments);
-      setTimeout(instalarPainelSupabase, 80);
-    };
+  if (typeof oldRenderDashboard === 'function' && !window.__supabaseBridgeV262) {
+    window.__supabaseBridgeV262 = true;
+    window.renderDashboard = function(){ oldRenderDashboard.apply(this, arguments); setTimeout(instalarPainelSupabase, 80); };
   }
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(instalarPainelSupabase, 500); });
   setTimeout(instalarPainelSupabase, 1200);
 })();
 </script>
-
 </body>
 </html>
