@@ -2252,6 +2252,12 @@
     document.getElementById('modal-analise').classList.add('open');
   }
 
+
+  // Alias para botões da Portaria Express e cards novos abrirem a ficha/análise completa
+  function abrirAnaliseTerceiro(id) {
+    return abrirAnalise(id);
+  }
+
   function fecharModalAnalise() {
     document.getElementById('modal-analise').classList.remove('open');
   }
