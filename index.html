@@ -964,7 +964,7 @@
     <div class="card">
       <div class="card-title">Buscar terceiro</div>
       <div class="portaria-search">
-        <input type="text" id="busca-portaria" placeholder="Digite o nome ou CPF do terceiro…" onkeydown="if(event.key==='Enter') consultarPortaria()" />
+        <input type="text" id="busca-portaria" placeholder="Digite o nome ou CPF do terceiro…" oninput="window.portariaAutoBusca && window.portariaAutoBusca()" onkeydown="if(event.key==='Enter') consultarPortaria()" />
         <button class="btn btn-primary" onclick="consultarPortaria()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Consultar
@@ -2583,6 +2583,372 @@
       <h2>Resumo executivo</h2><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>ASOs vencidos</td><td>${resumo.asoVencidos}</td></tr><tr><td>Integrações vencidas</td><td>${resumo.integVencidas}</td></tr><tr><td>Treinamentos pendentes/vencidos</td><td>${resumo.treinosPendentes}</td></tr><tr><td>Contratos vencidos</td><td>${resumo.contratosVencidos}</td></tr></table>
       <h2>Empresas com mais pendências</h2><table><tr><th>Empresa</th><th>Terceiros</th><th>Bloqueados</th><th>Pendências</th></tr>${ranking.map(r=>`<tr><td>${r.empresa.fantasia || r.empresa.razao}</td><td>${r.total}</td><td>${r.bloqueados}</td><td>${r.pendencias}</td></tr>`).join('')}</table>
       
+
+<style>
+  /* V24.2 - acabamento Portaria Express */
+  .v24-match-card { position:relative; overflow:hidden; }
+  .v24-match-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--border); }
+  .v24-match-card.ok::before { background:var(--ok); }
+  .v24-match-card.warn::before { background:var(--warn); }
+  .v24-match-card.blocked::before { background:var(--danger); }
+  .v24-match-card.ok { border-color:rgba(22,163,74,.28); }
+  .v24-match-card.warn { border-color:rgba(217,119,6,.28); }
+  .v24-match-card.blocked { border-color:rgba(220,38,38,.25); }
+  .v24-status-chip { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:5px 10px; font-size:11px; font-weight:900; margin-top:8px; }
+  .v24-status-chip.ok { color:var(--ok); background:var(--ok-lt); }
+  .v24-status-chip.warn { color:var(--warn); background:var(--warn-lt); }
+  .v24-status-chip.blocked { color:var(--danger); background:var(--danger-lt); }
+  .v24-express-hint { font-size:12px; color:var(--muted); margin-top:8px; font-weight:600; }
+  .v24-auto-note { font-size:12px; color:var(--muted); margin-top:10px; }
+</style>
+
+<script>
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function nrm(v){ return (v || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+  function soDig(v){ return (v || '').toString().replace(/\D/g,''); }
+  function all(){ return typeof getAll === 'function' ? getAll() : []; }
+  function fmt(iso){ return typeof fmtData === 'function' ? fmtData(iso) : (iso || '—'); }
+  function emp(t){ return typeof getEmpresaById === 'function' ? (getEmpresaById(t.empresaId) || {}) : {}; }
+  function stDate(iso){
+    if (typeof statusData === 'function') return statusData(iso);
+    if (!iso) return {classe:'neutral', label:'Sem data', texto:'Data não informada', semData:true};
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const d = new Date(iso+'T00:00:00');
+    if (isNaN(d)) return {classe:'neutral', label:'Sem data', texto:'Data não informada', semData:true};
+    const dias = Math.round((d-hoje)/86400000);
+    if (dias < 0) return {classe:'blocked', label:'Vencido', texto:'Vencido', dias};
+    if (dias <= 30) return {classe:'warn', label:'Vencendo', texto:'Vence em '+dias+' dia(s)', dias};
+    return {classe:'ok', label:'OK', texto:'Válido', dias};
+  }
+  function status(t){
+    const s = typeof getStatus === 'function' ? getStatus(t) : {ok:false,motivos:['Não foi possível calcular o status.'],avisos:[]};
+    if (s.excecao) return {classe:'warn', titulo:'LIBERADO POR EXCEÇÃO', sub:'Acesso permitido por autorização registrada', simbolo:'!', s:s};
+    if (s.ok && !s.pendente) return {classe:'ok', titulo:'LIBERADO', sub:'Acesso permitido', simbolo:'✓', s:s};
+    if (s.pendente) return {classe:'warn', titulo:'PENDENTE', sub:'Falta informação para validação completa', simbolo:'!', s:s};
+    return {classe:'blocked', titulo:'BLOQUEADO', sub:'Acesso não autorizado', simbolo:'×', s:s};
+  }
+  function linhaSemaforo(nome, iso, extra){
+    const st = stDate(iso);
+    const cls = st.classe || 'neutral';
+    const texto = st.semData ? 'SEM DATA' : (cls === 'blocked' ? 'VENCIDO' : (cls === 'warn' ? 'VENCENDO' : 'OK'));
+    const detalhe = st.semData ? 'Data não informada' : ((st.texto || '') + (extra ? ' • '+extra : ''));
+    return '<div class="v24-semaforo-row '+cls+'"><div><strong>'+nome+'</strong><small style="display:block;color:var(--muted);margin-top:3px;">'+detalhe+'</small></div><span>'+texto+'</span></div>';
+  }
+  function treinosRows(t){
+    let html = '';
+    try {
+      const obrig = typeof getTreinosObrigatoriosDaEmpresa === 'function' ? getTreinosObrigatoriosDaEmpresa(t.empresaId) : [];
+      obrig.slice(0,10).forEach(function(tr){
+        const reg = (t.treinamentosRealizados || []).find(function(x){ return x.treinamentoId === tr.id; });
+        const dataBase = reg && reg.data ? reg.data : '';
+        const venc = (typeof addMonths === 'function' && dataBase) ? addMonths(dataBase, tr.validade || 12) : '';
+        html += linhaSemaforo(tr.nome || 'Treinamento', venc, dataBase ? 'realizado em '+fmt(dataBase) : 'sem data de realização');
+      });
+    } catch(e) {}
+    return html;
+  }
+  function filtrar(q){
+    const lista = all();
+    const dig = soDig(q);
+    const txt = nrm(q);
+    if (!txt && !dig) return [];
+    if (dig.length >= 5) {
+      const exatos = lista.filter(function(t){ return soDig(t.cpf) === dig; });
+      if (exatos.length) return exatos;
+      const parciais = lista.filter(function(t){ return soDig(t.cpf).includes(dig); });
+      if (parciais.length) return parciais;
+    }
+    const partes = txt.split(/\s+/).filter(Boolean);
+    return lista.filter(function(t){
+      const base = nrm((t.nome||'')+' '+(t.empresa||'')+' '+(t.funcao||'')+' '+(t.cpf||''));
+      return partes.every(function(p){ return base.includes(p); });
+    });
+  }
+  function renderDetalhe(t){
+    const box = byId('v24-result');
+    const matches = byId('v24-matches');
+    if (matches) { matches.style.display = 'none'; matches.innerHTML = ''; }
+    if (!box) return;
+    const e = emp(t);
+    const se = status(t);
+    const motivos = (se.s && se.s.motivos) ? se.s.motivos : [];
+    const avisos = (se.s && se.s.avisos) ? se.s.avisos : [];
+    const ex = (se.s && se.s.excecaoDados) ? se.s.excecaoDados : null;
+    const excecaoHtml = ex ? '<div class="v24-motivos warn"><strong>Liberação por exceção</strong><ul>'+
+      '<li>Autorização: '+(ex.numero || '—')+'</li>'+
+      '<li>Aprovador: '+(ex.aprovador || '—')+(ex.cargo ? ' • '+ex.cargo : '')+'</li>'+
+      '<li>Liberado até: '+(ex.ate ? fmt(ex.ate) : '—')+'</li>'+
+      ((ex.motivos || []).map(function(m){ return '<li>'+m+'</li>'; }).join(''))+
+      '</ul></div>' : '';
+    const problemas = motivos.length || avisos.length ? '<div class="v24-motivos '+(motivos.length ? '' : 'warn')+'"><strong>'+(motivos.length ? 'Motivos do bloqueio' : 'Pendências / avisos')+'</strong><ul>'+motivos.concat(avisos).slice(0,15).map(function(m){ return '<li>'+m+'</li>'; }).join('')+'</ul></div>' : '';
+    box.innerHTML = '<div class="v24-status-head">'+
+      '<div class="v24-status-icon '+se.classe+'">'+se.simbolo+'</div>'+
+      '<div><div class="v24-status-title '+se.classe+'">'+se.titulo+'</div><div class="v24-status-sub">'+se.sub+'</div></div></div>'+
+      '<div class="v24-info-grid">'+
+      '<div class="v24-info"><small>Nome</small><strong>'+(t.nome || '—')+'</strong></div>'+
+      '<div class="v24-info"><small>CPF</small><strong>'+(t.cpf || 'Sem CPF')+'</strong></div>'+
+      '<div class="v24-info"><small>Empresa</small><strong>'+(t.empresa || e.razao || e.fantasia || '—')+'</strong></div>'+
+      '<div class="v24-info"><small>Função</small><strong>'+(t.funcao || '—')+'</strong></div>'+
+      '</div><div class="v24-semaforo">'+
+      linhaSemaforo('ASO', t.aso)+
+      linhaSemaforo('Integração', t.integ)+
+      linhaSemaforo('Contrato da empresa', e.contratoFim)+
+      linhaSemaforo('Documentos DP', e.docDPValidade)+
+      linhaSemaforo('Documentos SESMT', e.docSESMTValidade)+
+      treinosRows(t)+
+      '</div>'+excecaoHtml+problemas+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">'+
+      '<button class="btn btn-ghost" onclick="abrirAnaliseTerceiro(\''+t.id+'\')">Abrir ficha completa</button>'+
+      '<button class="btn btn-primary" onclick="showPage(\'listagem\')">Ver lista de terceiros</button></div>';
+    box.classList.add('show');
+  }
+  function renderMatches(lista){
+    const matches = byId('v24-matches');
+    const box = byId('v24-result');
+    if (box) { box.classList.remove('show'); box.innerHTML = ''; }
+    if (!matches) return;
+    if (!lista.length) { matches.style.display='none'; matches.innerHTML=''; return; }
+    matches.innerHTML = lista.slice(0,40).map(function(t){
+      const se = status(t);
+      return '<button class="v24-match-card '+se.classe+'" onclick="v242AbrirExpress(\''+t.id+'\')">'+
+        '<strong>'+(t.nome || 'Sem nome')+'</strong>'+
+        '<small>'+(t.empresa || 'Sem empresa')+' • '+(t.funcao || 'Sem função')+' • '+(t.cpf || 'Sem CPF')+'</small>'+
+        '<span class="v24-status-chip '+se.classe+'">'+se.titulo+'</span>'+
+      '</button>';
+    }).join('') + (lista.length > 40 ? '<div class="v24-auto-note">Mostrando os 40 primeiros. Refine a busca para reduzir a lista.</div>' : '');
+    matches.style.display = 'grid';
+  }
+  window.v242AbrirExpress = function(id){
+    const t = all().find(function(x){ return x.id === id; });
+    if (t) renderDetalhe(t);
+  };
+  window.v24ConsultarExpress = function(){
+    const q = (byId('v24-busca') && byId('v24-busca').value) || '';
+    const lista = filtrar(q);
+    if (!lista.length) { renderMatches([]); const box=byId('v24-result'); if(box){box.classList.remove('show'); box.innerHTML='';} if(typeof toast==='function') toast('Nenhum terceiro encontrado.'); return; }
+    if (lista.length === 1) renderDetalhe(lista[0]); else renderMatches(lista);
+  };
+  function init(){
+    const input = byId('v24-busca');
+    if (input && !input.dataset.v242) {
+      input.dataset.v242 = '1';
+      let timer = null;
+      input.addEventListener('input', function(){
+        clearTimeout(timer);
+        timer = setTimeout(function(){ if ((input.value || '').trim().length >= 3) window.v24ConsultarExpress(); }, 250);
+      });
+      const cardTitle = input.closest('.card') && input.closest('.card').querySelector('.card-title');
+      if (cardTitle && !byId('v24-hint')) {
+        const hint = document.createElement('div');
+        hint.id = 'v24-hint';
+        hint.className = 'v24-express-hint';
+        hint.textContent = 'Digite 3 ou mais caracteres para buscar automaticamente. Toque em um resultado para abrir o semáforo completo.';
+        cardTitle.insertAdjacentElement('afterend', hint);
+      }
+    }
+  }
+  const oldShow = window.showPage;
+  if (typeof oldShow === 'function' && !window.__v242ShowPatch) {
+    window.__v242ShowPatch = true;
+    window.showPage = function(name){ oldShow(name); if (name === 'portaria-express') setTimeout(init, 100); };
+  }
+  setTimeout(init, 500);
+})();
+</script>
+
+
+<style>
+/* V25 - Semáforo completo, foto e dashboard executivo */
+.v25-photo-box{display:flex;gap:14px;align-items:center;border:1px solid var(--border);border-radius:16px;background:#fff;padding:14px;margin:12px 0;}
+.v25-avatar{width:86px;height:86px;border-radius:18px;background:var(--accent-lt);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--accent);font-weight:900;font-size:28px;border:1px solid var(--border);}
+.v25-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.v25-photo-actions{display:flex;flex-direction:column;gap:8px;min-width:0;}
+.v25-photo-actions strong{font-size:15px;}
+.v25-photo-actions small{color:var(--muted);font-size:12px;line-height:1.35;}
+.v25-photo-input{font-size:12px;padding:8px;background:var(--bg-soft);border:1px dashed var(--border);border-radius:12px;}
+.v25-alert-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;}
+.v25-alert-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow-sm);cursor:pointer;transition:.12s;}
+.v25-alert-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:rgba(21,94,239,.35);}
+.v25-alert-card .label{font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:900;letter-spacing:.08em;}
+.v25-alert-card .value{font-size:30px;font-weight:900;margin-top:8px;}
+.v25-alert-card.warn .value{color:var(--warn);} .v25-alert-card.danger .value{color:var(--danger);} .v25-alert-card.ok .value{color:var(--ok);} .v25-alert-card.blue .value{color:var(--accent);}
+.v25-alert-card .hint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600;display:block;}
+.v25-alert-list{display:grid;gap:10px;}
+.v25-alert-item{border:1px solid var(--border);border-radius:14px;background:#fff;padding:13px;cursor:pointer;display:flex;justify-content:space-between;gap:12px;}
+.v25-alert-item:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(21,94,239,.10);}
+.v25-alert-item strong{display:block;font-size:14px;}.v25-alert-item small{display:block;color:var(--muted);margin-top:3px;font-size:12px;}.v25-alert-item .right{text-align:right;color:var(--warn);font-weight:800;font-size:12px;max-width:45%;}
+.v25-express-photo{display:flex;gap:14px;align-items:center;margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:18px;background:#fff;}
+.v25-semaforo-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900;margin:16px 0 8px;}
+.v25-doc-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;margin:4px 4px 0 0;}
+.v25-doc-badge.ok{background:var(--ok-lt);color:var(--ok)}.v25-doc-badge.warn{background:var(--warn-lt);color:var(--warn)}.v25-doc-badge.blocked{background:var(--danger-lt);color:var(--danger)}.v25-doc-badge.neutral{background:var(--accent-lt);color:var(--accent)}
+@media(max-width:700px){.v25-alert-grid{grid-template-columns:1fr}.v25-alert-item{display:block}.v25-alert-item .right{text-align:left;max-width:100%;margin-top:8px}.v25-photo-box,.v25-express-photo{align-items:flex-start}.v25-avatar{width:72px;height:72px;border-radius:16px}}
+</style>
+<script>
+/* V25 - Semáforo completo, foto e dashboard executivo */
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function all(){ try { return typeof getAll === 'function' ? getAll() : []; } catch(e){ return []; } }
+  function emp(t){ try { return typeof getEmpresaById === 'function' ? (getEmpresaById(t.empresaId) || {}) : {}; } catch(e){ return {}; } }
+  function fmt(iso){ try { return typeof fmtData === 'function' ? fmtData(iso) : (iso || 'Data não informada'); } catch(e){ return iso || 'Data não informada'; } }
+  function stData(iso){ try { return typeof statusData === 'function' ? statusData(iso) : {semData:!iso,classe:'neutral',dias:null,texto:'Sem data'}; } catch(e){ return {semData:!iso,classe:'neutral',dias:null,texto:'Sem data'}; } }
+  function status(t){ try { return typeof getStatus === 'function' ? getStatus(t) : {ok:false,bloqueado:true,motivos:['Status indisponível'],avisos:[]}; } catch(e){ return {ok:false,bloqueado:true,motivos:['Status indisponível'],avisos:[]}; } }
+  function fotos(){ try { return JSON.parse(localStorage.getItem('terceiroFotos') || '{}'); } catch(e){ return {}; } }
+  function saveFotos(obj){ localStorage.setItem('terceiroFotos', JSON.stringify(obj || {})); }
+  function fotoDe(id){ return fotos()[id] || ''; }
+  function iniciais(nome){ return (nome||'?').trim().split(/\s+/).slice(0,2).map(function(p){return p[0]||''}).join('').toUpperCase() || '?'; }
+  function avatarHtml(t, cls){ var f=fotoDe(t.id); return '<div class="v25-avatar '+(cls||'')+'">'+(f ? '<img src="'+f+'" alt="Foto de '+(t.nome||'terceiro')+'">' : iniciais(t.nome))+'</div>'; }
+  function ehVencendo(st){ return st && !st.semData && typeof st.dias === 'number' && st.dias >= 0 && st.dias <= 30; }
+  function ehVencido(st){ return st && !st.semData && typeof st.dias === 'number' && st.dias < 0; }
+  function getTreinos(t){ try { return typeof getTreinosObrigatoriosDaEmpresa === 'function' ? getTreinosObrigatoriosDaEmpresa(t.empresaId) : []; } catch(e){ return []; } }
+  function addMonthsLocal(iso, meses){ try { return typeof addMonths === 'function' ? addMonths(iso, meses || 12) : ''; } catch(e){ return ''; } }
+
+  window.v25SalvarFoto = function(id, input){
+    var file = input && input.files && input.files[0];
+    if(!file) return;
+    if(!/^image\//.test(file.type || '')){ if(typeof toast==='function') toast('Selecione uma imagem.'); return; }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var obj = fotos(); obj[id] = ev.target.result; saveFotos(obj);
+      if(typeof toast==='function') toast('Foto salva.');
+      if(typeof abrirAnalise === 'function') abrirAnalise(id);
+      setTimeout(function(){ if(typeof renderDashboard === 'function') renderDashboard(); }, 50);
+    };
+    reader.readAsDataURL(file);
+  };
+  window.v25RemoverFoto = function(id){
+    var obj=fotos(); delete obj[id]; saveFotos(obj);
+    if(typeof toast==='function') toast('Foto removida.');
+    if(typeof abrirAnalise === 'function') abrirAnalise(id);
+  };
+
+  function fotoBox(t){
+    return '<div class="v25-photo-box">'+avatarHtml(t)+'<div class="v25-photo-actions"><strong>Foto do terceiro</strong><small>Use uma foto do rosto para facilitar a conferência visual na portaria.</small><input class="v25-photo-input" type="file" accept="image/*" onchange="v25SalvarFoto(\''+t.id+'\', this)"><button class="btn btn-ghost" style="padding:8px 12px;font-size:12px;" onclick="v25RemoverFoto(\''+t.id+'\')">Remover foto</button></div></div>';
+  }
+
+  var oldAbrir = window.abrirAnalise;
+  if(typeof oldAbrir === 'function' && !window.__v25AnalisePatch){
+    window.__v25AnalisePatch = true;
+    window.abrirAnalise = function(id){
+      oldAbrir(id);
+      setTimeout(function(){
+        var t = all().find(function(x){ return x.id === id; });
+        var box = byId('analise-conteudo');
+        if(!t || !box || byId('v25-photo-'+id)) return;
+        box.insertAdjacentHTML('afterbegin','<div id="v25-photo-'+id+'">'+fotoBox(t)+'</div>');
+      }, 20);
+    };
+    window.abrirAnaliseTerceiro = window.abrirAnalise;
+  }
+
+  function pendencias30(){
+    var itens=[];
+    all().forEach(function(t){
+      var e=emp(t);
+      [['ASO',t.aso],['Integração',t.integ],['Contrato da empresa',e.contratoFim],['Documentos DP',e.docDPValidade],['Documentos SESMT',e.docSESMTValidade]].forEach(function(par){
+        var st=stData(par[1]);
+        if(ehVencendo(st) || ehVencido(st)) itens.push({terceiro:t,item:par[0],data:par[1],st:st,tipo:ehVencido(st)?'vencido':'vencendo'});
+      });
+      getTreinos(t).forEach(function(tr){
+        var reg=(t.treinamentosRealizados||[]).find(function(x){return x.treinamentoId===tr.id;});
+        var venc=reg && reg.data ? addMonthsLocal(reg.data, tr.validade||12) : '';
+        var st=stData(venc);
+        if(ehVencendo(st) || ehVencido(st)) itens.push({terceiro:t,item:tr.nome||'Treinamento',data:venc,st:st,tipo:ehVencido(st)?'vencido':'vencendo'});
+      });
+    });
+    return itens;
+  }
+  window.v25AbrirAlertas = function(tipo){
+    var page = byId('page-v25-alertas');
+    if(!page){
+      page=document.createElement('div'); page.id='page-v25-alertas'; page.className='page';
+      page.innerHTML='<div class="page-actions"><h2 id="v25-alert-title">Alertas</h2><button class="btn btn-ghost" onclick="showPage(\'dashboard\')">← Voltar</button></div><div class="card"><div class="card-title" id="v25-alert-sub">Vencimentos</div><div id="v25-alert-list" class="v25-alert-list"></div></div>';
+      document.querySelector('main').appendChild(page);
+    }
+    if(typeof showPage==='function') showPage('v25-alertas');
+    var itens=pendencias30();
+    if(tipo==='vencidos') itens=itens.filter(function(x){return x.tipo==='vencido';});
+    if(tipo==='30') itens=itens.filter(function(x){return x.tipo==='vencendo';});
+    if(tipo==='aso') itens=itens.filter(function(x){return x.item==='ASO';});
+    if(tipo==='integracao') itens=itens.filter(function(x){return x.item==='Integração';});
+    var title = tipo==='vencidos'?'Documentos vencidos':(tipo==='30'?'Vencem em até 30 dias':(tipo==='aso'?'ASO vencido/vencendo':(tipo==='integracao'?'Integrações vencidas/vencendo':'Alertas')));
+    byId('v25-alert-title').textContent=title;
+    byId('v25-alert-sub').textContent=itens.length+' registro(s) encontrado(s)';
+    var list=byId('v25-alert-list');
+    list.innerHTML = itens.slice(0,150).map(function(x){
+      var t=x.terceiro;
+      var direito=x.st.dias<0 ? ('Venceu em '+fmt(x.data)+'<br>'+Math.abs(x.st.dias)+' dia(s) atrás') : ('Vence em '+fmt(x.data)+'<br>faltam '+x.st.dias+' dia(s)');
+      return '<div class="v25-alert-item" onclick="abrirAnalise(\''+t.id+'\')"><div><strong>'+t.nome+'</strong><small>'+(t.empresa||'Sem empresa')+' • '+(t.cpf||'Sem CPF')+'</small><small>'+x.item+'</small></div><div class="right">'+direito+'</div></div>';
+    }).join('') || '<p style="color:var(--muted);font-size:14px;">Nenhum registro encontrado.</p>';
+  };
+
+  function renderV25Dashboard(){
+    var dash=byId('page-dashboard'); if(!dash) return;
+    var grid=byId('v25-alert-grid');
+    if(!grid){
+      grid=document.createElement('div'); grid.id='v25-alert-grid'; grid.className='v25-alert-grid';
+      var ref=dash.querySelector('.mini-dashboard') || dash.querySelector('.stats-grid');
+      if(ref) ref.insertAdjacentElement('afterend', grid); else dash.appendChild(grid);
+    }
+    var p=pendencias30();
+    var venc=p.filter(function(x){return x.tipo==='vencido';}).length;
+    var prox=p.filter(function(x){return x.tipo==='vencendo';}).length;
+    var aso=p.filter(function(x){return x.item==='ASO';}).length;
+    var integ=p.filter(function(x){return x.item==='Integração';}).length;
+    grid.innerHTML='<div class="v25-alert-card danger" onclick="v25AbrirAlertas(\'vencidos\')"><div class="label">Vencidos</div><div class="value">'+venc+'</div><span class="hint">Toque para ver críticos</span></div>'+ 
+      '<div class="v25-alert-card warn" onclick="v25AbrirAlertas(\'30\')"><div class="label">Vencem em 30 dias</div><div class="value">'+prox+'</div><span class="hint">Ação preventiva</span></div>'+ 
+      '<div class="v25-alert-card blue" onclick="v25AbrirAlertas(\'aso\')"><div class="label">Alertas ASO</div><div class="value">'+aso+'</div><span class="hint">Vencidos ou vencendo</span></div>'+ 
+      '<div class="v25-alert-card warn" onclick="v25AbrirAlertas(\'integracao\')"><div class="label">Alertas Integração</div><div class="value">'+integ+'</div><span class="hint">Vencidas ou vencendo</span></div>';
+  }
+  var oldDash=window.renderDashboard;
+  if(typeof oldDash==='function' && !window.__v25DashPatch){
+    window.__v25DashPatch=true;
+    window.renderDashboard=function(){ oldDash(); renderV25Dashboard(); };
+  }
+
+  function detailRows(t){
+    var e=emp(t), rows=[];
+    [['ASO',t.aso],['Integração',t.integ],['Contrato da empresa',e.contratoFim],['Documentos DP',e.docDPValidade],['Documentos SESMT',e.docSESMTValidade]].forEach(function(par){
+      var st=stData(par[1]); var cls=st.semData?'neutral':(st.dias<0?'blocked':(st.dias<=30?'warn':'ok'));
+      var txt=st.semData?'SEM DATA':(st.dias<0?'VENCIDO':(st.dias<=30?'VENCENDO':'OK'));
+      rows.push('<span class="v25-doc-badge '+cls+'">'+par[0]+': '+txt+'</span>');
+    });
+    getTreinos(t).slice(0,8).forEach(function(tr){
+      var reg=(t.treinamentosRealizados||[]).find(function(x){return x.treinamentoId===tr.id;});
+      var venc=reg&&reg.data?addMonthsLocal(reg.data,tr.validade||12):''; var st=stData(venc); var cls=st.semData?'neutral':(st.dias<0?'blocked':(st.dias<=30?'warn':'ok'));
+      rows.push('<span class="v25-doc-badge '+cls+'">'+(tr.nome||'Treino')+': '+(st.semData?'SEM DATA':(st.dias<0?'VENCIDO':(st.dias<=30?'VENCENDO':'OK')))+'</span>');
+    });
+    return rows.join('');
+  }
+
+  function renderExpressDetalheV25(t){
+    var box=byId('v24-result'), matches=byId('v24-matches'); if(matches){matches.style.display='none';matches.innerHTML='';} if(!box) return;
+    var s=status(t), classe=s.excecao?'warn':(s.ok && !s.pendente?'ok':(s.pendente?'warn':'blocked'));
+    var titulo=s.excecao?'LIBERADO POR EXCEÇÃO':(s.ok&&!s.pendente?'LIBERADO':(s.pendente?'PENDENTE':'BLOQUEADO'));
+    var motivos=(s.motivos||[]).concat(s.avisos||[]);
+    var ex=s.excecaoDados;
+    box.innerHTML='<div class="v25-express-photo">'+avatarHtml(t)+'<div><strong style="font-size:18px;display:block;">'+(t.nome||'Sem nome')+'</strong><small style="color:var(--muted);display:block;margin-top:4px;">'+(t.empresa||'Sem empresa')+' • '+(t.funcao||'Sem função')+' • '+(t.cpf||'Sem CPF')+'</small><span class="v24-status-chip '+classe+'">'+titulo+'</span></div></div>'+ 
+      '<div class="v25-semaforo-title">Semáforo de documentos</div><div style="margin-bottom:10px;">'+detailRows(t)+'</div>'+ 
+      (ex?'<div class="v24-motivos warn"><strong>Exceção ativa</strong><ul><li>Autorização: '+(ex.numero||'—')+'</li><li>Aprovador: '+(ex.aprovador||'—')+'</li><li>Liberado até: '+(ex.ate?fmt(ex.ate):'—')+'</li></ul></div>':'')+
+      (motivos.length?'<div class="v24-motivos '+(s.bloqueado?'':'warn')+'"><strong>'+(s.bloqueado?'Motivos / bloqueios':'Pendências / avisos')+'</strong><ul>'+motivos.slice(0,12).map(function(m){return '<li>'+m+'</li>';}).join('')+'</ul></div>':'')+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;"><button class="btn btn-ghost" onclick="abrirAnalise(\''+t.id+'\')">Abrir ficha completa</button></div>';
+    box.classList.add('show');
+  }
+  window.v25ExpressDetalhe = renderExpressDetalheV25;
+  if(!window.__v25ExpressPatch){
+    window.__v25ExpressPatch=true;
+    window.v242AbrirExpress=function(id){ var t=all().find(function(x){return x.id===id;}); if(t) renderExpressDetalheV25(t); };
+  }
+
+  var oldShow=window.showPage;
+  if(typeof oldShow==='function' && !window.__v25ShowPatch){
+    window.__v25ShowPatch=true;
+    window.showPage=function(name){ oldShow(name); setTimeout(function(){ if(name==='dashboard') renderV25Dashboard(); },80); };
+  }
+  setTimeout(renderV25Dashboard,400); setTimeout(renderV25Dashboard,1200);
+})();
+</script>
+
 </body></html>`;
     const win = window.open('', '_blank');
     if (!win) { toast('Não foi possível abrir o relatório. Verifique bloqueio de pop-up.'); return; }
@@ -5899,7 +6265,7 @@
       <div class="card v24-portaria-card">
         <div class="card-title">Consulta rápida por CPF ou nome</div>
         <div class="v24-portaria-search">
-          <input id="v24-busca" type="text" placeholder="Digite CPF, nome ou empresa..." onkeydown="if(event.key==='Enter') v24ConsultarExpress()" />
+          <input id="v24-busca" type="text" placeholder="Digite CPF, nome ou empresa..." oninput="window.v24AutoBusca && window.v24AutoBusca()" onkeydown="if(event.key==='Enter') v24ConsultarExpress()" />
           <button class="btn btn-primary" onclick="v24ConsultarExpress()">Consultar</button>
         </div>
         <div id="v24-matches" class="v24-match-list" style="display:none;"></div>
@@ -6252,6 +6618,85 @@
     window.showPage = function(name){ oldShow(name); if (name === 'portaria-express') setTimeout(init, 100); };
   }
   setTimeout(init, 500);
+})();
+</script>
+
+
+<script>
+/* V24.3 - Correção busca automática Portaria e Portaria Express */
+(function(){
+  let timerExpress = null;
+  let timerPortaria = null;
+
+  function valor(id){
+    const el = document.getElementById(id);
+    return el ? (el.value || '').trim() : '';
+  }
+
+  window.v24AutoBusca = function(){
+    clearTimeout(timerExpress);
+    timerExpress = setTimeout(function(){
+      const q = valor('v24-busca');
+      if (q.length >= 3 && typeof window.v24ConsultarExpress === 'function') {
+        window.v24ConsultarExpress();
+      }
+      if (q.length < 3) {
+        const matches = document.getElementById('v24-matches');
+        const result = document.getElementById('v24-result');
+        if (matches) { matches.style.display = 'none'; matches.innerHTML = ''; }
+        if (result) { result.classList.remove('show'); result.innerHTML = ''; }
+      }
+    }, 180);
+  };
+
+  window.portariaAutoBusca = function(){
+    clearTimeout(timerPortaria);
+    timerPortaria = setTimeout(function(){
+      const q = valor('busca-portaria');
+      if (q.length >= 3 && typeof window.consultarPortaria === 'function') {
+        window.consultarPortaria();
+      }
+      if (q.length < 3) {
+        const result = document.getElementById('portaria-result');
+        const matches = document.getElementById('portaria-matches');
+        const nf = document.getElementById('portaria-not-found');
+        if (result) result.classList.remove('show');
+        if (matches) { matches.style.display='none'; matches.innerHTML=''; }
+        if (nf) nf.classList.remove('show');
+      }
+    }, 180);
+  };
+
+  document.addEventListener('input', function(ev){
+    if (!ev || !ev.target) return;
+    if (ev.target.id === 'v24-busca') window.v24AutoBusca();
+    if (ev.target.id === 'busca-portaria') window.portariaAutoBusca();
+  }, true);
+
+  function ligarInputs(){
+    const express = document.getElementById('v24-busca');
+    if (express && !express.dataset.autoBuscaOk) {
+      express.dataset.autoBuscaOk = '1';
+      express.addEventListener('input', window.v24AutoBusca);
+    }
+    const portaria = document.getElementById('busca-portaria');
+    if (portaria && !portaria.dataset.autoBuscaOk) {
+      portaria.dataset.autoBuscaOk = '1';
+      portaria.addEventListener('input', window.portariaAutoBusca);
+    }
+  }
+
+  const oldShow = window.showPage;
+  if (typeof oldShow === 'function' && !window.__v243BuscaPatch) {
+    window.__v243BuscaPatch = true;
+    window.showPage = function(name){
+      oldShow(name);
+      setTimeout(ligarInputs, 120);
+    };
+  }
+
+  setTimeout(ligarInputs, 300);
+  setTimeout(ligarInputs, 900);
 })();
 </script>
 
