@@ -6546,5 +6546,205 @@
 })();
 </script>
 
+
+<script>
+/* V27 — Banco real Supabase em segundo plano
+   - Não mostra painel Supabase na tela.
+   - Mantém o app funcionando com localStorage como cache local.
+   - Sincroniza empresas, terceiros, treinamentos e histórico com a tabela app_data.
+   - Documentos/arquivos digitais continuam locais nesta etapa; storage privado vem na próxima fase.
+*/
+(function(){
+  const SUPABASE_URL = 'https://obzycbtfbadjwwwfpsed.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
+  const STATE_KEY = 'controle_terceiros_sst_state_v1';
+  const LOCAL_SYNC_MARK = 'tss_supabase_last_sync';
+  const ENDPOINT = SUPABASE_URL + '/rest/v1/app_data';
+
+  let syncTimer = null;
+  let isApplyingRemote = false;
+  let lastSaveStartedAt = 0;
+
+  function safeParse(value, fallback){
+    try { return JSON.parse(value || ''); } catch(e){ return fallback; }
+  }
+
+  function readLocalState(){
+    return {
+      schema: 'controle-terceiros-sst-v1',
+      updatedAt: new Date().toISOString(),
+      terceiros: safeParse(localStorage.getItem('terceiros'), []),
+      empresas: safeParse(localStorage.getItem('empresas'), []),
+      treinamentos: safeParse(localStorage.getItem('treinamentos'), []),
+      historico: safeParse(localStorage.getItem('historico'), []),
+      // Metadados leves. Arquivos grandes/base64 não são enviados nesta versão.
+      anexosTerceiros: safeParse(localStorage.getItem('anexosTerceiros'), {}),
+      anexosEmpresas: safeParse(localStorage.getItem('anexosEmpresas'), {})
+    };
+  }
+
+  function localHasUsefulData(){
+    const s = readLocalState();
+    return (s.terceiros && s.terceiros.length) || (s.empresas && s.empresas.length) || (s.treinamentos && s.treinamentos.length);
+  }
+
+  function applyRemoteState(state){
+    if (!state || typeof state !== 'object') return;
+    isApplyingRemote = true;
+    try {
+      if (Array.isArray(state.terceiros)) localStorage.setItem('terceiros', JSON.stringify(state.terceiros));
+      if (Array.isArray(state.empresas)) localStorage.setItem('empresas', JSON.stringify(state.empresas));
+      if (Array.isArray(state.treinamentos)) localStorage.setItem('treinamentos', JSON.stringify(state.treinamentos));
+      if (Array.isArray(state.historico)) localStorage.setItem('historico', JSON.stringify(state.historico));
+      if (state.anexosTerceiros && typeof state.anexosTerceiros === 'object') localStorage.setItem('anexosTerceiros', JSON.stringify(state.anexosTerceiros));
+      if (state.anexosEmpresas && typeof state.anexosEmpresas === 'object') localStorage.setItem('anexosEmpresas', JSON.stringify(state.anexosEmpresas));
+      localStorage.setItem(LOCAL_SYNC_MARK, new Date().toISOString());
+    } finally {
+      isApplyingRemote = false;
+    }
+  }
+
+  function sbHeaders(extra){
+    return Object.assign({
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json'
+    }, extra || {});
+  }
+
+  async function fetchRemoteState(){
+    const url = ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY) + '&select=key,data,updated_at&limit=1';
+    const res = await fetch(url, { headers: sbHeaders() });
+    if (!res.ok) throw new Error('Falha ao consultar Supabase: ' + res.status);
+    const rows = await res.json();
+    return rows && rows[0] ? rows[0] : null;
+  }
+
+  async function saveRemoteState(){
+    if (isApplyingRemote) return;
+    const startedAt = Date.now();
+    lastSaveStartedAt = startedAt;
+    const payload = {
+      key: STATE_KEY,
+      data: readLocalState(),
+      updated_at: new Date().toISOString()
+    };
+    const res = await fetch(ENDPOINT + '?on_conflict=key', {
+      method: 'POST',
+      headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Falha ao salvar no Supabase: ' + res.status);
+    if (lastSaveStartedAt === startedAt) localStorage.setItem(LOCAL_SYNC_MARK, new Date().toISOString());
+  }
+
+  function scheduleRemoteSync(){
+    if (isApplyingRemote) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
+      saveRemoteState().catch(err => {
+        console.warn('[TSS] Supabase sync:', err);
+        if (typeof toast === 'function') toast('⚠ Banco offline: alterações ficaram salvas neste aparelho.');
+      });
+    }, 900);
+  }
+
+  function renderEverythingSafe(){
+    try { if (typeof renderDashboard === 'function') renderDashboard(); } catch(e){}
+    try { if (typeof renderDashboardV11 === 'function') renderDashboardV11(); } catch(e){}
+    try { if (typeof renderLista === 'function') renderLista(); } catch(e){}
+    try { if (typeof renderEmpresas === 'function') renderEmpresas(); } catch(e){}
+    try { if (typeof renderTreinamentos === 'function') renderTreinamentos(); } catch(e){}
+    try { if (typeof popularSelectEmpresas === 'function') popularSelectEmpresas('f-empresa'); } catch(e){}
+    try { if (typeof popularSelectEmpresas === 'function') popularSelectEmpresas('e-empresa'); } catch(e){}
+  }
+
+  function wrapLocalSavers(){
+    const originalSaveAll = window.saveAll;
+    if (typeof originalSaveAll === 'function') {
+      window.saveAll = saveAll = function(data){
+        originalSaveAll(data);
+        scheduleRemoteSync();
+      };
+    }
+
+    const originalSaveEmpresas = window.saveAllEmpresas;
+    if (typeof originalSaveEmpresas === 'function') {
+      window.saveAllEmpresas = saveAllEmpresas = function(data){
+        originalSaveEmpresas(data);
+        scheduleRemoteSync();
+      };
+    }
+
+    const originalSaveTreinamentos = window.saveAllTreinamentos;
+    if (typeof originalSaveTreinamentos === 'function') {
+      window.saveAllTreinamentos = saveAllTreinamentos = function(data){
+        originalSaveTreinamentos(data);
+        scheduleRemoteSync();
+      };
+    }
+
+    const originalRegistrarHistorico = window.registrarHistorico;
+    if (typeof originalRegistrarHistorico === 'function') {
+      window.registrarHistorico = registrarHistorico = function(){
+        const result = originalRegistrarHistorico.apply(this, arguments);
+        scheduleRemoteSync();
+        return result;
+      };
+    }
+  }
+
+  async function initSupabaseCache(){
+    wrapLocalSavers();
+    try {
+      const remote = await fetchRemoteState();
+      const hasLocal = !!localHasUsefulData();
+      if (remote && remote.data) {
+        if (!hasLocal) {
+          applyRemoteState(remote.data);
+          renderEverythingSafe();
+          if (typeof toast === 'function') toast('✓ Dados carregados do banco.');
+        } else {
+          // Se já tem dados locais, não sobrescreve automaticamente; só garante backup remoto.
+          scheduleRemoteSync();
+        }
+      } else if (hasLocal) {
+        await saveRemoteState();
+        if (typeof toast === 'function') toast('✓ Dados enviados ao banco.');
+      }
+    } catch (err) {
+      console.warn('[TSS] Supabase inicialização:', err);
+      if (typeof toast === 'function') toast('⚠ Banco indisponível. Usando cache local.');
+    }
+  }
+
+  window.tssSupabaseSyncNow = function(){
+    return saveRemoteState()
+      .then(() => { if (typeof toast === 'function') toast('✓ Banco sincronizado.'); })
+      .catch(err => { console.error(err); if (typeof toast === 'function') toast('⚠ Falha ao sincronizar banco.'); });
+  };
+
+  window.tssSupabaseReload = async function(){
+    try {
+      const remote = await fetchRemoteState();
+      if (remote && remote.data) {
+        applyRemoteState(remote.data);
+        renderEverythingSafe();
+        if (typeof toast === 'function') toast('✓ Dados recarregados do banco.');
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof toast === 'function') toast('⚠ Falha ao recarregar banco.');
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSupabaseCache);
+  } else {
+    setTimeout(initSupabaseCache, 0);
+  }
+})();
+</script>
+
 </body>
 </html>
