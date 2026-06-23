@@ -6615,7 +6615,7 @@
   async function fetchRemoteState(){
     const url = ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY) + '&select=key,data,updated_at&limit=1';
     const res = await fetch(url, { headers: sbHeaders() });
-    if (!res.ok) throw new Error('Falha ao consultar Supabase: ' + res.status);
+    if (!res.ok) { const txt = await res.text().catch(()=> ''); throw new Error('Falha ao consultar Supabase: ' + res.status + ' ' + txt.slice(0,180)); }
     const rows = await res.json();
     return rows && rows[0] ? rows[0] : null;
   }
@@ -6634,7 +6634,7 @@
       headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Falha ao salvar no Supabase: ' + res.status);
+    if (!res.ok) { const txt = await res.text().catch(()=> ''); throw new Error('Falha ao salvar no Supabase: ' + res.status + ' ' + txt.slice(0,180)); }
     if (lastSaveStartedAt === startedAt) localStorage.setItem(LOCAL_SYNC_MARK, new Date().toISOString());
   }
 
@@ -6714,7 +6714,7 @@
       }
     } catch (err) {
       console.warn('[TSS] Supabase inicialização:', err);
-      if (typeof toast === 'function') toast('⚠ Banco indisponível. Usando cache local.');
+      if (typeof toast === 'function') toast('⚠ Banco não conectou. Verifique app_data/grants. Cache local ativo.');
     }
   }
 
