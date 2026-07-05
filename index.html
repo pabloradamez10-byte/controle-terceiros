@@ -6746,5 +6746,160 @@
 })();
 </script>
 
+
+<!-- =====================================================
+     TSS V28.2 — Fusão controlada: visão executiva + base para arquitetura
+     Este bloco é aditivo: não substitui regras existentes.
+===================================================== -->
+<style>
+  :root{
+    --v28-dark:#0f172a; --v28-blue:#155eef; --v28-indigo:#1d4ed8; --v28-soft:#eef4ff;
+    --v28-border:#d9e2ef; --v28-text:#0f172a; --v28-muted:#64748b;
+  }
+  header{box-shadow:0 6px 24px rgba(15,23,42,.08); backdrop-filter:saturate(140%) blur(8px);}
+  header .brand{letter-spacing:-.02em;}
+  header nav button{font-weight:800;}
+  .v28-fusion-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:var(--v28-soft);color:var(--v28-blue);font-size:12px;font-weight:900;margin-left:8px;vertical-align:middle;}
+  .v28-exec-panel{margin:18px 0 0;display:grid;gap:14px;}
+  .v28-exec-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
+  .v28-exec-title strong{font-size:18px;color:var(--v28-text);} 
+  .v28-exec-title small{color:var(--v28-muted);font-weight:800;}
+  .v28-exec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .v28-exec-card{background:#fff;border:1px solid var(--v28-border);border-radius:18px;padding:15px;box-shadow:0 10px 30px rgba(15,23,42,.06);cursor:pointer;transition:.18s ease;}
+  .v28-exec-card:hover{transform:translateY(-2px);border-color:rgba(21,94,239,.35);box-shadow:0 12px 36px rgba(21,94,239,.12);} 
+  .v28-exec-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--v28-muted);font-weight:900;}
+  .v28-exec-value{font-size:30px;font-weight:950;margin-top:6px;color:var(--v28-text);}
+  .v28-exec-hint{font-size:12px;color:var(--v28-muted);margin-top:5px;display:block;}
+  .v28-exec-ok .v28-exec-value{color:#159947}.v28-exec-warn .v28-exec-value{color:#d97706}.v28-exec-danger .v28-exec-value{color:#dc2626}.v28-exec-blue .v28-exec-value{color:var(--v28-blue)}
+  .v28-risk-list{display:grid;gap:10px;margin-top:10px;}
+  .v28-risk-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--v28-border);border-radius:14px;background:#fff;cursor:pointer;}
+  .v28-risk-item:hover{border-color:rgba(21,94,239,.35);}
+  .v28-risk-name{font-weight:900;color:var(--v28-text);}.v28-risk-meta{font-size:12px;color:var(--v28-muted);margin-top:3px;}
+  .v28-risk-score{font-weight:950;padding:7px 10px;border-radius:999px;white-space:nowrap;font-size:13px;}
+  .v28-score-ok{background:#dcfce7;color:#15803d}.v28-score-warn{background:#fef3c7;color:#92400e}.v28-score-danger{background:#fee2e2;color:#b91c1c}
+  .v28-sync-mini{position:fixed;right:12px;bottom:12px;z-index:2000;background:rgba(15,23,42,.92);color:#fff;border-radius:999px;padding:9px 12px;font-size:12px;font-weight:800;box-shadow:0 12px 32px rgba(15,23,42,.25);display:none;}
+  .v28-sync-mini.show{display:block;}
+  @media(max-width:820px){.v28-exec-grid{grid-template-columns:1fr 1fr}.v28-exec-title{display:block}.v28-exec-card{padding:14px}.v28-exec-value{font-size:26px}}
+  @media(max-width:420px){.v28-exec-grid{grid-template-columns:1fr}.v28-risk-item{align-items:flex-start;flex-direction:column}.v28-risk-score{align-self:flex-start}}
+</style>
+<script>
+(function(){
+  'use strict';
+  window.TSS_VERSION = 'V28.2 - Fusão Controlada';
+
+  function safe(fn, fallback){ try { return fn(); } catch(e) { console.warn('[V28]', e); return fallback; } }
+  function terceiros(){ return safe(() => typeof getAll === 'function' ? getAll() : [], []); }
+  function empresas(){ return safe(() => typeof getAllEmpresas === 'function' ? getAllEmpresas() : [], []); }
+  function excecoes(){ return safe(() => typeof getAllExcecoes === 'function' ? getAllExcecoes() : [], []); }
+  function nomeEmpresa(id){ const e = empresas().find(x => x.id === id); return e ? (e.razao || e.nome || e.fantasia || 'Empresa') : 'Sem empresa'; }
+  function statusTerceiro(t){ return String(t.status || t.situacao || '').toUpperCase(); }
+  function isBloqueado(t){ return statusTerceiro(t).includes('BLOQUEADO'); }
+  function isPendente(t){ return statusTerceiro(t).includes('PENDENTE'); }
+  function isExcecao(t){ return statusTerceiro(t).includes('EXCE'); }
+  function hojeISO(){ return new Date().toISOString().slice(0,10); }
+  function isExcecaoAtiva(e){ const ate = e.ate || e.liberadoAte || e.validade || e.dataAte; return !ate || ate >= hojeISO(); }
+
+  function scoreClass(score){ if(score >= 85) return 'v28-score-ok'; if(score >= 65) return 'v28-score-warn'; return 'v28-score-danger'; }
+
+  function calcularEmpresasRisco(){
+    const ts = terceiros();
+    return empresas().map(e => {
+      const vinculados = ts.filter(t => String(t.empresaId || t.empresa_id || t.empresa || '') === String(e.id) || String(t.empresa || '').toLowerCase() === String(e.razao || e.nome || '').toLowerCase());
+      const total = vinculados.length;
+      const bloqueados = vinculados.filter(isBloqueado).length;
+      const pendentes = vinculados.filter(isPendente).length;
+      const exc = vinculados.filter(isExcecao).length;
+      const risco = total ? Math.min(100, Math.round(((bloqueados * 1.0 + pendentes * 0.55 + exc * 0.25) / total) * 100)) : 0;
+      const conformidade = Math.max(0, 100 - risco);
+      return { id:e.id, nome:e.razao || e.nome || e.fantasia || 'Empresa sem nome', total, bloqueados, pendentes, excecoes:exc, risco, conformidade };
+    }).sort((a,b) => b.risco - a.risco || b.total - a.total);
+  }
+
+  function renderV28PainelExecutivo(){
+    const page = document.getElementById('page-dashboard');
+    if(!page) return;
+    const old = document.getElementById('v28-exec-panel');
+    if(old) old.remove();
+
+    const ts = terceiros();
+    const emp = empresas();
+    const riscos = calcularEmpresasRisco();
+    const empresasEmRisco = riscos.filter(r => r.risco > 0).length;
+    const excAtivas = excecoes().filter(isExcecaoAtiva).length || ts.filter(isExcecao).length;
+    const pendOuBloq = ts.filter(t => isBloqueado(t) || isPendente(t)).length;
+    const mediaConformidade = riscos.length ? Math.round(riscos.reduce((s,r)=>s+r.conformidade,0)/riscos.length) : 100;
+    const top = riscos.filter(r => r.total > 0).slice(0,5);
+
+    const panel = document.createElement('div');
+    panel.id = 'v28-exec-panel';
+    panel.className = 'card v28-exec-panel';
+    panel.innerHTML = `
+      <div class="v28-exec-title">
+        <div><strong>Visão Executiva V28</strong><span class="v28-fusion-badge">fusão controlada</span></div>
+        <small>Indicadores para apresentação e gestão</small>
+      </div>
+      <div class="v28-exec-grid">
+        <div class="v28-exec-card v28-exec-blue" onclick="showPage && showPage('empresas')"><div class="v28-exec-label">Empresas avaliadas</div><div class="v28-exec-value">${emp.length}</div><span class="v28-exec-hint">Base de prestadores</span></div>
+        <div class="v28-exec-card ${empresasEmRisco ? 'v28-exec-danger':'v28-exec-ok'}" onclick="showPage && showPage('empresas')"><div class="v28-exec-label">Empresas em risco</div><div class="v28-exec-value">${empresasEmRisco}</div><span class="v28-exec-hint">Com pendências ou bloqueios</span></div>
+        <div class="v28-exec-card ${pendOuBloq ? 'v28-exec-warn':'v28-exec-ok'}" onclick="typeof abrirListaPorStatus==='function' ? abrirListaPorStatus('bloqueados') : showPage('listagem')"><div class="v28-exec-label">Ações necessárias</div><div class="v28-exec-value">${pendOuBloq}</div><span class="v28-exec-hint">Bloqueados ou pendentes</span></div>
+        <div class="v28-exec-card ${mediaConformidade >= 85 ? 'v28-exec-ok' : mediaConformidade >= 65 ? 'v28-exec-warn' : 'v28-exec-danger'}"><div class="v28-exec-label">Conformidade média</div><div class="v28-exec-value">${mediaConformidade}%</div><span class="v28-exec-hint">Indicador inicial de risco</span></div>
+      </div>
+      <div class="v28-risk-list">
+        ${top.length ? top.map(r => `<div class="v28-risk-item" onclick="showPage && showPage('empresas')"><div><div class="v28-risk-name">${r.nome}</div><div class="v28-risk-meta">${r.total} terceiro(s) • ${r.bloqueados} bloqueado(s) • ${r.pendentes} pendente(s) • ${r.excecoes} exceção(ões)</div></div><span class="v28-risk-score ${scoreClass(r.conformidade)}">${r.conformidade}% regular</span></div>`).join('') : '<div class="v28-risk-item"><div><div class="v28-risk-name">Sem dados suficientes</div><div class="v28-risk-meta">Importe/cadastre empresas e terceiros para calcular risco.</div></div></div>'}
+      </div>
+    `;
+
+    const firstStats = page.querySelector('.stats-grid');
+    if(firstStats && firstStats.parentNode) firstStats.parentNode.insertBefore(panel, firstStats.nextSibling);
+    else page.prepend(panel);
+  }
+
+  window.databaseService = window.databaseService || {
+    buscarTerceiros: () => terceiros(),
+    buscarEmpresas: () => empresas(),
+    buscarExcecoes: () => excecoes(),
+    salvarTerceiros: (lista) => typeof saveAll === 'function' ? saveAll(lista) : false,
+    salvarEmpresas: (lista) => typeof saveAllEmpresas === 'function' ? saveAllEmpresas(lista) : false,
+    origem: 'TSS local/Supabase cache',
+    versao: 'V28.2'
+  };
+
+  function showMini(msg){
+    let el = document.getElementById('v28-sync-mini');
+    if(!el){ el = document.createElement('div'); el.id='v28-sync-mini'; el.className='v28-sync-mini'; document.body.appendChild(el); }
+    el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2600);
+  }
+
+  const oldRender = window.renderDashboard;
+  if(typeof oldRender === 'function' && !window.__v28RenderPatch){
+    window.__v28RenderPatch = true;
+    window.renderDashboard = function(){
+      const res = oldRender.apply(this, arguments);
+      setTimeout(renderV28PainelExecutivo, 60);
+      return res;
+    };
+  }
+
+  const oldShow = window.showPage;
+  if(typeof oldShow === 'function' && !window.__v28ShowPatch){
+    window.__v28ShowPatch = true;
+    window.showPage = function(name){
+      const res = oldShow.apply(this, arguments);
+      if(name === 'dashboard') setTimeout(renderV28PainelExecutivo, 90);
+      return res;
+    };
+  }
+
+  const oldSync = window.syncData || window.sincronizarSupabase;
+  if(typeof oldSync === 'function' && !window.__v28SyncPatch){
+    window.__v28SyncPatch = true;
+    window.syncData = async function(){ showMini('Sincronizando...'); const r = await oldSync.apply(this, arguments); showMini('Sincronização concluída'); setTimeout(renderV28PainelExecutivo, 200); return r; };
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(renderV28PainelExecutivo, 500));
+  else setTimeout(renderV28PainelExecutivo, 500);
+})();
+</script>
+
 </body>
 </html>
