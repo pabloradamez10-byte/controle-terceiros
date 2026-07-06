@@ -5949,8 +5949,7 @@
   function statusExpress(t){
     const s = (typeof getStatus === 'function') ? getStatus(t) : {ok:false,motivos:['Não foi possível calcular status'],avisos:[]};
     if (s.excecao) return {classe:'warn', titulo:'LIBERADO POR EXCEÇÃO', sub:'Acesso permitido por autorização registrada', simbolo:'!', status:s};
-    if (s.ok && !s.pendente) return {classe:'ok', titulo:'LIBERADO', sub:'Acesso permitido', simbolo:'✓', status:s};
-    if (s.pendente) return {classe:'warn', titulo:'PENDENTE', sub:'Falta informação para validação completa', simbolo:'!', status:s};
+    if (s.ok) return {classe:'ok', titulo:'LIBERADO', sub: s.pendente ? 'Acesso permitido — possui pendências/avisos' : 'Acesso permitido', simbolo:'✓', status:s};
     return {classe:'blocked', titulo:'BLOQUEADO', sub:'Acesso não autorizado', simbolo:'×', status:s};
   }
 
@@ -5997,7 +5996,7 @@
       </div>` : '';
     const problemasHtml = (motivos.length || avisos.length) ? `
       <div class="v24-motivos ${motivos.length ? '' : 'warn'}">
-        <strong>${motivos.length ? 'Motivos / impedimentos' : 'Pendências / avisos'}</strong>
+        <strong>${motivos.length ? 'Motivos / impedimentos' : 'Pendências / avisos não bloqueantes'}</strong>
         <ul>${[...motivos, ...avisos].slice(0,12).map(m => `<li>${m}</li>`).join('')}</ul>
       </div>` : '';
     res.innerHTML = `
@@ -6127,8 +6126,7 @@
   function status(t){
     const s = typeof getStatus === 'function' ? getStatus(t) : {ok:false,motivos:['Não foi possível calcular o status.'],avisos:[]};
     if (s.excecao) return {classe:'warn', titulo:'LIBERADO POR EXCEÇÃO', sub:'Acesso permitido por autorização registrada', simbolo:'!', s:s};
-    if (s.ok && !s.pendente) return {classe:'ok', titulo:'LIBERADO', sub:'Acesso permitido', simbolo:'✓', s:s};
-    if (s.pendente) return {classe:'warn', titulo:'PENDENTE', sub:'Falta informação para validação completa', simbolo:'!', s:s};
+    if (s.ok) return {classe:'ok', titulo:'LIBERADO', sub: s.pendente ? 'Acesso permitido — possui pendências/avisos' : 'Acesso permitido', simbolo:'✓', s:s};
     return {classe:'blocked', titulo:'BLOQUEADO', sub:'Acesso não autorizado', simbolo:'×', s:s};
   }
   function linhaSemaforo(nome, iso, extra){
@@ -6184,7 +6182,7 @@
       '<li>Liberado até: '+(ex.ate ? fmt(ex.ate) : '—')+'</li>'+
       ((ex.motivos || []).map(function(m){ return '<li>'+m+'</li>'; }).join(''))+
       '</ul></div>' : '';
-    const problemas = motivos.length || avisos.length ? '<div class="v24-motivos '+(motivos.length ? '' : 'warn')+'"><strong>'+(motivos.length ? 'Motivos do bloqueio' : 'Pendências / avisos')+'</strong><ul>'+motivos.concat(avisos).slice(0,15).map(function(m){ return '<li>'+m+'</li>'; }).join('')+'</ul></div>' : '';
+    const problemas = motivos.length || avisos.length ? '<div class="v24-motivos '+(motivos.length ? '' : 'warn')+'"><strong>'+(motivos.length ? 'Motivos do bloqueio' : 'Pendências / avisos não bloqueantes')+'</strong><ul>'+motivos.concat(avisos).slice(0,15).map(function(m){ return '<li>'+m+'</li>'; }).join('')+'</ul></div>' : '';
     box.innerHTML = '<div class="v24-status-head">'+
       '<div class="v24-status-icon '+se.classe+'">'+se.simbolo+'</div>'+
       '<div><div class="v24-status-title '+se.classe+'">'+se.titulo+'</div><div class="v24-status-sub">'+se.sub+'</div></div></div>'+
