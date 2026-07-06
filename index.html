@@ -1142,7 +1142,7 @@
         <h3>Backup do sistema</h3>
         <p>Baixa um arquivo com empresas, terceiros, treinamentos e vínculos. Use isso para não perder os cadastros do navegador.</p>
         <button class="btn btn-primary" onclick="exportarBackupJSON()">Baixar backup JSON</button>
-        <div class="muted-note">Importante: hoje os dados ficam no navegador via localStorage. Para usar em outro celular ou computador, exporte e importe o backup.</div>
+        <div class="muted-note">Importante: os dados principais sincronizam com o Supabase. O navegador mantém cache local apenas como segurança/offline.</div>
       </div>
 
       <div class="data-box">
@@ -6548,57 +6548,99 @@
 
 
 <script>
-/* V27 — Banco real Supabase em segundo plano
-   - Não mostra painel Supabase na tela.
-   - Mantém o app funcionando com localStorage como cache local.
-   - Sincroniza empresas, terceiros, treinamentos e histórico com a tabela app_data.
-   - Documentos/arquivos digitais continuam locais nesta etapa; storage privado vem na próxima fase.
+/* V28 — Banco real Supabase com sincronização multi-dispositivo
+   Base: V27 estável.
+   Objetivo: manter o app igual, mas usar Supabase como fonte compartilhada.
+   Estratégia: salva um estado único na tabela app_data e usa localStorage apenas como cache/offline.
 */
 (function(){
   const SUPABASE_URL = 'https://obzycbtfbadjwwwfpsed.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
+
   const STATE_KEY = 'controle_terceiros_sst_state_v1';
-  const LOCAL_SYNC_MARK = 'tss_supabase_last_sync';
   const ENDPOINT = SUPABASE_URL + '/rest/v1/app_data';
+  const LOCAL_SYNC_MARK = 'tss_supabase_last_sync';
+  const LOCAL_CHANGE_MARK = 'tss_local_last_change';
+  const INSTANCE_ID = 'tss_instance_id';
+
+  const DATA_KEYS = {
+    terceiros: 'terceiros',
+    empresas: 'empresas',
+    treinamentos: 'treinamentos',
+    historico: 'historico',
+    excecoes: 'liberacoesExcecao',
+    anexosTerceiros: 'anexosTerceiros',
+    anexosEmpresas: 'anexosEmpresas',
+    arquivosTerceirosV16: 'arquivosTerceirosV16',
+    arquivosEmpresasV26: 'arquivosEmpresasV26'
+  };
 
   let syncTimer = null;
   let isApplyingRemote = false;
   let lastSaveStartedAt = 0;
+  let bootFinished = false;
 
-  function safeParse(value, fallback){
-    try { return JSON.parse(value || ''); } catch(e){ return fallback; }
+  if (!localStorage.getItem(INSTANCE_ID)) {
+    try { localStorage.setItem(INSTANCE_ID, crypto.randomUUID()); }
+    catch(e) { localStorage.setItem(INSTANCE_ID, 'inst-' + Date.now() + '-' + Math.random().toString(16).slice(2)); }
   }
+
+  function nowIso(){ return new Date().toISOString(); }
+  function parseTime(v){ const t = Date.parse(v || ''); return Number.isFinite(t) ? t : 0; }
+  function safeParse(value, fallback){ try { return JSON.parse(value || ''); } catch(e){ return fallback; } }
+  function readKey(key, fallback){ return safeParse(localStorage.getItem(key), fallback); }
+  function writeKey(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
 
   function readLocalState(){
     return {
-      schema: 'controle-terceiros-sst-v1',
-      updatedAt: new Date().toISOString(),
-      terceiros: safeParse(localStorage.getItem('terceiros'), []),
-      empresas: safeParse(localStorage.getItem('empresas'), []),
-      treinamentos: safeParse(localStorage.getItem('treinamentos'), []),
-      historico: safeParse(localStorage.getItem('historico'), []),
-      // Metadados leves. Arquivos grandes/base64 não são enviados nesta versão.
-      anexosTerceiros: safeParse(localStorage.getItem('anexosTerceiros'), {}),
-      anexosEmpresas: safeParse(localStorage.getItem('anexosEmpresas'), {})
+      schema: 'controle-terceiros-sst-v2',
+      updatedAt: nowIso(),
+      updatedBy: localStorage.getItem(INSTANCE_ID),
+      terceiros: readKey(DATA_KEYS.terceiros, []),
+      empresas: readKey(DATA_KEYS.empresas, []),
+      treinamentos: readKey(DATA_KEYS.treinamentos, []),
+      historico: readKey(DATA_KEYS.historico, []),
+      excecoes: readKey(DATA_KEYS.excecoes, {}),
+      anexosTerceiros: readKey(DATA_KEYS.anexosTerceiros, {}),
+      anexosEmpresas: readKey(DATA_KEYS.anexosEmpresas, {}),
+      arquivosTerceirosV16: readKey(DATA_KEYS.arquivosTerceirosV16, {}),
+      arquivosEmpresasV26: readKey(DATA_KEYS.arquivosEmpresasV26, {})
     };
   }
 
   function localHasUsefulData(){
     const s = readLocalState();
-    return (s.terceiros && s.terceiros.length) || (s.empresas && s.empresas.length) || (s.treinamentos && s.treinamentos.length);
+    return !!(
+      (Array.isArray(s.terceiros) && s.terceiros.length) ||
+      (Array.isArray(s.empresas) && s.empresas.length) ||
+      (Array.isArray(s.treinamentos) && s.treinamentos.length) ||
+      (s.excecoes && typeof s.excecoes === 'object' && Object.keys(s.excecoes).length) ||
+      (s.arquivosTerceirosV16 && typeof s.arquivosTerceirosV16 === 'object' && Object.keys(s.arquivosTerceirosV16).length) ||
+      (s.arquivosEmpresasV26 && typeof s.arquivosEmpresasV26 === 'object' && Object.keys(s.arquivosEmpresasV26).length)
+    );
+  }
+
+  function markLocalChanged(){
+    if (isApplyingRemote) return;
+    localStorage.setItem(LOCAL_CHANGE_MARK, nowIso());
   }
 
   function applyRemoteState(state){
     if (!state || typeof state !== 'object') return;
     isApplyingRemote = true;
     try {
-      if (Array.isArray(state.terceiros)) localStorage.setItem('terceiros', JSON.stringify(state.terceiros));
-      if (Array.isArray(state.empresas)) localStorage.setItem('empresas', JSON.stringify(state.empresas));
-      if (Array.isArray(state.treinamentos)) localStorage.setItem('treinamentos', JSON.stringify(state.treinamentos));
-      if (Array.isArray(state.historico)) localStorage.setItem('historico', JSON.stringify(state.historico));
-      if (state.anexosTerceiros && typeof state.anexosTerceiros === 'object') localStorage.setItem('anexosTerceiros', JSON.stringify(state.anexosTerceiros));
-      if (state.anexosEmpresas && typeof state.anexosEmpresas === 'object') localStorage.setItem('anexosEmpresas', JSON.stringify(state.anexosEmpresas));
-      localStorage.setItem(LOCAL_SYNC_MARK, new Date().toISOString());
+      if (Array.isArray(state.terceiros)) writeKey(DATA_KEYS.terceiros, state.terceiros);
+      if (Array.isArray(state.empresas)) writeKey(DATA_KEYS.empresas, state.empresas);
+      if (Array.isArray(state.treinamentos)) writeKey(DATA_KEYS.treinamentos, state.treinamentos);
+      if (Array.isArray(state.historico)) writeKey(DATA_KEYS.historico, state.historico);
+      if (state.excecoes && typeof state.excecoes === 'object') writeKey(DATA_KEYS.excecoes, state.excecoes);
+      if (state.anexosTerceiros && typeof state.anexosTerceiros === 'object') writeKey(DATA_KEYS.anexosTerceiros, state.anexosTerceiros);
+      if (state.anexosEmpresas && typeof state.anexosEmpresas === 'object') writeKey(DATA_KEYS.anexosEmpresas, state.anexosEmpresas);
+      if (state.arquivosTerceirosV16 && typeof state.arquivosTerceirosV16 === 'object') writeKey(DATA_KEYS.arquivosTerceirosV16, state.arquivosTerceirosV16);
+      if (state.arquivosEmpresasV26 && typeof state.arquivosEmpresasV26 === 'object') writeKey(DATA_KEYS.arquivosEmpresasV26, state.arquivosEmpresasV26);
+      const stamp = state.updatedAt || nowIso();
+      localStorage.setItem(LOCAL_SYNC_MARK, stamp);
+      localStorage.setItem(LOCAL_CHANGE_MARK, stamp);
     } finally {
       isApplyingRemote = false;
     }
@@ -6615,136 +6657,202 @@
   async function fetchRemoteState(){
     const url = ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY) + '&select=key,data,updated_at&limit=1';
     const res = await fetch(url, { headers: sbHeaders() });
-    if (!res.ok) throw new Error('Falha ao consultar Supabase: ' + res.status);
+    if (!res.ok) {
+      const txt = await res.text().catch(()=> '');
+      throw new Error('Falha ao consultar Supabase: ' + res.status + ' ' + txt.slice(0,180));
+    }
     const rows = await res.json();
     return rows && rows[0] ? rows[0] : null;
   }
 
   async function saveRemoteState(){
-    if (isApplyingRemote) return;
+    if (isApplyingRemote) return false;
     const startedAt = Date.now();
     lastSaveStartedAt = startedAt;
+    const localState = readLocalState();
     const payload = {
       key: STATE_KEY,
-      data: readLocalState(),
-      updated_at: new Date().toISOString()
+      data: localState,
+      updated_at: nowIso()
     };
     const res = await fetch(ENDPOINT + '?on_conflict=key', {
       method: 'POST',
       headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Falha ao salvar no Supabase: ' + res.status);
-    if (lastSaveStartedAt === startedAt) localStorage.setItem(LOCAL_SYNC_MARK, new Date().toISOString());
+    if (!res.ok) {
+      const txt = await res.text().catch(()=> '');
+      throw new Error('Falha ao salvar no Supabase: ' + res.status + ' ' + txt.slice(0,180));
+    }
+    if (lastSaveStartedAt === startedAt) {
+      const stamp = payload.data.updatedAt;
+      localStorage.setItem(LOCAL_SYNC_MARK, stamp);
+      localStorage.setItem(LOCAL_CHANGE_MARK, stamp);
+    }
+    return true;
   }
 
-  function scheduleRemoteSync(){
+  function scheduleRemoteSync(delay){
     if (isApplyingRemote) return;
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => {
-      saveRemoteState().catch(err => {
+      saveRemoteState().then(() => {
+        updateBancoBadge('online');
+      }).catch(err => {
         console.warn('[TSS] Supabase sync:', err);
+        updateBancoBadge('offline');
         if (typeof toast === 'function') toast('⚠ Banco offline: alterações ficaram salvas neste aparelho.');
       });
-    }, 900);
+    }, delay ?? 800);
   }
 
   function renderEverythingSafe(){
-    try { if (typeof renderDashboard === 'function') renderDashboard(); } catch(e){}
-    try { if (typeof renderDashboardV11 === 'function') renderDashboardV11(); } catch(e){}
-    try { if (typeof renderLista === 'function') renderLista(); } catch(e){}
-    try { if (typeof renderEmpresas === 'function') renderEmpresas(); } catch(e){}
-    try { if (typeof renderTreinamentos === 'function') renderTreinamentos(); } catch(e){}
+    const funcs = [
+      'atualizarStats','renderDashboard','renderDashboardV11','renderLista','renderEmpresas','renderTreinamentos',
+      'renderRankingEmpresas','renderPendencias','renderPortariaExpress','renderCentralPendencias'
+    ];
+    funcs.forEach(name => { try { if (typeof window[name] === 'function') window[name](); } catch(e){} });
     try { if (typeof popularSelectEmpresas === 'function') popularSelectEmpresas('f-empresa'); } catch(e){}
     try { if (typeof popularSelectEmpresas === 'function') popularSelectEmpresas('e-empresa'); } catch(e){}
   }
 
+  function updateBancoBadge(status){
+    let el = document.getElementById('tss-banco-status');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'tss-banco-status';
+      el.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:99999;padding:8px 10px;border-radius:12px;font:600 12px system-ui;background:#0f172a;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.22);opacity:.92;';
+      document.body.appendChild(el);
+    }
+    if (status === 'online') {
+      el.textContent = 'Banco online';
+      el.style.background = '#15803d';
+      setTimeout(() => { if (el && el.textContent === 'Banco online') el.style.display = 'none'; }, 2500);
+    } else if (status === 'loading') {
+      el.style.display = 'block';
+      el.textContent = 'Sincronizando banco...';
+      el.style.background = '#b45309';
+    } else {
+      el.style.display = 'block';
+      el.textContent = 'Banco offline/cache local';
+      el.style.background = '#991b1b';
+    }
+  }
+
   function wrapLocalSavers(){
-    const originalSaveAll = window.saveAll;
-    if (typeof originalSaveAll === 'function') {
-      window.saveAll = saveAll = function(data){
-        originalSaveAll(data);
-        scheduleRemoteSync();
-      };
-    }
-
-    const originalSaveEmpresas = window.saveAllEmpresas;
-    if (typeof originalSaveEmpresas === 'function') {
-      window.saveAllEmpresas = saveAllEmpresas = function(data){
-        originalSaveEmpresas(data);
-        scheduleRemoteSync();
-      };
-    }
-
-    const originalSaveTreinamentos = window.saveAllTreinamentos;
-    if (typeof originalSaveTreinamentos === 'function') {
-      window.saveAllTreinamentos = saveAllTreinamentos = function(data){
-        originalSaveTreinamentos(data);
-        scheduleRemoteSync();
-      };
-    }
-
-    const originalRegistrarHistorico = window.registrarHistorico;
-    if (typeof originalRegistrarHistorico === 'function') {
-      window.registrarHistorico = registrarHistorico = function(){
-        const result = originalRegistrarHistorico.apply(this, arguments);
+    const wrap = (name) => {
+      const original = window[name];
+      if (typeof original !== 'function' || original.__tssWrappedV28) return;
+      const wrapped = function(){
+        const result = original.apply(this, arguments);
+        markLocalChanged();
         scheduleRemoteSync();
         return result;
       };
-    }
+      wrapped.__tssWrappedV28 = true;
+      window[name] = wrapped;
+      try { eval(name + ' = window["' + name + '"]'); } catch(e) {}
+    };
+
+    [
+      'saveAll','saveAllEmpresas','saveAllTreinamentos','saveAllExcecoes',
+      'setAnexosTerceiro','setArquivosTerceiroV16','setArquivosEmpresaV26',
+      'registrarHistorico','importarPlanilhaExcel','importarBackupJSON'
+    ].forEach(wrap);
   }
 
-  async function initSupabaseCache(){
+  async function initSupabaseReal(){
     wrapLocalSavers();
+    updateBancoBadge('loading');
     try {
       const remote = await fetchRemoteState();
-      const hasLocal = !!localHasUsefulData();
+      const hasLocal = localHasUsefulData();
+      const localChange = parseTime(localStorage.getItem(LOCAL_CHANGE_MARK) || localStorage.getItem(LOCAL_SYNC_MARK));
+
       if (remote && remote.data) {
-        if (!hasLocal) {
+        const remoteTime = Math.max(parseTime(remote.updated_at), parseTime(remote.data.updatedAt));
+
+        if (!hasLocal || remoteTime >= localChange) {
           applyRemoteState(remote.data);
           renderEverythingSafe();
-          if (typeof toast === 'function') toast('✓ Dados carregados do banco.');
+          updateBancoBadge('online');
+          if (typeof toast === 'function') toast('✓ Dados carregados do Supabase.');
         } else {
-          // Se já tem dados locais, não sobrescreve automaticamente; só garante backup remoto.
-          scheduleRemoteSync();
+          await saveRemoteState();
+          updateBancoBadge('online');
+          if (typeof toast === 'function') toast('✓ Dados locais enviados ao Supabase.');
         }
       } else if (hasLocal) {
         await saveRemoteState();
-        if (typeof toast === 'function') toast('✓ Dados enviados ao banco.');
+        updateBancoBadge('online');
+        if (typeof toast === 'function') toast('✓ Base enviada ao Supabase.');
+      } else {
+        updateBancoBadge('online');
       }
+      bootFinished = true;
     } catch (err) {
+      bootFinished = true;
       console.warn('[TSS] Supabase inicialização:', err);
-      if (typeof toast === 'function') toast('⚠ Banco indisponível. Usando cache local.');
+      updateBancoBadge('offline');
+      if (typeof toast === 'function') toast('⚠ Banco não conectou. Cache local ativo.');
     }
   }
 
-  window.tssSupabaseSyncNow = function(){
-    return saveRemoteState()
-      .then(() => { if (typeof toast === 'function') toast('✓ Banco sincronizado.'); })
-      .catch(err => { console.error(err); if (typeof toast === 'function') toast('⚠ Falha ao sincronizar banco.'); });
+  window.tssSupabaseSyncNow = async function(){
+    updateBancoBadge('loading');
+    try {
+      await saveRemoteState();
+      updateBancoBadge('online');
+      if (typeof toast === 'function') toast('✓ Banco sincronizado.');
+      return true;
+    } catch(err) {
+      console.error(err);
+      updateBancoBadge('offline');
+      if (typeof toast === 'function') toast('⚠ Falha ao sincronizar banco.');
+      return false;
+    }
   };
 
   window.tssSupabaseReload = async function(){
+    updateBancoBadge('loading');
     try {
       const remote = await fetchRemoteState();
       if (remote && remote.data) {
         applyRemoteState(remote.data);
         renderEverythingSafe();
-        if (typeof toast === 'function') toast('✓ Dados recarregados do banco.');
+        updateBancoBadge('online');
+        if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
+        return true;
       }
-    } catch (err) {
+      updateBancoBadge('online');
+      if (typeof toast === 'function') toast('Nenhum dado encontrado no Supabase.');
+      return false;
+    } catch(err) {
       console.error(err);
+      updateBancoBadge('offline');
       if (typeof toast === 'function') toast('⚠ Falha ao recarregar banco.');
+      return false;
     }
   };
 
+  // Sincronização leve ao voltar para a aba/app.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && bootFinished) {
+      window.tssSupabaseReload().catch(()=>{});
+    }
+  });
+
+  // Atalho de emergência para testar no console:
+  // tssSupabaseSyncNow() envia este aparelho ao banco.
+  // tssSupabaseReload() baixa do banco para este aparelho.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSupabaseCache);
+    document.addEventListener('DOMContentLoaded', initSupabaseReal);
   } else {
-    setTimeout(initSupabaseCache, 0);
+    setTimeout(initSupabaseReal, 0);
   }
 })();
 </script>
+
 
 </body>
 </html>
