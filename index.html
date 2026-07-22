@@ -6572,7 +6572,8 @@
     arquivosTerceirosV16: 'arquivosTerceirosV16',
     arquivosEmpresasV26: 'arquivosEmpresasV26',
     acessos: 'tssAcessosV29',
-    rascunhos: 'tssRascunhosV29'
+    rascunhos: 'tssRascunhosV29',
+    usuarios: 'tssUserRolesV30'
   };
 
   let syncTimer = null;
@@ -6606,7 +6607,8 @@
       arquivosTerceirosV16: readKey(DATA_KEYS.arquivosTerceirosV16, {}),
       arquivosEmpresasV26: readKey(DATA_KEYS.arquivosEmpresasV26, {}),
       acessos: readKey(DATA_KEYS.acessos, []),
-      rascunhos: readKey(DATA_KEYS.rascunhos, [])
+      rascunhos: readKey(DATA_KEYS.rascunhos, []),
+      usuarios: readKey(DATA_KEYS.usuarios, { 'pablo.wommer1@gmail.com': { role:'admin', active:true } })
     };
   }
 
@@ -6642,6 +6644,7 @@
       if (state.arquivosEmpresasV26 && typeof state.arquivosEmpresasV26 === 'object') writeKey(DATA_KEYS.arquivosEmpresasV26, state.arquivosEmpresasV26);
       if (Array.isArray(state.acessos)) writeKey(DATA_KEYS.acessos, state.acessos);
       if (Array.isArray(state.rascunhos)) writeKey(DATA_KEYS.rascunhos, state.rascunhos);
+      if (state.usuarios && typeof state.usuarios === 'object') writeKey(DATA_KEYS.usuarios, state.usuarios);
       const stamp = state.updatedAt || nowIso();
       localStorage.setItem(LOCAL_SYNC_MARK, stamp);
       localStorage.setItem(LOCAL_CHANGE_MARK, stamp);
@@ -6651,9 +6654,14 @@
   }
 
   function sbHeaders(extra){
+    let authToken = SUPABASE_ANON_KEY;
+    try {
+      const auth = JSON.parse(localStorage.getItem('tss_auth_session_v30') || 'null');
+      if (auth?.access_token) authToken = auth.access_token;
+    } catch(e) {}
     return Object.assign({
       apikey: SUPABASE_ANON_KEY,
-      Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + authToken,
       'Content-Type': 'application/json'
     }, extra || {});
   }
@@ -6760,7 +6768,7 @@
 
     [
       'saveAll','saveAllEmpresas','saveAllTreinamentos','saveAllExcecoes',
-      'saveAllAcessosV29','saveRascunhosV29',
+      'saveAllAcessosV29','saveRascunhosV29','saveUserRolesV30',
       'setAnexosTerceiro','setArquivosTerceiroV16','setArquivosEmpresaV26',
       'registrarHistorico','importarPlanilhaExcel','importarBackupJSON'
     ].forEach(wrap);
@@ -6919,6 +6927,71 @@
 
   function wrapPort(){['v242AbrirExpress','v24AbrirExpress'].forEach(n=>{const old=window[n];if(typeof old!=='function'||old.__v29)return;const fn=function(id){old(id);setTimeout(()=>attachPortActions(id),20)};fn.__v29=true;window[n]=fn})}
   function init(){createPages();normalizeNav();setupWizard();wrapPort();dashboard();const obs=new MutationObserver(()=>{normalizeNav();wrapPort()});obs.observe(document.querySelector('header nav'),{childList:true});setTimeout(()=>obs.disconnect(),2500)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
+<style>
+/* V30 — autenticação e perfis */
+.v30-auth{position:fixed;inset:0;z-index:200000;background:linear-gradient(145deg,#eef4ff,#f8fafc);display:grid;place-items:center;padding:18px}.v30-auth.hidden{display:none}.v30-auth-card{width:min(440px,100%);background:#fff;border:1px solid var(--border);border-radius:24px;padding:28px;box-shadow:0 24px 70px rgba(15,23,42,.16)}.v30-auth-logo{width:54px;height:54px;border-radius:17px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:27px;font-weight:900;margin-bottom:16px}.v30-auth-card h1{font-size:25px;margin-bottom:5px}.v30-auth-card p{color:var(--muted);font-size:14px;margin-bottom:18px}.v30-auth-card label{display:block;font-weight:700;font-size:13px;margin:12px 0 6px}.v30-auth-card input{width:100%}.v30-auth-actions{display:flex;gap:8px;margin-top:18px}.v30-auth-actions .btn{flex:1;min-height:44px}.v30-auth-msg{display:none;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px}.v30-auth-msg.show{display:block}.v30-auth-msg.error{background:var(--danger-lt);color:var(--danger)}.v30-auth-msg.ok{background:var(--ok-lt);color:var(--ok)}.v30-userbar{display:flex;align-items:center;gap:8px;margin-left:auto}.v30-role{border-radius:999px;background:#dbeafe;color:#1d4ed8;padding:6px 10px;font-size:11px;font-weight:900;text-transform:uppercase}.v30-logout{border:1px solid rgba(255,255,255,.35);background:transparent;color:inherit;border-radius:9px;padding:6px 9px;cursor:pointer;font-weight:700}.v30-users{display:grid;gap:10px}.v30-user{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--border);border-radius:14px;padding:13px}.v30-user small{display:block;color:var(--muted);margin-top:3px}.v30-bind-form{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-bottom:16px}.v30-access-denied{padding:40px;text-align:center}.v30-pending-badge{display:inline-flex;border-radius:999px;padding:5px 9px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}
+@media(max-width:700px){.v30-auth-card{padding:22px}.v30-userbar{width:100%;justify-content:flex-end}.v30-bind-form{grid-template-columns:1fr}.v30-user{align-items:flex-start;flex-direction:column}}
+</style>
+
+<script>
+/* V30 — Supabase Auth + matriz de acesso da interface.
+   A senha é tratada diretamente pelo Supabase e nunca é salva no app. */
+(function(){
+  const SB='https://obzycbtfbadjwwwfpsed.supabase.co';
+  const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
+  const SESSION='tss_auth_session_v30', ROLES='tssUserRolesV30', ADMIN='pablo.wommer1@gmail.com';
+  const $=id=>document.getElementById(id);
+  const norm=v=>(v||'').trim().toLowerCase();
+  const roleLabels={admin:'Administrador',sesmt:'SESMT',portaria:'Portaria',cadastro:'Cadastro externo'};
+  const permissions={
+    admin:['dashboard','empresas','listagem','cadastro','documentos','acessos','portaria-express','configuracoes','treinamentos','dados','validacao'],
+    sesmt:['dashboard','empresas','listagem','documentos','validacao','treinamentos'],
+    portaria:['portaria-express','acessos'],
+    cadastro:['listagem','cadastro','documentos']
+  };
+  let currentUser=null,currentRole=null;
+
+  function roles(){try{const r=JSON.parse(localStorage.getItem(ROLES)||'{}');if(!r[ADMIN])r[ADMIN]={role:'admin',active:true};return r}catch(e){return{[ADMIN]:{role:'admin',active:true}}}}
+  window.saveUserRolesV30=function(v){if(!v[ADMIN])v[ADMIN]={role:'admin',active:true};localStorage.setItem(ROLES,JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')setTimeout(()=>window.tssSupabaseSyncNow(),80)};
+  function session(){try{return JSON.parse(localStorage.getItem(SESSION)||'null')}catch(e){return null}}
+  function headers(token){return{'apikey':KEY,'Authorization':'Bearer '+(token||KEY),'Content-Type':'application/json'}}
+  function authMessage(text,type='error'){const m=$('v30-auth-msg');if(!m)return;m.textContent=text;m.className='v30-auth-msg show '+type}
+  function createAuth(){if($('v30-auth'))return;document.body.insertAdjacentHTML('beforeend',`<div id="v30-auth" class="v30-auth"><div class="v30-auth-card"><div class="v30-auth-logo">T</div><h1>Acesso ao TSS</h1><p>Entre com seu e-mail e senha. Cada usuário verá apenas as funções autorizadas.</p><label>E-mail</label><input id="v30-email" type="email" autocomplete="username" placeholder="seuemail@empresa.com"><label>Senha</label><input id="v30-password" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo de 6 caracteres"><div id="v30-auth-msg" class="v30-auth-msg"></div><div class="v30-auth-actions"><button class="btn btn-primary" onclick="v30Login()">Entrar</button><button class="btn btn-ghost" onclick="v30Register()">Criar acesso</button></div><button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="v30Recover()">Esqueci minha senha</button><small style="display:block;color:var(--muted);margin-top:14px">O acesso só será liberado se o e-mail estiver vinculado a um perfil pelo Administrador.</small></div></div>`)}
+  async function request(path,body,token){const r=await fetch(SB+path,{method:'POST',headers:headers(token),body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error_description||data.msg||data.message||'Não foi possível concluir.');return data}
+  window.v30Login=async function(){const email=norm($('v30-email')?.value),password=$('v30-password')?.value||'';if(!email||!password)return authMessage('Informe e-mail e senha.');authMessage('Entrando...','ok');try{const data=await request('/auth/v1/token?grant_type=password',{email,password});localStorage.setItem(SESSION,JSON.stringify(data));await activate(data.user,data);if(typeof window.tssSupabaseReload==='function')setTimeout(()=>window.tssSupabaseReload(),100)}catch(e){authMessage(e.message)} };
+  window.v30Register=async function(){const email=norm($('v30-email')?.value),password=$('v30-password')?.value||'';if(!email||password.length<6)return authMessage('Informe um e-mail e uma senha com pelo menos 6 caracteres.');if(email!==ADMIN&&!roles()[email])return authMessage('Este e-mail ainda não foi vinculado pelo Administrador.');authMessage('Criando acesso...','ok');try{const data=await request('/auth/v1/signup',{email,password,data:{system:'tss'}});if(data.session){localStorage.setItem(SESSION,JSON.stringify(data.session));await activate(data.user,data.session)}else authMessage('Cadastro criado. Confirme o e-mail recebido e depois entre.','ok')}catch(e){authMessage(e.message)}};
+  window.v30Recover=async function(){const email=norm($('v30-email')?.value);if(!email)return authMessage('Informe o e-mail para recuperar a senha.');try{await request('/auth/v1/recover',{email});authMessage('Enviamos as instruções de recuperação para o e-mail.','ok')}catch(e){authMessage(e.message)}};
+  window.v30Logout=function(){localStorage.removeItem(SESSION);currentUser=null;currentRole=null;$('v30-auth')?.classList.remove('hidden');document.querySelector('.v30-userbar')?.remove()};
+  async function validate(s){if(!s?.access_token)return null;const r=await fetch(SB+'/auth/v1/user',{headers:headers(s.access_token)});if(!r.ok)return null;return await r.json()}
+  async function activate(user,s){currentUser=user;await new Promise(r=>setTimeout(r,250));const email=norm(user?.email),binding=roles()[email];currentRole=email===ADMIN?'admin':(binding?.active!==false?binding?.role:null);if(!currentRole){localStorage.removeItem(SESSION);currentUser=null;return authMessage('Seu cadastro existe, mas o Administrador ainda não vinculou um perfil a este e-mail.')}$('v30-auth')?.classList.add('hidden');applyPermissions();addUserBar();const first=permissions[currentRole][0];setTimeout(()=>window.showPage(first),80)}
+  function allowed(page){return !!currentRole&&permissions[currentRole]?.includes(page)}
+  function applyPermissions(){document.querySelectorAll('header nav button').forEach(b=>{const p=b.dataset.page;b.style.display=!p||allowed(p)?'':'none'});document.querySelectorAll('[data-v30-admin]').forEach(e=>e.style.display=currentRole==='admin'?'':'none')}
+  function addUserBar(){document.querySelector('.v30-userbar')?.remove();const bar=document.createElement('div');bar.className='v30-userbar';bar.innerHTML=`<span class="v30-role">${roleLabels[currentRole]}</span><button class="v30-logout" onclick="v30Logout()">Sair</button>`;document.querySelector('header')?.appendChild(bar)}
+
+  function ensureUsersPage(){if($('page-usuarios'))return;const p=document.createElement('div');p.id='page-usuarios';p.className='page';p.innerHTML=`<div class="page-actions"><h2>Usuários e permissões</h2></div><div class="card"><div class="card-title">Vincular e-mail a um perfil</div><div class="v30-bind-form"><input id="v30-bind-email" type="email" placeholder="email@empresa.com"><select id="v30-bind-role"><option value="sesmt">SESMT — valida documentos</option><option value="portaria">Portaria — entrada e saída</option><option value="cadastro">Cadastro externo — cadastra e anexa</option></select><button class="btn btn-primary" onclick="v30BindUser()">Vincular</button></div><div id="v30-users-list" class="v30-users"></div></div>`;document.querySelector('main').appendChild(p)}
+  window.v30BindUser=function(){if(currentRole!=='admin')return;const email=norm($('v30-bind-email')?.value),role=$('v30-bind-role')?.value;if(!email||!email.includes('@'))return toast('Informe um e-mail válido.');const r=roles();r[email]={role,active:true,updatedAt:new Date().toISOString(),updatedBy:currentUser?.email};saveUserRolesV30(r);$('v30-bind-email').value='';renderUsers();toast('✓ E-mail vinculado. A pessoa já pode criar o acesso.')};
+  window.v30ToggleUser=function(email){if(currentRole!=='admin'||email===ADMIN)return;const r=roles();if(!r[email])return;r[email].active=r[email].active===false;saveUserRolesV30(r);renderUsers()};
+  window.v30RemoveUser=function(email){if(currentRole!=='admin'||email===ADMIN)return;if(!confirm('Remover o vínculo deste e-mail?'))return;const r=roles();delete r[email];saveUserRolesV30(r);renderUsers()};
+  function renderUsers(){const box=$('v30-users-list');if(!box)return;box.innerHTML=Object.entries(roles()).map(([email,u])=>`<div class="v30-user"><div><strong>${email}</strong><small>${roleLabels[u.role]||u.role}${email===ADMIN?' • Administrador principal':''}</small></div><div class="v29-actions"><span class="badge ${u.active!==false?'badge-ok':'badge-blocked'}">${u.active!==false?'Ativo':'Inativo'}</span>${email!==ADMIN?`<button class="btn btn-ghost" onclick="v30ToggleUser('${email}')">${u.active!==false?'Desativar':'Ativar'}</button><button class="btn btn-danger" onclick="v30RemoveUser('${email}')">Remover</button>`:''}</div></div>`).join('')}
+
+  function addSettingsLink(){const grid=$('page-configuracoes')?.querySelector('.v29-settings-grid');if(!grid||grid.querySelector('[data-v30-admin]'))return;grid.insertAdjacentHTML('afterbegin',`<button class="v29-setting" data-v30-admin onclick="showPage('usuarios')"><strong>Usuários e permissões</strong><small>Vincular e-mails aos perfis do sistema</small></button>`)}
+  function markPendingUploads(){if(currentRole!=='cadastro')return;try{const docs=JSON.parse(localStorage.getItem('arquivosTerceirosV16')||'{}');let changed=false;Object.values(docs).forEach(list=>(list||[]).forEach(d=>{if(!d.statusValidacao){d.statusValidacao='aguardando_sesmt';d.enviadoPor=currentUser?.email;changed=true}}));if(changed){localStorage.setItem('arquivosTerceirosV16',JSON.stringify(docs));if(typeof window.tssSupabaseSyncNow==='function')window.tssSupabaseSyncNow()}}catch(e){}}
+
+  function uploadDocs(){try{return JSON.parse(localStorage.getItem('arquivosTerceirosV16')||'{}')}catch(e){return{}}}
+  function saveUploadDocs(v){localStorage.setItem('arquivosTerceirosV16',JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')window.tssSupabaseSyncNow()}
+  window.v30ValidateDoc=function(personId,docId,decision){if(!['admin','sesmt'].includes(currentRole))return toast('Somente o SESMT pode validar documentos.');const docs=uploadDocs(),doc=(docs[personId]||[]).find(x=>x.id===docId);if(!doc)return;let reason='';if(decision==='rejeitado'){reason=prompt('Informe o motivo da rejeição:')||'';if(!reason.trim())return toast('O motivo da rejeição é obrigatório.')}if(!confirm(decision==='aprovado'?'Aprovar este documento?':'Rejeitar este documento?'))return;doc.statusValidacao=decision;doc.validadoPor=currentUser?.email;doc.validadoEm=new Date().toISOString();doc.motivoRejeicao=reason;saveUploadDocs(docs);renderUploadValidation();toast(decision==='aprovado'?'✓ Documento aprovado pelo SESMT.':'Documento rejeitado e devolvido para correção.')};
+  function renderUploadValidation(){const page=$('page-documentos');if(!page)return;let section=$('v30-upload-validation');if(!section){section=document.createElement('div');section.id='v30-upload-validation';section.className='card';section.innerHTML='<div class="card-title">Documentos e fotos enviados</div><div id="v30-upload-list" class="v30-users"></div>';page.prepend(section)}const people=typeof getAll==='function'?getAll():[],docs=uploadDocs(),items=[];Object.entries(docs).forEach(([personId,list])=>(list||[]).forEach(doc=>{const person=people.find(x=>x.id===personId)||{};items.push({personId,person,doc})}));const box=$('v30-upload-list');if(!box)return;box.innerHTML=items.length?items.sort((a,b)=>(b.doc.criadoEm||'').localeCompare(a.doc.criadoEm||'')).map(({personId,person,doc})=>{const st=doc.statusValidacao||'aguardando_sesmt',label=st==='aprovado'?'Aprovado':st==='rejeitado'?'Rejeitado':'Aguardando validação do SESMT',cls=st==='aprovado'?'badge-ok':st==='rejeitado'?'badge-blocked':'badge-warn';return `<div class="v30-user"><div><strong>${person.nome||'Terceiro'} — ${doc.tipo||'Documento'}</strong><small>${doc.nome||'Arquivo anexado'} • ${person.empresa||'Empresa não informada'}</small><small>Enviado por: ${doc.enviadoPor||'Cadastro anterior'}${doc.motivoRejeicao?' • Motivo: '+doc.motivoRejeicao:''}</small></div><div class="v29-actions"><span class="badge ${cls}">${label}</span>${['admin','sesmt'].includes(currentRole)&&st==='aguardando_sesmt'?`<button class="btn btn-primary" onclick="v30ValidateDoc('${personId}','${doc.id}','aprovado')">Aprovar</button><button class="btn btn-danger" onclick="v30ValidateDoc('${personId}','${doc.id}','rejeitado')">Rejeitar</button>`:''}</div></div>`}).join(''):'<div class="v29-state">Nenhum documento ou foto enviado.</div>'}
+  function restrictRenderedActions(){if(currentRole!=='cadastro')return;document.querySelectorAll('#page-listagem button').forEach(b=>{if(/editar|excluir|exceção|liberar/i.test(b.textContent||''))b.style.display='none'})}
+
+  const oldShow=window.showPage;window.showPage=function(name){if(!currentRole)return;if(name==='usuarios'){if(currentRole!=='admin')return toast('Acesso restrito ao Administrador.');ensureUsersPage();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$('page-usuarios').classList.add('active');renderUsers();return}if(!allowed(name))return toast('Seu perfil não possui acesso a esta função.');oldShow(name);applyPermissions();if(name==='configuracoes')addSettingsLink();if(name==='documentos'){if(currentRole==='cadastro')markPendingUploads();renderUploadValidation()}if(name==='listagem')setTimeout(restrictRenderedActions,30)};
+  ['adicionarArquivoTerceiroV16','adicionarAnexoTerceiro'].forEach(n=>{const old=window[n];if(typeof old!=='function')return;window[n]=function(){const r=old.apply(this,arguments);setTimeout(markPendingUploads,50);return r}});
+  ['excluir','salvarEdicao','salvarEmpresa','salvarTreinamento','alternarTreinamento','salvarLiberacaoExcecaoV17','cancelarLiberacaoExcecao'].forEach(n=>{const old=window[n];if(typeof old!=='function')return;window[n]=function(){if(currentRole!=='admin'&&!(currentRole==='sesmt'&&/Treinamento|Excecao/i.test(n)))return toast('Seu perfil não possui permissão para esta alteração.');return old.apply(this,arguments)}});
+
+  async function init(){createAuth();ensureUsersPage();addSettingsLink();const s=session(),u=await validate(s).catch(()=>null);if(u)activate(u,s);else{$('v30-auth')?.classList.remove('hidden');localStorage.removeItem(SESSION)}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
