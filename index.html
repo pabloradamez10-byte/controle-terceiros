@@ -6608,7 +6608,7 @@
       arquivosEmpresasV26: readKey(DATA_KEYS.arquivosEmpresasV26, {}),
       acessos: readKey(DATA_KEYS.acessos, []),
       rascunhos: readKey(DATA_KEYS.rascunhos, []),
-      usuarios: readKey(DATA_KEYS.usuarios, { 'pablo.wommer1@gmail.com': { role:'admin', active:true } })
+      usuarios: readKey(DATA_KEYS.usuarios, { 'pabloradamez10@gmail.com': { role:'admin', active:true } })
     };
   }
 
@@ -6943,7 +6943,7 @@
 (function(){
   const SB='https://obzycbtfbadjwwwfpsed.supabase.co';
   const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
-  const SESSION='tss_auth_session_v30', ROLES='tssUserRolesV30', ADMIN='pablo.wommer1@gmail.com';
+  const SESSION='tss_auth_session_v30', ROLES='tssUserRolesV30', ADMIN='pabloradamez10@gmail.com', LEGACY_ADMIN='pablo.wommer1@gmail.com';
   const $=id=>document.getElementById(id);
   const norm=v=>(v||'').trim().toLowerCase();
   const roleLabels={admin:'Administrador',sesmt:'SESMT',portaria:'Portaria',cadastro:'Cadastro externo'};
@@ -6955,8 +6955,8 @@
   };
   let currentUser=null,currentRole=null;
 
-  function roles(){try{const r=JSON.parse(localStorage.getItem(ROLES)||'{}');if(!r[ADMIN])r[ADMIN]={role:'admin',active:true};return r}catch(e){return{[ADMIN]:{role:'admin',active:true}}}}
-  window.saveUserRolesV30=function(v){if(!v[ADMIN])v[ADMIN]={role:'admin',active:true};localStorage.setItem(ROLES,JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')setTimeout(()=>window.tssSupabaseSyncNow(),80)};
+  function roles(){try{const r=JSON.parse(localStorage.getItem(ROLES)||'{}');delete r[LEGACY_ADMIN];if(!r[ADMIN])r[ADMIN]={role:'admin',active:true};return r}catch(e){return{[ADMIN]:{role:'admin',active:true}}}}
+  window.saveUserRolesV30=function(v){delete v[LEGACY_ADMIN];if(!v[ADMIN])v[ADMIN]={role:'admin',active:true};localStorage.setItem(ROLES,JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')setTimeout(()=>window.tssSupabaseSyncNow(),80)};
   function session(){try{return JSON.parse(localStorage.getItem(SESSION)||'null')}catch(e){return null}}
   function headers(token){return{'apikey':KEY,'Authorization':'Bearer '+(token||KEY),'Content-Type':'application/json'}}
   function authMessage(text,type='error'){const m=$('v30-auth-msg');if(!m)return;m.textContent=text;m.className='v30-auth-msg show '+type}
