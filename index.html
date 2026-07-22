@@ -759,13 +759,13 @@
     Controle de Terceiros
   </div>
   <nav>
-    <button class="active" onclick="showPage('dashboard')">Dashboard</button>
-    <button onclick="showPage('cadastro')">Cadastro</button>
-    <button onclick="showPage('listagem')">Terceiros</button>
-    <button onclick="showPage('empresas')">Empresas</button>
-    <button onclick="showPage('treinamentos')">Treinamentos</button>
-    <button onclick="showPage('dados')">Dados</button>
-    <button onclick="showPage('portaria')">Portaria</button>
+    <button class="active" data-page="dashboard" onclick="showPage('dashboard')">Painel</button>
+    <button data-page="empresas" onclick="showPage('empresas')">Empresas</button>
+    <button data-page="listagem" onclick="showPage('listagem')">Terceiros</button>
+    <button data-page="documentos" onclick="showPage('documentos')">Documentos</button>
+    <button data-page="acessos" onclick="showPage('acessos')">Acessos</button>
+    <button data-page="portaria-express" data-v24-portaria="1" onclick="showPage('portaria-express')">Portaria Express</button>
+    <button data-page="configuracoes" class="v29-settings-nav" onclick="showPage('configuracoes')" aria-label="Configurações">Configurações</button>
   </nav>
 </header>
 
@@ -773,8 +773,8 @@
 
   <section class="hero">
     <div>
-      <h1>Controle de Terceiros</h1>
-      <p>Base inicial para cadastro de empresas, terceiros, treinamentos obrigatórios, validade de ASO, integração e consulta rápida para portaria.</p>
+      <h1>Gestão de Terceiros</h1>
+      <p>Controle de pessoas externas, documentos, autorizações e acessos à unidade.</p>
     </div>
   </section>
 
@@ -1423,16 +1423,23 @@
     return { ok: motivos.length === 0, motivos, avisos };
   }
 
+  function exigeAsoPessoa(t) {
+    return !['Visitante', 'Motorista', 'Fornecedor', 'Colaborador de outra unidade'].includes(t?.tipoPessoa || 'Terceiro');
+  }
+
   function getStatusSESMT(t) {
     const h = hoje();
     const motivos = [];
     const avisos = [];
     const empresa = getEmpresaById(t.empresaId);
 
-    const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) avisos.push('ASO sem data informada');
-    else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
-    else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    const exigeAso = exigeAsoPessoa(t);
+    if (exigeAso) {
+      const asoStatus = statusData(t.aso);
+      if (asoStatus.semData) avisos.push('ASO sem data informada');
+      else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
+      else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    }
 
     const integStatus = statusData(t.integ);
     if (integStatus.semData) avisos.push('Integração sem data informada');
@@ -1564,9 +1571,11 @@
     const aso    = document.getElementById('f-aso').value;
     const integ  = document.getElementById('f-integ').value;
     const obs    = document.getElementById('f-obs').value.trim();
+    const tipoPessoa = document.querySelector('[name="v29-person-type"]:checked')?.value || 'Terceiro';
+    const exigeAso = !['Visitante', 'Motorista', 'Fornecedor', 'Colaborador de outra unidade'].includes(tipoPessoa);
     const treinamentosRealizados = coletarTreinamentosDoFormulario('f');
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+    if (!nome || !cpf || !empresaId || !funcao || (exigeAso && !aso) || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.');
       return;
     }
@@ -1579,7 +1588,7 @@
       return;
     }
 
-    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados });
+    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, tipoPessoa, aso: exigeAso ? aso : '', integ, obs, treinamentosRealizados });
     saveAll(lista);
     limparForm();
     toast('✓ Terceiro cadastrado com sucesso!');
@@ -1626,7 +1635,7 @@
         semData.push({ terceiroId:t.id, terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'DP', item:'Empresa vinculada', vencimento:'', dias:null, detalheExtra:'Cadastro sem empresa vinculada' });
       }
 
-      addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
+      if (exigeAsoPessoa(t)) addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
       addPend('SESMT', 'Integração', t.integ, 'Integração obrigatória');
 
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
@@ -1810,7 +1819,7 @@
         ? `<span class="badge badge-ok">✓ Liberado</span>`
         : `<span class="badge badge-blocked">✕ Bloqueado</span>`;
       const h = hoje();
-      const asoTag  = t.aso  < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
+      const asoTag  = !exigeAsoPessoa(t) ? `<span class="badge badge-warn">NÃO EXIGIDO</span>` : (t.aso < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`);
       const integTag= t.integ< h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
       const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
       const pend = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
@@ -1824,7 +1833,7 @@
         <td class="td-name">${t.nome}</td>
         <td class="td-cpf">${t.cpf}</td>
         <td class="td-company">${t.empresa}</td>
-        <td>${fmtData(t.aso)}${asoTag}</td>
+        <td>${exigeAsoPessoa(t) ? fmtData(t.aso) : '—'}${asoTag}</td>
         <td>${fmtData(t.integ)}${integTag}</td>
         <td>${treinoBadge}</td>
         <td>${dpBadge}</td>
@@ -1894,8 +1903,10 @@
     const integ  = document.getElementById('e-integ').value;
     const obs    = document.getElementById('e-obs').value.trim();
     const treinamentosRealizados = coletarTreinamentosDoFormulario('e');
+    const atual = getAll().find(t => t.id === id);
+    const exigeAso = !['Visitante', 'Motorista', 'Fornecedor', 'Colaborador de outra unidade'].includes(atual?.tipoPessoa || 'Terceiro');
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+    if (!nome || !cpf || !empresaId || !funcao || (exigeAso && !aso) || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.'); return;
     }
 
@@ -2238,7 +2249,7 @@
         <div class="info-item"><label>CPF</label><span>${t.cpf}</span></div>
         <div class="info-item"><label>Função</label><span>${t.funcao || '—'}</span></div>
         <div class="info-item"><label>Contrato Empresa</label><span>${empresa?.contratoFim ? fmtData(empresa.contratoFim) + ' ' + tagData(empresa.contratoFim) : 'Não informado'}</span></div>
-        <div class="info-item"><label>ASO</label><span>${fmtData(t.aso)} ${tagData(t.aso)}</span></div>
+        <div class="info-item"><label>ASO</label><span>${exigeAsoPessoa(t) ? `${fmtData(t.aso)} ${tagData(t.aso)}` : '<span class="badge badge-warn">Não exigido para este tipo</span>'}</span></div>
       </div>
       <div class="analysis-grid" style="margin-top:16px;">
         ${renderListaMotivos('DP', st.dp)}
@@ -2362,7 +2373,7 @@
     const terceiros = getAll();
     const empresas = getAllEmpresas();
     const hojeIso = hoje();
-    const asoVencidos = terceiros.filter(t => isDataValidaSistema(t.aso) && t.aso < hojeIso).length;
+    const asoVencidos = terceiros.filter(t => exigeAsoPessoa(t) && isDataValidaSistema(t.aso) && t.aso < hojeIso).length;
     const integVencidas = terceiros.filter(t => isDataValidaSistema(t.integ) && t.integ < hojeIso).length;
     const treinosPendentes = terceiros.reduce((acc, t) => acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length, 0);
     const contratosVencidos = empresas.filter(e => isDataValidaSistema(e.contratoFim) && e.contratoFim < hojeIso).length;
@@ -3168,10 +3179,12 @@
     const avisos = [];
     const empresa = getEmpresaById(t.empresaId);
 
-    const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) avisos.push('ASO sem data informada');
-    else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
-    else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    if (exigeAsoPessoa(t)) {
+      const asoStatus = statusData(t.aso);
+      if (asoStatus.semData) avisos.push('ASO sem data informada');
+      else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
+      else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    }
 
     const integStatus = statusData(t.integ);
     if (integStatus.semData) avisos.push('Integração sem data informada');
@@ -3844,8 +3857,9 @@
     let semData = 0;
     terceiros.forEach(t => {
       const emp = empresas.find(e => e.id === t.empresaId) || null;
-      ['aso','integ'].forEach(k => { if (!isDataValidaSistema(t[k])) semData++; });
-      v16AddDateItem(proximos, t, 'ASO', t.aso);
+      if (exigeAsoPessoa(t) && !isDataValidaSistema(t.aso)) semData++;
+      if (!isDataValidaSistema(t.integ)) semData++;
+      if (exigeAsoPessoa(t)) v16AddDateItem(proximos, t, 'ASO', t.aso);
       v16AddDateItem(proximos, t, 'Integração', t.integ);
       if (emp) v16AddDateItem(proximos, t, 'Fim prestação/contrato empresa', emp.contratoFim || emp.fimPrestacao || emp.contratoValidade);
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
@@ -5091,7 +5105,7 @@
       alertas[tipo].push({ terceiroId:t.id, terceiro:t.nome || 'Sem nome', empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', item, vencimento, dias, detalhe: detalhe || '' });
     };
     terceiros.forEach(t => {
-      add('aso30', t, 'ASO', t.aso, 'Documento ocupacional');
+      if (exigeAsoPessoa(t)) add('aso30', t, 'ASO', t.aso, 'Documento ocupacional');
       add('integracao30', t, 'Integração', t.integ, 'Integração obrigatória');
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
         const reg = getTreinoRealizado(t, tr.id);
@@ -5336,9 +5350,9 @@
       const emp = empresas.find(e => e.id === t.empresaId);
       const base = { id:t.id, nome:t.nome || 'Sem nome', cpf:t.cpf || '', empresa:getTerceiroEmpresaV22(t), t };
       const st = getStatus(t);
-      if (isValidDate(t.aso) && t.aso < h) out.aso.push({...base, item:'ASO vencido', detalhe:fmt(t.aso)});
+      if (exigeAsoPessoa(t) && isValidDate(t.aso) && t.aso < h) out.aso.push({...base, item:'ASO vencido', detalhe:fmt(t.aso)});
       if (isValidDate(t.integ) && t.integ < h) out.integracao.push({...base, item:'Integração vencida', detalhe:fmt(t.integ)});
-      if (!isValidDate(t.aso)) out.semData.push({...base, item:'ASO sem data informada', detalhe:''});
+      if (exigeAsoPessoa(t) && !isValidDate(t.aso)) out.semData.push({...base, item:'ASO sem data informada', detalhe:''});
       if (!isValidDate(t.integ)) out.semData.push({...base, item:'Integração sem data informada', detalhe:''});
 
       (getTreinosObrigatoriosDaEmpresa(t.empresaId) || []).forEach(tr => {
@@ -6011,7 +6025,7 @@
         <div class="v24-info"><small>Função</small><strong>${t.funcao || '—'}</strong></div>
       </div>
       <div class="v24-semaforo">
-        ${linhaSemaforo('ASO', t.aso)}
+        ${exigeAsoPessoa(t) ? linhaSemaforo('ASO', t.aso) : '<div class="v24-semaforo-row neutral"><div><strong>ASO</strong><small style="display:block;color:var(--muted);margin-top:3px;">Não exigido para este tipo de pessoa</small></div><span>NÃO EXIGIDO</span></div>'}
         ${linhaSemaforo('Integração', t.integ)}
         ${linhaSemaforo('Contrato da empresa', emp.contratoFim)}
         ${linhaSemaforo('Documentos DP', emp.docDPValidade)}
@@ -6192,7 +6206,7 @@
       '<div class="v24-info"><small>Empresa</small><strong>'+(t.empresa || e.razao || e.fantasia || '—')+'</strong></div>'+
       '<div class="v24-info"><small>Função</small><strong>'+(t.funcao || '—')+'</strong></div>'+
       '</div><div class="v24-semaforo">'+
-      linhaSemaforo('ASO', t.aso)+
+      (exigeAsoPessoa(t) ? linhaSemaforo('ASO', t.aso) : '<div class="v24-semaforo-row neutral"><div><strong>ASO</strong><small style="display:block;color:var(--muted);margin-top:3px;">Não exigido para este tipo de pessoa</small></div><span>NÃO EXIGIDO</span></div>')+
       linhaSemaforo('Integração', t.integ)+
       linhaSemaforo('Contrato da empresa', e.contratoFim)+
       linhaSemaforo('Documentos DP', e.docDPValidade)+
@@ -6570,7 +6584,10 @@
     anexosTerceiros: 'anexosTerceiros',
     anexosEmpresas: 'anexosEmpresas',
     arquivosTerceirosV16: 'arquivosTerceirosV16',
-    arquivosEmpresasV26: 'arquivosEmpresasV26'
+    arquivosEmpresasV26: 'arquivosEmpresasV26',
+    acessos: 'tssAcessosV29',
+    rascunhos: 'tssRascunhosV29',
+    usuarios: 'tssUserRolesV30'
   };
 
   let syncTimer = null;
@@ -6602,7 +6619,10 @@
       anexosTerceiros: readKey(DATA_KEYS.anexosTerceiros, {}),
       anexosEmpresas: readKey(DATA_KEYS.anexosEmpresas, {}),
       arquivosTerceirosV16: readKey(DATA_KEYS.arquivosTerceirosV16, {}),
-      arquivosEmpresasV26: readKey(DATA_KEYS.arquivosEmpresasV26, {})
+      arquivosEmpresasV26: readKey(DATA_KEYS.arquivosEmpresasV26, {}),
+      acessos: readKey(DATA_KEYS.acessos, []),
+      rascunhos: readKey(DATA_KEYS.rascunhos, []),
+      usuarios: readKey(DATA_KEYS.usuarios, { 'pabloradamez10@gmail.com': { role:'admin', active:true } })
     };
   }
 
@@ -6636,6 +6656,9 @@
       if (state.anexosEmpresas && typeof state.anexosEmpresas === 'object') writeKey(DATA_KEYS.anexosEmpresas, state.anexosEmpresas);
       if (state.arquivosTerceirosV16 && typeof state.arquivosTerceirosV16 === 'object') writeKey(DATA_KEYS.arquivosTerceirosV16, state.arquivosTerceirosV16);
       if (state.arquivosEmpresasV26 && typeof state.arquivosEmpresasV26 === 'object') writeKey(DATA_KEYS.arquivosEmpresasV26, state.arquivosEmpresasV26);
+      if (Array.isArray(state.acessos)) writeKey(DATA_KEYS.acessos, state.acessos);
+      if (Array.isArray(state.rascunhos)) writeKey(DATA_KEYS.rascunhos, state.rascunhos);
+      if (state.usuarios && typeof state.usuarios === 'object') writeKey(DATA_KEYS.usuarios, state.usuarios);
       const stamp = state.updatedAt || nowIso();
       localStorage.setItem(LOCAL_SYNC_MARK, stamp);
       localStorage.setItem(LOCAL_CHANGE_MARK, stamp);
@@ -6645,9 +6668,14 @@
   }
 
   function sbHeaders(extra){
+    let authToken = SUPABASE_ANON_KEY;
+    try {
+      const auth = JSON.parse(localStorage.getItem('tss_auth_session_v30') || 'null');
+      if (auth?.access_token) authToken = auth.access_token;
+    } catch(e) {}
     return Object.assign({
       apikey: SUPABASE_ANON_KEY,
-      Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + authToken,
       'Content-Type': 'application/json'
     }, extra || {});
   }
@@ -6754,6 +6782,7 @@
 
     [
       'saveAll','saveAllEmpresas','saveAllTreinamentos','saveAllExcecoes',
+      'saveAllAcessosV29','saveRascunhosV29','saveUserRolesV30',
       'setAnexosTerceiro','setArquivosTerceiroV16','setArquivosEmpresaV26',
       'registrarHistorico','importarPlanilhaExcel','importarBackupJSON'
     ].forEach(wrap);
@@ -6848,6 +6877,138 @@
   } else {
     setTimeout(initSupabaseReal, 0);
   }
+})();
+</script>
+
+
+<style>
+/* V29 — usabilidade focada exclusivamente em terceiros */
+.v29-only{display:none}.v29-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.v29-quick{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}.v29-summary{border:1px solid var(--border);border-radius:16px;background:#fff;padding:16px;cursor:pointer;min-width:0}.v29-summary:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(21,94,239,.08)}.v29-summary small{display:block;color:var(--muted);font-weight:700}.v29-summary strong{display:block;font-size:28px;margin-top:6px}.v29-pending{display:grid;gap:10px}.v29-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid var(--border);border-radius:14px;background:#fff}.v29-row small{display:block;color:var(--muted);margin-top:4px}.v29-state{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:14px}.v29-filters{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:10px;margin-bottom:16px}.v29-profile-reasons{border-left:5px solid var(--danger);background:var(--danger-lt);border-radius:14px;padding:15px;margin-top:14px}.v29-profile-reasons.ok{border-color:var(--ok);background:var(--ok-lt)}.v29-profile-reasons ul{padding-left:20px;margin:8px 0}.v29-profile-reasons li{margin:6px 0}.v29-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.v29-tabs{display:flex;gap:6px;overflow:auto;margin:12px 0}.v29-tabs button{white-space:nowrap;border:1px solid var(--border);background:#fff;padding:9px 12px;border-radius:10px;font-weight:700}.v29-settings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.v29-setting{border:1px solid var(--border);background:#fff;border-radius:16px;padding:18px;text-align:left;cursor:pointer}.v29-setting strong{display:block}.v29-setting small{display:block;color:var(--muted);margin-top:5px}.v29-port-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}.v29-wizard-progress{display:flex;gap:6px;margin:0 0 16px;overflow:auto}.v29-step-dot{min-width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#e2e8f0;color:#475569;font-weight:800}.v29-step-dot.active{background:var(--accent);color:#fff}.v29-wizard-nav{display:flex;justify-content:space-between;gap:10px;margin-top:14px}.v29-wizard-type{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.v29-wizard-type label{border:1px solid var(--border);border-radius:14px;padding:14px;cursor:pointer}.v29-wizard-type input{width:auto;margin-right:7px}.v29-mobile-title{display:none}
+#page-dashboard>.stats-grid,#page-dashboard>.mini-dashboard,#page-dashboard>#v16-dashboard-smart,#page-dashboard>#v21-alertas-cards,#page-dashboard>#v22-inteligencia,#page-dashboard>.card{display:none!important}
+#page-dashboard>.page-actions{display:none}.v29-dashboard{display:block!important}.v29-settings-nav{margin-left:auto}
+@media(max-width:900px){.v29-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v29-filters{grid-template-columns:1fr 1fr}.v29-settings-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){header{align-items:stretch}header nav{display:flex;width:100%;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 0 8px}header nav button{flex:0 0 auto;scroll-snap-align:start;min-height:42px}.v29-settings-nav{margin-left:0}.hero{padding:16px}.hero h1{font-size:22px}.v29-grid{grid-template-columns:1fr 1fr;gap:8px}.v29-summary{padding:12px}.v29-summary strong{font-size:23px}.v29-filters{grid-template-columns:1fr}.v29-row{align-items:flex-start;flex-direction:column}.v29-settings-grid,.v29-wizard-type{grid-template-columns:1fr}.v29-quick .btn{flex:1 1 calc(50% - 8px);min-height:44px}.v29-mobile-title{display:block}.modal-content{max-height:94vh;overflow:auto;margin:3vh 10px}.table-wrap{overflow-x:auto}}
+</style>
+
+<script>
+/* V29 — camada compatível, sem apagar dados e sem substituir o Supabase real */
+(function(){
+  const ACCESS_KEY='tssAcessosV29', DRAFT_KEY='tssRascunhosV29';
+  const $=id=>document.getElementById(id);
+  const esc=v=>(v??'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const all=()=>typeof getAll==='function'?getAll():[];
+  const status=t=>typeof getStatus==='function'?getStatus(t):{ok:false,motivos:['Status indisponível'],avisos:[]};
+  const fmt=v=>typeof fmtData==='function'?fmtData(v):(v||'—');
+  const now=()=>new Date().toISOString();
+
+  window.getAllAcessosV29=function(){try{return JSON.parse(localStorage.getItem(ACCESS_KEY)||'[]')}catch(e){return[]}};
+  window.saveAllAcessosV29=function(v){localStorage.setItem(ACCESS_KEY,JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')setTimeout(()=>window.tssSupabaseSyncNow(),50)};
+  window.saveRascunhosV29=function(v){localStorage.setItem(DRAFT_KEY,JSON.stringify(v));};
+
+  function ensurePage(id,title,body){if($(id))return $(id);const el=document.createElement('div');el.id=id;el.className='page';el.innerHTML=`<div class="page-actions"><h2>${title}</h2></div>${body}`;document.querySelector('main').appendChild(el);return el}
+  function createPages(){
+    ensurePage('page-documentos','Documentos',`<div class="card"><div class="v29-filters"><input id="v29-doc-search" placeholder="Buscar por pessoa, empresa ou documento" oninput="renderDocumentosV29()"><select id="v29-doc-status" onchange="renderDocumentosV29()"><option value="">Todos os status</option><option value="vencido">Vencidos</option><option value="proximo">Próximos do vencimento</option><option value="semdata">Sem data</option></select></div><div id="v29-documentos-list" class="v29-pending"></div></div>`);
+    ensurePage('page-acessos','Acessos',`<div class="v29-grid" style="margin-bottom:16px"><div class="v29-summary"><small>Dentro da unidade</small><strong id="v29-dentro">0</strong></div><div class="v29-summary"><small>Sem saída registrada</small><strong id="v29-semsaida">0</strong></div><div class="v29-summary"><small>Entradas hoje</small><strong id="v29-entradas-hoje">0</strong></div><div class="v29-summary"><small>Negativas hoje</small><strong id="v29-negativas-hoje">0</strong></div></div><div class="card"><div class="v29-filters"><input id="v29-access-search" placeholder="Buscar nome, CPF ou empresa" oninput="renderAcessosV29()"><select id="v29-access-type" onchange="renderAcessosV29()"><option value="">Todos os registros</option><option value="entrada">Entradas</option><option value="saida">Saídas</option><option value="negativa">Negativas</option></select></div><div id="v29-access-list" class="v29-pending"></div></div>`);
+    ensurePage('page-validacao','Central de Validação',`<div class="card"><div class="v29-filters"><input id="v29-val-search" placeholder="Nome, CPF, empresa ou item" oninput="renderValidacaoV29()"><select id="v29-val-type" onchange="renderValidacaoV29()"><option value="">Todas as pendências</option><option value="Documento">Documentos</option><option value="Treinamento">Treinamentos</option><option value="ASO">ASO</option><option value="Integração">Integração</option></select><select id="v29-val-urgency" onchange="renderValidacaoV29()"><option value="">Toda urgência</option><option value="vencido">Vencido</option><option value="proximo">Próximo do vencimento</option><option value="semdata">Sem data</option></select></div><div id="v29-validation-list" class="v29-pending"></div></div>`);
+    ensurePage('page-configuracoes','Configurações',`<div class="v29-settings-grid"><button class="v29-setting" onclick="showPage('treinamentos')"><strong>Treinamentos</strong><small>Tipos, validade, obrigatoriedade e ativação</small></button><button class="v29-setting" onclick="showPage('dados')"><strong>Dados e importação</strong><small>Backup, importação e sincronização</small></button><button class="v29-setting" onclick="showPage('validacao')"><strong>Central de Validação</strong><small>Documentos, treinamentos e pendências</small></button><button class="v29-setting" onclick="toast('Unidades e áreas serão habilitadas quando houver perfis de acesso.')"><strong>Unidades e áreas</strong><small>Estrutura organizacional</small></button><button class="v29-setting" onclick="toast('Usuários e permissões dependem da autenticação do Supabase.')"><strong>Usuários e permissões</strong><small>Perfis e acessos ao sistema</small></button><button class="v29-setting" onclick="toast('Requisitos configuráveis: próxima etapa estrutural.')"><strong>Requisitos</strong><small>Documentos e treinamentos por atividade</small></button></div>`);
+  }
+
+  function pendencias(){
+    try{const p=montarPendencias();return [...(p.vencidas||[]).map(x=>({...x,urgencia:'vencido'})),...(p.proximas||[]).map(x=>({...x,urgencia:'proximo'})),...(p.semData||[]).map(x=>({...x,urgencia:'semdata'}))]}catch(e){return[]}
+  }
+  function state(text){return `<div class="v29-state">${text}</div>`}
+  function rowPend(p,action='abrirAnaliseTerceiro') {return `<div class="v29-row"><div><strong>${esc(p.terceiro||p.nome||'Pessoa não informada')}</strong><small>${esc(p.empresa||'Empresa não informada')} • ${esc(p.tipo||'Documento')} — ${esc(p.item||'Pendência')}</small><small>${p.vencimento?`Validade: ${fmt(p.vencimento)}`:'Data não informada'}${p.detalheExtra?' • '+esc(p.detalheExtra):''}</small></div><button class="btn btn-ghost" onclick="${action}('${esc(p.terceiroId||p.id||'')}')">Ver agora</button></div>`}
+  window.renderDocumentosV29=function(){const box=$('v29-documentos-list');if(!box)return;const q=($('v29-doc-search')?.value||'').toLowerCase(),st=$('v29-doc-status')?.value||'';const list=pendencias().filter(p=>(!st||p.urgencia===st)&&(`${p.terceiro} ${p.empresa} ${p.item} ${p.tipo}`.toLowerCase().includes(q)));box.innerHTML=list.length?list.map(p=>rowPend(p)).join(''):state('Nenhum documento ou pendência encontrado.')};
+  window.renderValidacaoV29=function(){const box=$('v29-validation-list');if(!box)return;const q=($('v29-val-search')?.value||'').toLowerCase(),tp=$('v29-val-type')?.value||'',ur=$('v29-val-urgency')?.value||'';const list=pendencias().filter(p=>(!tp||p.tipo===tp)&&(!ur||p.urgencia===ur)&&(`${p.terceiro} ${p.cpf} ${p.empresa} ${p.item}`.toLowerCase().includes(q)));box.innerHTML=list.length?list.map(p=>rowPend(p)).join(''):state('Nenhuma pendência encontrada.')};
+
+  function accessState(){const list=getAllAcessosV29();const inside=new Map();list.forEach(a=>{if(a.tipo==='entrada')inside.set(a.terceiroId,a);if(a.tipo==='saida')inside.delete(a.terceiroId)});return{list,inside}}
+  window.renderAcessosV29=function(){const box=$('v29-access-list');if(!box)return;const {list,inside}=accessState(),q=($('v29-access-search')?.value||'').toLowerCase(),tp=$('v29-access-type')?.value||'',today=new Date().toISOString().slice(0,10);const filtered=list.filter(a=>(!tp||a.tipo===tp)&&(`${a.nome} ${a.cpf} ${a.empresa}`.toLowerCase().includes(q))).sort((a,b)=>b.dataHora.localeCompare(a.dataHora));$('v29-dentro').textContent=inside.size;$('v29-semsaida').textContent=inside.size;$('v29-entradas-hoje').textContent=list.filter(a=>a.tipo==='entrada'&&a.dataHora.startsWith(today)).length;$('v29-negativas-hoje').textContent=list.filter(a=>a.tipo==='negativa'&&a.dataHora.startsWith(today)).length;box.innerHTML=filtered.length?filtered.slice(0,200).map(a=>`<div class="v29-row"><div><strong>${a.tipo==='entrada'?'Entrada':a.tipo==='saida'?'Saída':'Negativa'} — ${esc(a.nome)}</strong><small>${esc(a.empresa||'Sem empresa')} • ${new Date(a.dataHora).toLocaleString('pt-BR')}</small>${a.motivo?`<small>Motivo: ${esc(a.motivo)}</small>`:''}</div><span class="badge ${a.tipo==='negativa'?'badge-blocked':a.tipo==='entrada'?'badge-ok':'badge-warn'}">${a.tipo.toUpperCase()}</span></div>`).join(''):state('Nenhum acesso registrado.')};
+  window.registrarAcessoV29=function(id,tipo){const t=all().find(x=>x.id===id);if(!t)return;const st=status(t),{inside}=accessState();if(tipo==='entrada'&&!st.ok&&!st.excecao)return toast('Entrada bloqueada. Registre uma negativa.');if(tipo==='entrada'&&inside.has(id))return toast('Esta pessoa já está dentro da unidade.');if(tipo==='saida'&&!inside.has(id))return toast('Não existe entrada aberta para esta pessoa.');let motivo='';if(tipo==='negativa'){motivo=prompt('Informe o motivo da negativa:')||'';if(!motivo.trim())return toast('O motivo é obrigatório.')}if(!confirm(`Confirmar ${tipo} de ${t.nome}?`))return;const rec={id:'acc-'+Date.now()+'-'+Math.random().toString(16).slice(2),terceiroId:id,nome:t.nome,cpf:t.cpf||'',empresa:t.empresa||'',tipo,motivo,dataHora:now(),usuario:'Portaria'};saveAllAcessosV29([...getAllAcessosV29(),rec]);if(typeof registrarHistorico==='function')registrarHistorico('terceiro',id,`${tipo==='entrada'?'Entrada':tipo==='saida'?'Saída':'Negativa'} registrada pela Portaria${motivo?'. Motivo: '+motivo:''}.`);toast(`✓ ${tipo==='entrada'?'Entrada':tipo==='saida'?'Saída':'Negativa'} registrada.`);renderAcessosV29();attachPortActions(id)};
+  function attachPortActions(id){const box=$('v24-result');if(!box)return;box.querySelector('.v29-port-actions')?.remove();const t=all().find(x=>x.id===id);if(!t)return;const st=status(t),inside=accessState().inside.has(id);const div=document.createElement('div');div.className='v29-port-actions';div.innerHTML=inside?`<button class="btn btn-primary" onclick="registrarAcessoV29('${id}','saida')">Registrar saída</button>`:(st.ok||st.excecao)?`<button class="btn btn-primary" onclick="registrarAcessoV29('${id}','entrada')">Registrar entrada</button>`:`<button class="btn btn-danger" onclick="registrarAcessoV29('${id}','negativa')">Registrar negativa</button>`;box.appendChild(div)}
+
+  function dashboard(){let box=$('v29-dashboard');if(!box){box=document.createElement('div');box.id='v29-dashboard';box.className='v29-dashboard';$('page-dashboard').prepend(box)}const pessoas=all(),sts=pessoas.map(t=>({t,s:status(t)})),ps=pendencias(),{inside}=accessState();box.innerHTML=`<div class="page-actions"><div><h2>O que precisa ser resolvido hoje?</h2><p style="color:var(--muted);margin-top:4px">Visão rápida da operação de terceiros.</p></div></div><div class="v29-quick"><button class="btn btn-primary" onclick="showPage('cadastro')">+ Novo terceiro</button><button class="btn btn-ghost" onclick="gerarRelatorioExecutivo()">Emitir relatório</button><button class="btn btn-ghost" onclick="showPage('validacao')">Ver pendências</button><button class="btn btn-ghost" onclick="showPage('portaria-express')">Portaria Express</button></div><div class="v29-grid">${[['Total de terceiros',pessoas.length,"showPage('listagem')"],['Liberados',sts.filter(x=>x.s.ok&&!x.s.excecao).length,"abrirListaPorStatus('liberados')"],['Bloqueados',sts.filter(x=>!x.s.ok&&!x.s.excecao).length,"abrirListaPorStatus('bloqueados')"],['Documentos vencidos',ps.filter(x=>x.urgencia==='vencido').length,"showPage('documentos')"],['Próximos do vencimento',ps.filter(x=>x.urgencia==='proximo').length,"showPage('documentos')"],['Pendências',ps.length,"showPage('validacao')"],['Dentro da unidade',inside.size,"showPage('acessos')"],['Sem saída registrada',inside.size,"showPage('acessos')"]].map(x=>`<div class="v29-summary" onclick="${x[2]}"><small>${x[0]}</small><strong>${x[1]}</strong></div>`).join('')}</div><div class="card" style="margin-top:18px"><div class="card-title">Pendências em destaque</div><div class="v29-pending">${ps.length?ps.slice(0,6).map(p=>rowPend(p)).join(''):state('Nenhuma pendência encontrada.')}</div></div>`}
+
+  function enhanceProfile(id){setTimeout(()=>{const box=$('analise-conteudo');if(!box||box.querySelector('.v29-profile-reasons'))return;const t=all().find(x=>x.id===id);if(!t)return;const st=status(t),reasons=[...(st.motivos||[]),...(st.avisos||[])];box.insertAdjacentHTML('afterbegin',`<div class="v29-tabs"><button>Resumo</button><button>Dados pessoais</button><button>Empresa</button><button>Documentos</button><button>Treinamentos</button><button>Autorizações</button><button>Acessos</button><button>Exceções</button><button>Histórico</button></div><div class="v29-profile-reasons ${st.ok?'ok':''}"><strong>${st.ok?'Entrada liberada':'Entrada bloqueada porque:'}</strong>${reasons.length?`<ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:'<p>Não há impedimentos ativos.</p>'}<strong>${st.ok?'Situação regular.':'Como resolver:'}</strong>${st.ok?'':`<ul>${reasons.map(r=>`<li>${/aso/i.test(r)?'Enviar novo ASO':/integra/i.test(r)?'Agendar ou atualizar a integração':/trein/i.test(r)?'Registrar o treinamento obrigatório':/contrato|document/i.test(r)?'Enviar ou corrigir o documento':'Consultar o responsável e regularizar a pendência'}</li>`).join('')}</ul>`}<div class="v29-actions"><button class="btn btn-ghost" onclick="showPage('documentos')">Consultar documentos</button><button class="btn btn-ghost" onclick="showPage('acessos')">Consultar acessos</button></div></div>`);},30)}
+
+  function atualizarRequisitosTipoPessoaV31(){const tipo=document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',semAso=['Visitante','Motorista','Fornecedor','Colaborador de outra unidade'].includes(tipo),input=$('f-aso'),wrap=input?.closest('div'),label=wrap?.querySelector('label');if(!input||!wrap)return;input.required=!semAso;if(semAso){input.value='';input.disabled=true;wrap.style.opacity='.58';if(label)label.textContent='ASO — não exigido para '+tipo.toLowerCase()}else{input.disabled=false;wrap.style.opacity='1';if(label)label.textContent='Validade do ASO *'}}
+  window.atualizarRequisitosTipoPessoaV31=atualizarRequisitosTipoPessoaV31;
+  function setupWizard(){const page=$('page-cadastro');if(!page||page.dataset.v29)return;page.dataset.v29='1';const h=page.querySelector('h2');if(h)h.textContent='Cadastro guiado de terceiro';const first=page.querySelector('.card');if(first)first.insertAdjacentHTML('afterbegin',`<div id="v29-type-step"><div class="card-title">Etapa 1 — Tipo da pessoa</div><div class="v29-wizard-type">${['Terceiro','Visitante','Motorista','Fornecedor','Colaborador de outra unidade'].map((x,i)=>`<label><input type="radio" name="v29-person-type" value="${x}" ${i===0?'checked':''} onchange="atualizarRequisitosTipoPessoaV31()">${x}</label>`).join('')}</div><p style="color:var(--muted);font-size:13px;margin-top:10px">O sistema controla somente pessoas externas à rotina permanente da unidade.</p></div>`);page.insertAdjacentHTML('afterbegin','<div class="v29-wizard-progress"><span class="v29-step-dot active">1</span><span class="v29-step-dot">2</span><span class="v29-step-dot">3</span><span class="v29-step-dot">4</span><span class="v29-step-dot">5</span><span class="v29-step-dot">6</span></div>');const save=page.querySelector('button[onclick="salvarTerceiro()"]');if(save){save.textContent='Concluir cadastro';save.insertAdjacentHTML('beforebegin','<button class="btn btn-ghost" type="button" onclick="salvarRascunhoV29()">Salvar rascunho</button>')}atualizarRequisitosTipoPessoaV31()}
+  window.salvarRascunhoV29=function(){const drafts=(()=>{try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]')}catch(e){return[]}})();drafts.push({id:'draft-'+Date.now(),nome:$('f-nome')?.value||'',cpf:$('f-cpf')?.value||'',empresaId:$('f-empresa')?.value||'',funcao:$('f-funcao')?.value||'',tipo:document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',salvoEm:now()});saveRascunhosV29(drafts);toast('✓ Rascunho salvo. Você pode continuar depois.')};
+
+  const oldSave=window.salvarTerceiro;if(typeof oldSave==='function'){window.salvarTerceiro=function(){const before=all().length;oldSave.apply(this,arguments);const after=all();if(after.length>before){const tipo=document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro';after[after.length-1].tipoPessoa=tipo;if(typeof saveAll==='function')saveAll(after)}}}
+  const oldAnalysis=window.abrirAnalise;if(typeof oldAnalysis==='function'){window.abrirAnalise=function(id){oldAnalysis(id);enhanceProfile(id)};window.abrirAnaliseTerceiro=window.abrirAnalise}
+
+  function normalizeNav(){document.querySelectorAll('header nav button').forEach(b=>{if(!b.dataset.page){const txt=b.textContent.trim();if(txt==='Portaria'||txt==='Treinamentos'||txt==='Dados'||txt==='Cadastro')b.remove()}});const seen=new Set();document.querySelectorAll('header nav button').forEach(b=>{const p=b.dataset.page||b.textContent.trim();if(seen.has(p))b.remove();else seen.add(p)})}
+  window.showPage=function(name){createPages();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const page=$('page-'+name);if(page)page.classList.add('active');document.querySelectorAll('header nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===name));if(name==='dashboard')dashboard();if(name==='listagem'){try{renderLista();atualizarStats()}catch(e){}}if(name==='empresas'){try{renderEmpresas()}catch(e){}}if(name==='documentos')renderDocumentosV29();if(name==='validacao')renderValidacaoV29();if(name==='acessos')renderAcessosV29();if(name==='treinamentos'){try{renderTreinamentos()}catch(e){}}if(name==='dados'){try{renderDados()}catch(e){}}if(name==='cadastro')setupWizard();if(name==='portaria-express')setTimeout(()=>{$('v24-busca')?.focus()},60);window.scrollTo({top:0,behavior:'smooth'})};
+
+  function wrapPort(){['v242AbrirExpress','v24AbrirExpress'].forEach(n=>{const old=window[n];if(typeof old!=='function'||old.__v29)return;const fn=function(id){old(id);setTimeout(()=>attachPortActions(id),20)};fn.__v29=true;window[n]=fn})}
+  function init(){createPages();normalizeNav();setupWizard();wrapPort();dashboard();const obs=new MutationObserver(()=>{normalizeNav();wrapPort()});obs.observe(document.querySelector('header nav'),{childList:true});setTimeout(()=>obs.disconnect(),2500)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
+<style>
+/* V30 — autenticação e perfis */
+.v30-auth{position:fixed;inset:0;z-index:200000;background:linear-gradient(145deg,#eef4ff,#f8fafc);display:grid;place-items:center;padding:18px}.v30-auth.hidden{display:none}.v30-auth-card{width:min(440px,100%);background:#fff;border:1px solid var(--border);border-radius:24px;padding:28px;box-shadow:0 24px 70px rgba(15,23,42,.16)}.v30-auth-logo{width:54px;height:54px;border-radius:17px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:27px;font-weight:900;margin-bottom:16px}.v30-auth-card h1{font-size:25px;margin-bottom:5px}.v30-auth-card p{color:var(--muted);font-size:14px;margin-bottom:18px}.v30-auth-card label{display:block;font-weight:700;font-size:13px;margin:12px 0 6px}.v30-auth-card input{width:100%}.v30-auth-actions{display:flex;gap:8px;margin-top:18px}.v30-auth-actions .btn{flex:1;min-height:44px}.v30-auth-msg{display:none;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px}.v30-auth-msg.show{display:block}.v30-auth-msg.error{background:var(--danger-lt);color:var(--danger)}.v30-auth-msg.ok{background:var(--ok-lt);color:var(--ok)}.v30-userbar{display:flex;align-items:center;gap:8px;margin-left:auto}.v30-role{border-radius:999px;background:#dbeafe;color:#1d4ed8;padding:6px 10px;font-size:11px;font-weight:900;text-transform:uppercase}.v30-logout{border:1px solid rgba(255,255,255,.35);background:transparent;color:inherit;border-radius:9px;padding:6px 9px;cursor:pointer;font-weight:700}.v30-users{display:grid;gap:10px}.v30-user{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--border);border-radius:14px;padding:13px}.v30-user small{display:block;color:var(--muted);margin-top:3px}.v30-bind-form{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-bottom:16px}.v30-access-denied{padding:40px;text-align:center}.v30-pending-badge{display:inline-flex;border-radius:999px;padding:5px 9px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:900}
+@media(max-width:700px){.v30-auth-card{padding:22px}.v30-userbar{width:100%;justify-content:flex-end}.v30-bind-form{grid-template-columns:1fr}.v30-user{align-items:flex-start;flex-direction:column}}
+</style>
+
+<script>
+/* V30 — Supabase Auth + matriz de acesso da interface.
+   A senha é tratada diretamente pelo Supabase e nunca é salva no app. */
+(function(){
+  const SB='https://obzycbtfbadjwwwfpsed.supabase.co';
+  const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
+  const SESSION='tss_auth_session_v30', ROLES='tssUserRolesV30', ADMIN='pabloradamez10@gmail.com', LEGACY_ADMIN='pablo.wommer1@gmail.com';
+  const $=id=>document.getElementById(id);
+  const norm=v=>(v||'').trim().toLowerCase();
+  const roleLabels={admin:'Administrador',sesmt:'SESMT',portaria:'Portaria',cadastro:'Cadastro externo'};
+  const permissions={
+    admin:['dashboard','empresas','listagem','cadastro','documentos','acessos','portaria-express','configuracoes','treinamentos','dados','validacao'],
+    sesmt:['dashboard','empresas','listagem','documentos','validacao','treinamentos'],
+    portaria:['portaria-express','acessos'],
+    cadastro:['listagem','cadastro','documentos']
+  };
+  let currentUser=null,currentRole=null;
+
+  function roles(){try{const r=JSON.parse(localStorage.getItem(ROLES)||'{}');delete r[LEGACY_ADMIN];if(!r[ADMIN])r[ADMIN]={role:'admin',active:true};return r}catch(e){return{[ADMIN]:{role:'admin',active:true}}}}
+  window.saveUserRolesV30=function(v){delete v[LEGACY_ADMIN];if(!v[ADMIN])v[ADMIN]={role:'admin',active:true};localStorage.setItem(ROLES,JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')setTimeout(()=>window.tssSupabaseSyncNow(),80)};
+  function session(){try{return JSON.parse(localStorage.getItem(SESSION)||'null')}catch(e){return null}}
+  function headers(token){return{'apikey':KEY,'Authorization':'Bearer '+(token||KEY),'Content-Type':'application/json'}}
+  function authMessage(text,type='error'){const m=$('v30-auth-msg');if(!m)return;m.textContent=text;m.className='v30-auth-msg show '+type}
+  function createAuth(){if($('v30-auth'))return;document.body.insertAdjacentHTML('beforeend',`<div id="v30-auth" class="v30-auth"><div class="v30-auth-card"><div class="v30-auth-logo">T</div><h1>Acesso ao TSS</h1><p>Entre com seu e-mail e senha. Cada usuário verá apenas as funções autorizadas.</p><label>E-mail</label><input id="v30-email" type="email" autocomplete="username" placeholder="seuemail@empresa.com"><label>Senha</label><input id="v30-password" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo de 6 caracteres"><div id="v30-auth-msg" class="v30-auth-msg"></div><div class="v30-auth-actions"><button class="btn btn-primary" onclick="v30Login()">Entrar</button><button class="btn btn-ghost" onclick="v30Register()">Criar acesso</button></div><button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="v30Recover()">Esqueci minha senha</button><small style="display:block;color:var(--muted);margin-top:14px">O acesso só será liberado se o e-mail estiver vinculado a um perfil pelo Administrador.</small></div></div>`)}
+  async function request(path,body,token){const r=await fetch(SB+path,{method:'POST',headers:headers(token),body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error_description||data.msg||data.message||'Não foi possível concluir.');return data}
+  window.v30Login=async function(){const email=norm($('v30-email')?.value),password=$('v30-password')?.value||'';if(!email||!password)return authMessage('Informe e-mail e senha.');authMessage('Entrando...','ok');try{const data=await request('/auth/v1/token?grant_type=password',{email,password});localStorage.setItem(SESSION,JSON.stringify(data));await activate(data.user,data);if(typeof window.tssSupabaseReload==='function')setTimeout(()=>window.tssSupabaseReload(),100)}catch(e){authMessage(e.message)} };
+  window.v30Register=async function(){const email=norm($('v30-email')?.value),password=$('v30-password')?.value||'';if(!email||password.length<6)return authMessage('Informe um e-mail e uma senha com pelo menos 6 caracteres.');if(email!==ADMIN&&!roles()[email])return authMessage('Este e-mail ainda não foi vinculado pelo Administrador.');authMessage('Criando acesso...','ok');try{const data=await request('/auth/v1/signup',{email,password,data:{system:'tss'}});if(data.session){localStorage.setItem(SESSION,JSON.stringify(data.session));await activate(data.user,data.session)}else authMessage('Cadastro criado. Confirme o e-mail recebido e depois entre.','ok')}catch(e){authMessage(e.message)}};
+  window.v30Recover=async function(){const email=norm($('v30-email')?.value);if(!email)return authMessage('Informe o e-mail para recuperar a senha.');try{await request('/auth/v1/recover',{email});authMessage('Enviamos as instruções de recuperação para o e-mail.','ok')}catch(e){authMessage(e.message)}};
+  window.v30Logout=function(){localStorage.removeItem(SESSION);currentUser=null;currentRole=null;$('v30-auth')?.classList.remove('hidden');document.querySelector('.v30-userbar')?.remove()};
+  async function validate(s){if(!s?.access_token)return null;const r=await fetch(SB+'/auth/v1/user',{headers:headers(s.access_token)});if(!r.ok)return null;return await r.json()}
+  async function activate(user,s){currentUser=user;await new Promise(r=>setTimeout(r,250));const email=norm(user?.email),binding=roles()[email];currentRole=email===ADMIN?'admin':(binding?.active!==false?binding?.role:null);if(!currentRole){localStorage.removeItem(SESSION);currentUser=null;return authMessage('Seu cadastro existe, mas o Administrador ainda não vinculou um perfil a este e-mail.')}$('v30-auth')?.classList.add('hidden');applyPermissions();addUserBar();const first=permissions[currentRole][0];setTimeout(()=>window.showPage(first),80)}
+  function allowed(page){return !!currentRole&&permissions[currentRole]?.includes(page)}
+  function applyPermissions(){document.querySelectorAll('header nav button').forEach(b=>{const p=b.dataset.page;b.style.display=!p||allowed(p)?'':'none'});document.querySelectorAll('[data-v30-admin]').forEach(e=>e.style.display=currentRole==='admin'?'':'none')}
+  function addUserBar(){document.querySelector('.v30-userbar')?.remove();const bar=document.createElement('div');bar.className='v30-userbar';bar.innerHTML=`<span class="v30-role">${roleLabels[currentRole]}</span><button class="v30-logout" onclick="v30Logout()">Sair</button>`;document.querySelector('header')?.appendChild(bar)}
+
+  function ensureUsersPage(){if($('page-usuarios'))return;const p=document.createElement('div');p.id='page-usuarios';p.className='page';p.innerHTML=`<div class="page-actions"><h2>Usuários e permissões</h2></div><div class="card"><div class="card-title">Vincular e-mail a um perfil</div><div class="v30-bind-form"><input id="v30-bind-email" type="email" placeholder="email@empresa.com"><select id="v30-bind-role"><option value="sesmt">SESMT — valida documentos</option><option value="portaria">Portaria — entrada e saída</option><option value="cadastro">Cadastro externo — cadastra e anexa</option></select><button class="btn btn-primary" onclick="v30BindUser()">Vincular</button></div><div id="v30-users-list" class="v30-users"></div></div>`;document.querySelector('main').appendChild(p)}
+  window.v30BindUser=function(){if(currentRole!=='admin')return;const email=norm($('v30-bind-email')?.value),role=$('v30-bind-role')?.value;if(!email||!email.includes('@'))return toast('Informe um e-mail válido.');const r=roles();r[email]={role,active:true,updatedAt:new Date().toISOString(),updatedBy:currentUser?.email};saveUserRolesV30(r);$('v30-bind-email').value='';renderUsers();toast('✓ E-mail vinculado. A pessoa já pode criar o acesso.')};
+  window.v30ToggleUser=function(email){if(currentRole!=='admin'||email===ADMIN)return;const r=roles();if(!r[email])return;r[email].active=r[email].active===false;saveUserRolesV30(r);renderUsers()};
+  window.v30RemoveUser=function(email){if(currentRole!=='admin'||email===ADMIN)return;if(!confirm('Remover o vínculo deste e-mail?'))return;const r=roles();delete r[email];saveUserRolesV30(r);renderUsers()};
+  function renderUsers(){const box=$('v30-users-list');if(!box)return;box.innerHTML=Object.entries(roles()).map(([email,u])=>`<div class="v30-user"><div><strong>${email}</strong><small>${roleLabels[u.role]||u.role}${email===ADMIN?' • Administrador principal':''}</small></div><div class="v29-actions"><span class="badge ${u.active!==false?'badge-ok':'badge-blocked'}">${u.active!==false?'Ativo':'Inativo'}</span>${email!==ADMIN?`<button class="btn btn-ghost" onclick="v30ToggleUser('${email}')">${u.active!==false?'Desativar':'Ativar'}</button><button class="btn btn-danger" onclick="v30RemoveUser('${email}')">Remover</button>`:''}</div></div>`).join('')}
+
+  function addSettingsLink(){const grid=$('page-configuracoes')?.querySelector('.v29-settings-grid');if(!grid||grid.querySelector('[data-v30-admin]'))return;grid.insertAdjacentHTML('afterbegin',`<button class="v29-setting" data-v30-admin onclick="showPage('usuarios')"><strong>Usuários e permissões</strong><small>Vincular e-mails aos perfis do sistema</small></button>`)}
+  function markPendingUploads(){if(currentRole!=='cadastro')return;try{const docs=JSON.parse(localStorage.getItem('arquivosTerceirosV16')||'{}');let changed=false;Object.values(docs).forEach(list=>(list||[]).forEach(d=>{if(!d.statusValidacao){d.statusValidacao='aguardando_sesmt';d.enviadoPor=currentUser?.email;changed=true}}));if(changed){localStorage.setItem('arquivosTerceirosV16',JSON.stringify(docs));if(typeof window.tssSupabaseSyncNow==='function')window.tssSupabaseSyncNow()}}catch(e){}}
+
+  function uploadDocs(){try{return JSON.parse(localStorage.getItem('arquivosTerceirosV16')||'{}')}catch(e){return{}}}
+  function saveUploadDocs(v){localStorage.setItem('arquivosTerceirosV16',JSON.stringify(v));if(typeof window.tssSupabaseSyncNow==='function')window.tssSupabaseSyncNow()}
+  window.v30ValidateDoc=function(personId,docId,decision){if(!['admin','sesmt'].includes(currentRole))return toast('Somente o SESMT pode validar documentos.');const docs=uploadDocs(),doc=(docs[personId]||[]).find(x=>x.id===docId);if(!doc)return;let reason='';if(decision==='rejeitado'){reason=prompt('Informe o motivo da rejeição:')||'';if(!reason.trim())return toast('O motivo da rejeição é obrigatório.')}if(!confirm(decision==='aprovado'?'Aprovar este documento?':'Rejeitar este documento?'))return;doc.statusValidacao=decision;doc.validadoPor=currentUser?.email;doc.validadoEm=new Date().toISOString();doc.motivoRejeicao=reason;saveUploadDocs(docs);renderUploadValidation();toast(decision==='aprovado'?'✓ Documento aprovado pelo SESMT.':'Documento rejeitado e devolvido para correção.')};
+  function renderUploadValidation(){const page=$('page-documentos');if(!page)return;let section=$('v30-upload-validation');if(!section){section=document.createElement('div');section.id='v30-upload-validation';section.className='card';section.innerHTML='<div class="card-title">Documentos e fotos enviados</div><div id="v30-upload-list" class="v30-users"></div>';page.prepend(section)}const people=typeof getAll==='function'?getAll():[],docs=uploadDocs(),items=[];Object.entries(docs).forEach(([personId,list])=>(list||[]).forEach(doc=>{const person=people.find(x=>x.id===personId)||{};items.push({personId,person,doc})}));const box=$('v30-upload-list');if(!box)return;box.innerHTML=items.length?items.sort((a,b)=>(b.doc.criadoEm||'').localeCompare(a.doc.criadoEm||'')).map(({personId,person,doc})=>{const st=doc.statusValidacao||'aguardando_sesmt',label=st==='aprovado'?'Aprovado':st==='rejeitado'?'Rejeitado':'Aguardando validação do SESMT',cls=st==='aprovado'?'badge-ok':st==='rejeitado'?'badge-blocked':'badge-warn';return `<div class="v30-user"><div><strong>${person.nome||'Terceiro'} — ${doc.tipo||'Documento'}</strong><small>${doc.nome||'Arquivo anexado'} • ${person.empresa||'Empresa não informada'}</small><small>Enviado por: ${doc.enviadoPor||'Cadastro anterior'}${doc.motivoRejeicao?' • Motivo: '+doc.motivoRejeicao:''}</small></div><div class="v29-actions"><span class="badge ${cls}">${label}</span>${['admin','sesmt'].includes(currentRole)&&st==='aguardando_sesmt'?`<button class="btn btn-primary" onclick="v30ValidateDoc('${personId}','${doc.id}','aprovado')">Aprovar</button><button class="btn btn-danger" onclick="v30ValidateDoc('${personId}','${doc.id}','rejeitado')">Rejeitar</button>`:''}</div></div>`}).join(''):'<div class="v29-state">Nenhum documento ou foto enviado.</div>'}
+  function restrictRenderedActions(){if(currentRole!=='cadastro')return;document.querySelectorAll('#page-listagem button').forEach(b=>{if(/editar|excluir|exceção|liberar/i.test(b.textContent||''))b.style.display='none'})}
+
+  const oldShow=window.showPage;window.showPage=function(name){if(!currentRole)return;if(name==='usuarios'){if(currentRole!=='admin')return toast('Acesso restrito ao Administrador.');ensureUsersPage();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$('page-usuarios').classList.add('active');renderUsers();return}if(!allowed(name))return toast('Seu perfil não possui acesso a esta função.');oldShow(name);applyPermissions();if(name==='configuracoes')addSettingsLink();if(name==='documentos'){if(currentRole==='cadastro')markPendingUploads();renderUploadValidation()}if(name==='listagem')setTimeout(restrictRenderedActions,30)};
+  ['adicionarArquivoTerceiroV16','adicionarAnexoTerceiro'].forEach(n=>{const old=window[n];if(typeof old!=='function')return;window[n]=function(){const r=old.apply(this,arguments);setTimeout(markPendingUploads,50);return r}});
+  ['excluir','salvarEdicao','salvarEmpresa','salvarTreinamento','alternarTreinamento','salvarLiberacaoExcecaoV17','cancelarLiberacaoExcecao'].forEach(n=>{const old=window[n];if(typeof old!=='function')return;window[n]=function(){if(currentRole!=='admin'&&!(currentRole==='sesmt'&&/Treinamento|Excecao/i.test(n)))return toast('Seu perfil não possui permissão para esta alteração.');return old.apply(this,arguments)}});
+
+  async function init(){createAuth();ensureUsersPage();addSettingsLink();const s=session(),u=await validate(s).catch(()=>null);if(u)activate(u,s);else{$('v30-auth')?.classList.remove('hidden');localStorage.removeItem(SESSION)}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 
