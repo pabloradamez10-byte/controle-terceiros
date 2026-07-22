@@ -1423,16 +1423,23 @@
     return { ok: motivos.length === 0, motivos, avisos };
   }
 
+  function exigeAsoPessoa(t) {
+    return !['Visitante', 'Motorista', 'Colaborador de outra unidade'].includes(t?.tipoPessoa || 'Terceiro');
+  }
+
   function getStatusSESMT(t) {
     const h = hoje();
     const motivos = [];
     const avisos = [];
     const empresa = getEmpresaById(t.empresaId);
 
-    const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) avisos.push('ASO sem data informada');
-    else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
-    else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    const exigeAso = exigeAsoPessoa(t);
+    if (exigeAso) {
+      const asoStatus = statusData(t.aso);
+      if (asoStatus.semData) avisos.push('ASO sem data informada');
+      else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
+      else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    }
 
     const integStatus = statusData(t.integ);
     if (integStatus.semData) avisos.push('Integração sem data informada');
@@ -1564,9 +1571,11 @@
     const aso    = document.getElementById('f-aso').value;
     const integ  = document.getElementById('f-integ').value;
     const obs    = document.getElementById('f-obs').value.trim();
+    const tipoPessoa = document.querySelector('[name="v29-person-type"]:checked')?.value || 'Terceiro';
+    const exigeAso = !['Visitante', 'Motorista', 'Colaborador de outra unidade'].includes(tipoPessoa);
     const treinamentosRealizados = coletarTreinamentosDoFormulario('f');
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+    if (!nome || !cpf || !empresaId || !funcao || (exigeAso && !aso) || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.');
       return;
     }
@@ -1579,7 +1588,7 @@
       return;
     }
 
-    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados });
+    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, tipoPessoa, aso: exigeAso ? aso : '', integ, obs, treinamentosRealizados });
     saveAll(lista);
     limparForm();
     toast('✓ Terceiro cadastrado com sucesso!');
@@ -1626,7 +1635,7 @@
         semData.push({ terceiroId:t.id, terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'DP', item:'Empresa vinculada', vencimento:'', dias:null, detalheExtra:'Cadastro sem empresa vinculada' });
       }
 
-      addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
+      if (exigeAsoPessoa(t)) addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
       addPend('SESMT', 'Integração', t.integ, 'Integração obrigatória');
 
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
@@ -1810,7 +1819,7 @@
         ? `<span class="badge badge-ok">✓ Liberado</span>`
         : `<span class="badge badge-blocked">✕ Bloqueado</span>`;
       const h = hoje();
-      const asoTag  = t.aso  < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
+      const asoTag  = !exigeAsoPessoa(t) ? `<span class="badge badge-warn">NÃO EXIGIDO</span>` : (t.aso < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`);
       const integTag= t.integ< h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
       const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
       const pend = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
@@ -1824,7 +1833,7 @@
         <td class="td-name">${t.nome}</td>
         <td class="td-cpf">${t.cpf}</td>
         <td class="td-company">${t.empresa}</td>
-        <td>${fmtData(t.aso)}${asoTag}</td>
+        <td>${exigeAsoPessoa(t) ? fmtData(t.aso) : '—'}${asoTag}</td>
         <td>${fmtData(t.integ)}${integTag}</td>
         <td>${treinoBadge}</td>
         <td>${dpBadge}</td>
@@ -1894,8 +1903,10 @@
     const integ  = document.getElementById('e-integ').value;
     const obs    = document.getElementById('e-obs').value.trim();
     const treinamentosRealizados = coletarTreinamentosDoFormulario('e');
+    const atual = getAll().find(t => t.id === id);
+    const exigeAso = !['Visitante', 'Motorista', 'Colaborador de outra unidade'].includes(atual?.tipoPessoa || 'Terceiro');
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+    if (!nome || !cpf || !empresaId || !funcao || (exigeAso && !aso) || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.'); return;
     }
 
@@ -2238,7 +2249,7 @@
         <div class="info-item"><label>CPF</label><span>${t.cpf}</span></div>
         <div class="info-item"><label>Função</label><span>${t.funcao || '—'}</span></div>
         <div class="info-item"><label>Contrato Empresa</label><span>${empresa?.contratoFim ? fmtData(empresa.contratoFim) + ' ' + tagData(empresa.contratoFim) : 'Não informado'}</span></div>
-        <div class="info-item"><label>ASO</label><span>${fmtData(t.aso)} ${tagData(t.aso)}</span></div>
+        <div class="info-item"><label>ASO</label><span>${exigeAsoPessoa(t) ? `${fmtData(t.aso)} ${tagData(t.aso)}` : '<span class="badge badge-warn">Não exigido para este tipo</span>'}</span></div>
       </div>
       <div class="analysis-grid" style="margin-top:16px;">
         ${renderListaMotivos('DP', st.dp)}
@@ -2362,7 +2373,7 @@
     const terceiros = getAll();
     const empresas = getAllEmpresas();
     const hojeIso = hoje();
-    const asoVencidos = terceiros.filter(t => isDataValidaSistema(t.aso) && t.aso < hojeIso).length;
+    const asoVencidos = terceiros.filter(t => exigeAsoPessoa(t) && isDataValidaSistema(t.aso) && t.aso < hojeIso).length;
     const integVencidas = terceiros.filter(t => isDataValidaSistema(t.integ) && t.integ < hojeIso).length;
     const treinosPendentes = terceiros.reduce((acc, t) => acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length, 0);
     const contratosVencidos = empresas.filter(e => isDataValidaSistema(e.contratoFim) && e.contratoFim < hojeIso).length;
@@ -3168,10 +3179,12 @@
     const avisos = [];
     const empresa = getEmpresaById(t.empresaId);
 
-    const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) avisos.push('ASO sem data informada');
-    else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
-    else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    if (exigeAsoPessoa(t)) {
+      const asoStatus = statusData(t.aso);
+      if (asoStatus.semData) avisos.push('ASO sem data informada');
+      else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
+      else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
+    }
 
     const integStatus = statusData(t.integ);
     if (integStatus.semData) avisos.push('Integração sem data informada');
@@ -3844,8 +3857,9 @@
     let semData = 0;
     terceiros.forEach(t => {
       const emp = empresas.find(e => e.id === t.empresaId) || null;
-      ['aso','integ'].forEach(k => { if (!isDataValidaSistema(t[k])) semData++; });
-      v16AddDateItem(proximos, t, 'ASO', t.aso);
+      if (exigeAsoPessoa(t) && !isDataValidaSistema(t.aso)) semData++;
+      if (!isDataValidaSistema(t.integ)) semData++;
+      if (exigeAsoPessoa(t)) v16AddDateItem(proximos, t, 'ASO', t.aso);
       v16AddDateItem(proximos, t, 'Integração', t.integ);
       if (emp) v16AddDateItem(proximos, t, 'Fim prestação/contrato empresa', emp.contratoFim || emp.fimPrestacao || emp.contratoValidade);
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
@@ -5091,7 +5105,7 @@
       alertas[tipo].push({ terceiroId:t.id, terceiro:t.nome || 'Sem nome', empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', item, vencimento, dias, detalhe: detalhe || '' });
     };
     terceiros.forEach(t => {
-      add('aso30', t, 'ASO', t.aso, 'Documento ocupacional');
+      if (exigeAsoPessoa(t)) add('aso30', t, 'ASO', t.aso, 'Documento ocupacional');
       add('integracao30', t, 'Integração', t.integ, 'Integração obrigatória');
       getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
         const reg = getTreinoRealizado(t, tr.id);
@@ -5336,9 +5350,9 @@
       const emp = empresas.find(e => e.id === t.empresaId);
       const base = { id:t.id, nome:t.nome || 'Sem nome', cpf:t.cpf || '', empresa:getTerceiroEmpresaV22(t), t };
       const st = getStatus(t);
-      if (isValidDate(t.aso) && t.aso < h) out.aso.push({...base, item:'ASO vencido', detalhe:fmt(t.aso)});
+      if (exigeAsoPessoa(t) && isValidDate(t.aso) && t.aso < h) out.aso.push({...base, item:'ASO vencido', detalhe:fmt(t.aso)});
       if (isValidDate(t.integ) && t.integ < h) out.integracao.push({...base, item:'Integração vencida', detalhe:fmt(t.integ)});
-      if (!isValidDate(t.aso)) out.semData.push({...base, item:'ASO sem data informada', detalhe:''});
+      if (exigeAsoPessoa(t) && !isValidDate(t.aso)) out.semData.push({...base, item:'ASO sem data informada', detalhe:''});
       if (!isValidDate(t.integ)) out.semData.push({...base, item:'Integração sem data informada', detalhe:''});
 
       (getTreinosObrigatoriosDaEmpresa(t.empresaId) || []).forEach(tr => {
@@ -6011,7 +6025,7 @@
         <div class="v24-info"><small>Função</small><strong>${t.funcao || '—'}</strong></div>
       </div>
       <div class="v24-semaforo">
-        ${linhaSemaforo('ASO', t.aso)}
+        ${exigeAsoPessoa(t) ? linhaSemaforo('ASO', t.aso) : '<div class="v24-semaforo-row neutral"><div><strong>ASO</strong><small style="display:block;color:var(--muted);margin-top:3px;">Não exigido para este tipo de pessoa</small></div><span>NÃO EXIGIDO</span></div>'}
         ${linhaSemaforo('Integração', t.integ)}
         ${linhaSemaforo('Contrato da empresa', emp.contratoFim)}
         ${linhaSemaforo('Documentos DP', emp.docDPValidade)}
@@ -6192,7 +6206,7 @@
       '<div class="v24-info"><small>Empresa</small><strong>'+(t.empresa || e.razao || e.fantasia || '—')+'</strong></div>'+
       '<div class="v24-info"><small>Função</small><strong>'+(t.funcao || '—')+'</strong></div>'+
       '</div><div class="v24-semaforo">'+
-      linhaSemaforo('ASO', t.aso)+
+      (exigeAsoPessoa(t) ? linhaSemaforo('ASO', t.aso) : '<div class="v24-semaforo-row neutral"><div><strong>ASO</strong><small style="display:block;color:var(--muted);margin-top:3px;">Não exigido para este tipo de pessoa</small></div><span>NÃO EXIGIDO</span></div>')+
       linhaSemaforo('Integração', t.integ)+
       linhaSemaforo('Contrato da empresa', e.contratoFim)+
       linhaSemaforo('Documentos DP', e.docDPValidade)+
@@ -6916,7 +6930,9 @@
 
   function enhanceProfile(id){setTimeout(()=>{const box=$('analise-conteudo');if(!box||box.querySelector('.v29-profile-reasons'))return;const t=all().find(x=>x.id===id);if(!t)return;const st=status(t),reasons=[...(st.motivos||[]),...(st.avisos||[])];box.insertAdjacentHTML('afterbegin',`<div class="v29-tabs"><button>Resumo</button><button>Dados pessoais</button><button>Empresa</button><button>Documentos</button><button>Treinamentos</button><button>Autorizações</button><button>Acessos</button><button>Exceções</button><button>Histórico</button></div><div class="v29-profile-reasons ${st.ok?'ok':''}"><strong>${st.ok?'Entrada liberada':'Entrada bloqueada porque:'}</strong>${reasons.length?`<ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:'<p>Não há impedimentos ativos.</p>'}<strong>${st.ok?'Situação regular.':'Como resolver:'}</strong>${st.ok?'':`<ul>${reasons.map(r=>`<li>${/aso/i.test(r)?'Enviar novo ASO':/integra/i.test(r)?'Agendar ou atualizar a integração':/trein/i.test(r)?'Registrar o treinamento obrigatório':/contrato|document/i.test(r)?'Enviar ou corrigir o documento':'Consultar o responsável e regularizar a pendência'}</li>`).join('')}</ul>`}<div class="v29-actions"><button class="btn btn-ghost" onclick="showPage('documentos')">Consultar documentos</button><button class="btn btn-ghost" onclick="showPage('acessos')">Consultar acessos</button></div></div>`);},30)}
 
-  function setupWizard(){const page=$('page-cadastro');if(!page||page.dataset.v29)return;page.dataset.v29='1';const h=page.querySelector('h2');if(h)h.textContent='Cadastro guiado de terceiro';const first=page.querySelector('.card');if(first)first.insertAdjacentHTML('afterbegin',`<div id="v29-type-step"><div class="card-title">Etapa 1 — Tipo da pessoa</div><div class="v29-wizard-type">${['Terceiro','Visitante','Motorista','Fornecedor','Colaborador de outra unidade'].map((x,i)=>`<label><input type="radio" name="v29-person-type" value="${x}" ${i===0?'checked':''}>${x}</label>`).join('')}</div><p style="color:var(--muted);font-size:13px;margin-top:10px">O sistema controla somente pessoas externas à rotina permanente da unidade.</p></div>`);page.insertAdjacentHTML('afterbegin','<div class="v29-wizard-progress"><span class="v29-step-dot active">1</span><span class="v29-step-dot">2</span><span class="v29-step-dot">3</span><span class="v29-step-dot">4</span><span class="v29-step-dot">5</span><span class="v29-step-dot">6</span></div>');const save=page.querySelector('button[onclick="salvarTerceiro()"]');if(save){save.textContent='Concluir cadastro';save.insertAdjacentHTML('beforebegin','<button class="btn btn-ghost" type="button" onclick="salvarRascunhoV29()">Salvar rascunho</button>')}}
+  function atualizarRequisitosTipoPessoaV31(){const tipo=document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',semAso=['Visitante','Motorista','Colaborador de outra unidade'].includes(tipo),input=$('f-aso'),wrap=input?.closest('div'),label=wrap?.querySelector('label');if(!input||!wrap)return;input.required=!semAso;if(semAso){input.value='';input.disabled=true;wrap.style.opacity='.58';if(label)label.textContent='ASO — não exigido para '+tipo.toLowerCase()}else{input.disabled=false;wrap.style.opacity='1';if(label)label.textContent='Validade do ASO *'}}
+  window.atualizarRequisitosTipoPessoaV31=atualizarRequisitosTipoPessoaV31;
+  function setupWizard(){const page=$('page-cadastro');if(!page||page.dataset.v29)return;page.dataset.v29='1';const h=page.querySelector('h2');if(h)h.textContent='Cadastro guiado de terceiro';const first=page.querySelector('.card');if(first)first.insertAdjacentHTML('afterbegin',`<div id="v29-type-step"><div class="card-title">Etapa 1 — Tipo da pessoa</div><div class="v29-wizard-type">${['Terceiro','Visitante','Motorista','Fornecedor','Colaborador de outra unidade'].map((x,i)=>`<label><input type="radio" name="v29-person-type" value="${x}" ${i===0?'checked':''} onchange="atualizarRequisitosTipoPessoaV31()">${x}</label>`).join('')}</div><p style="color:var(--muted);font-size:13px;margin-top:10px">O sistema controla somente pessoas externas à rotina permanente da unidade.</p></div>`);page.insertAdjacentHTML('afterbegin','<div class="v29-wizard-progress"><span class="v29-step-dot active">1</span><span class="v29-step-dot">2</span><span class="v29-step-dot">3</span><span class="v29-step-dot">4</span><span class="v29-step-dot">5</span><span class="v29-step-dot">6</span></div>');const save=page.querySelector('button[onclick="salvarTerceiro()"]');if(save){save.textContent='Concluir cadastro';save.insertAdjacentHTML('beforebegin','<button class="btn btn-ghost" type="button" onclick="salvarRascunhoV29()">Salvar rascunho</button>')}atualizarRequisitosTipoPessoaV31()}
   window.salvarRascunhoV29=function(){const drafts=(()=>{try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]')}catch(e){return[]}})();drafts.push({id:'draft-'+Date.now(),nome:$('f-nome')?.value||'',cpf:$('f-cpf')?.value||'',empresaId:$('f-empresa')?.value||'',funcao:$('f-funcao')?.value||'',tipo:document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',salvoEm:now()});saveRascunhosV29(drafts);toast('✓ Rascunho salvo. Você pode continuar depois.')};
 
   const oldSave=window.salvarTerceiro;if(typeof oldSave==='function'){window.salvarTerceiro=function(){const before=all().length;oldSave.apply(this,arguments);const after=all();if(after.length>before){const tipo=document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro';after[after.length-1].tipoPessoa=tipo;if(typeof saveAll==='function')saveAll(after)}}}
