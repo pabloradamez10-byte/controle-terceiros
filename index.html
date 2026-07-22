@@ -1424,7 +1424,7 @@
   }
 
   function exigeAsoPessoa(t) {
-    return !['Visitante', 'Motorista', 'Colaborador de outra unidade'].includes(t?.tipoPessoa || 'Terceiro');
+    return !['Visitante', 'Motorista', 'Fornecedor', 'Colaborador de outra unidade'].includes(t?.tipoPessoa || 'Terceiro');
   }
 
   function getStatusSESMT(t) {
@@ -1572,7 +1572,7 @@
     const integ  = document.getElementById('f-integ').value;
     const obs    = document.getElementById('f-obs').value.trim();
     const tipoPessoa = document.querySelector('[name="v29-person-type"]:checked')?.value || 'Terceiro';
-    const exigeAso = !['Visitante', 'Motorista', 'Colaborador de outra unidade'].includes(tipoPessoa);
+    const exigeAso = !['Visitante', 'Motorista', 'Fornecedor', 'Colaborador de outra unidade'].includes(tipoPessoa);
     const treinamentosRealizados = coletarTreinamentosDoFormulario('f');
 
     if (!nome || !cpf || !empresaId || !funcao || (exigeAso && !aso) || !integ) {
@@ -1904,7 +1904,7 @@
     const obs    = document.getElementById('e-obs').value.trim();
     const treinamentosRealizados = coletarTreinamentosDoFormulario('e');
     const atual = getAll().find(t => t.id === id);
-    const exigeAso = !['Visitante', 'Motorista', 'Colaborador de outra unidade'].includes(atual?.tipoPessoa || 'Terceiro');
+    const exigeAso = !['Visitante', 'Motorista', 'Fornecedor', 'Colaborador de outra unidade'].includes(atual?.tipoPessoa || 'Terceiro');
 
     if (!nome || !cpf || !empresaId || !funcao || (exigeAso && !aso) || !integ) {
       toast('⚠ Preencha todos os campos obrigatórios.'); return;
@@ -6930,7 +6930,7 @@
 
   function enhanceProfile(id){setTimeout(()=>{const box=$('analise-conteudo');if(!box||box.querySelector('.v29-profile-reasons'))return;const t=all().find(x=>x.id===id);if(!t)return;const st=status(t),reasons=[...(st.motivos||[]),...(st.avisos||[])];box.insertAdjacentHTML('afterbegin',`<div class="v29-tabs"><button>Resumo</button><button>Dados pessoais</button><button>Empresa</button><button>Documentos</button><button>Treinamentos</button><button>Autorizações</button><button>Acessos</button><button>Exceções</button><button>Histórico</button></div><div class="v29-profile-reasons ${st.ok?'ok':''}"><strong>${st.ok?'Entrada liberada':'Entrada bloqueada porque:'}</strong>${reasons.length?`<ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:'<p>Não há impedimentos ativos.</p>'}<strong>${st.ok?'Situação regular.':'Como resolver:'}</strong>${st.ok?'':`<ul>${reasons.map(r=>`<li>${/aso/i.test(r)?'Enviar novo ASO':/integra/i.test(r)?'Agendar ou atualizar a integração':/trein/i.test(r)?'Registrar o treinamento obrigatório':/contrato|document/i.test(r)?'Enviar ou corrigir o documento':'Consultar o responsável e regularizar a pendência'}</li>`).join('')}</ul>`}<div class="v29-actions"><button class="btn btn-ghost" onclick="showPage('documentos')">Consultar documentos</button><button class="btn btn-ghost" onclick="showPage('acessos')">Consultar acessos</button></div></div>`);},30)}
 
-  function atualizarRequisitosTipoPessoaV31(){const tipo=document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',semAso=['Visitante','Motorista','Colaborador de outra unidade'].includes(tipo),input=$('f-aso'),wrap=input?.closest('div'),label=wrap?.querySelector('label');if(!input||!wrap)return;input.required=!semAso;if(semAso){input.value='';input.disabled=true;wrap.style.opacity='.58';if(label)label.textContent='ASO — não exigido para '+tipo.toLowerCase()}else{input.disabled=false;wrap.style.opacity='1';if(label)label.textContent='Validade do ASO *'}}
+  function atualizarRequisitosTipoPessoaV31(){const tipo=document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',semAso=['Visitante','Motorista','Fornecedor','Colaborador de outra unidade'].includes(tipo),input=$('f-aso'),wrap=input?.closest('div'),label=wrap?.querySelector('label');if(!input||!wrap)return;input.required=!semAso;if(semAso){input.value='';input.disabled=true;wrap.style.opacity='.58';if(label)label.textContent='ASO — não exigido para '+tipo.toLowerCase()}else{input.disabled=false;wrap.style.opacity='1';if(label)label.textContent='Validade do ASO *'}}
   window.atualizarRequisitosTipoPessoaV31=atualizarRequisitosTipoPessoaV31;
   function setupWizard(){const page=$('page-cadastro');if(!page||page.dataset.v29)return;page.dataset.v29='1';const h=page.querySelector('h2');if(h)h.textContent='Cadastro guiado de terceiro';const first=page.querySelector('.card');if(first)first.insertAdjacentHTML('afterbegin',`<div id="v29-type-step"><div class="card-title">Etapa 1 — Tipo da pessoa</div><div class="v29-wizard-type">${['Terceiro','Visitante','Motorista','Fornecedor','Colaborador de outra unidade'].map((x,i)=>`<label><input type="radio" name="v29-person-type" value="${x}" ${i===0?'checked':''} onchange="atualizarRequisitosTipoPessoaV31()">${x}</label>`).join('')}</div><p style="color:var(--muted);font-size:13px;margin-top:10px">O sistema controla somente pessoas externas à rotina permanente da unidade.</p></div>`);page.insertAdjacentHTML('afterbegin','<div class="v29-wizard-progress"><span class="v29-step-dot active">1</span><span class="v29-step-dot">2</span><span class="v29-step-dot">3</span><span class="v29-step-dot">4</span><span class="v29-step-dot">5</span><span class="v29-step-dot">6</span></div>');const save=page.querySelector('button[onclick="salvarTerceiro()"]');if(save){save.textContent='Concluir cadastro';save.insertAdjacentHTML('beforebegin','<button class="btn btn-ghost" type="button" onclick="salvarRascunhoV29()">Salvar rascunho</button>')}atualizarRequisitosTipoPessoaV31()}
   window.salvarRascunhoV29=function(){const drafts=(()=>{try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||'[]')}catch(e){return[]}})();drafts.push({id:'draft-'+Date.now(),nome:$('f-nome')?.value||'',cpf:$('f-cpf')?.value||'',empresaId:$('f-empresa')?.value||'',funcao:$('f-funcao')?.value||'',tipo:document.querySelector('[name="v29-person-type"]:checked')?.value||'Terceiro',salvoEm:now()});saveRascunhosV29(drafts);toast('✓ Rascunho salvo. Você pode continuar depois.')};
