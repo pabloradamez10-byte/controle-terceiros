@@ -755,6 +755,8 @@
   #tss-auth-overlay input, #tss-auth-overlay button { padding:12px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; }
   #tss-auth-overlay button { background:#155eef; color:white; cursor:pointer; }
   #tss-auth-error { color:#b91c1c; font-size:13px; min-height:18px; }
+  #tss-users-modal[hidden], #tss-users-open[hidden] { display:none !important; }
+  button[hidden] { display:none !important; }
 </style>
 <div id="tss-auth-overlay">
   <form id="tss-auth-form">
@@ -786,8 +788,23 @@
     <button onclick="showPage('treinamentos')">Treinamentos</button>
     <button onclick="showPage('dados')">Dados</button>
     <button onclick="showPage('portaria')">Portaria</button>
+    <button id="tss-users-open" type="button" hidden>Usuários</button>
   </nav>
 </header>
+
+<div id="tss-users-modal" hidden style="position:fixed;inset:0;z-index:99998;background:#0f172acc;overflow:auto;padding:24px;box-sizing:border-box">
+  <div style="max-width:780px;margin:24px auto;background:white;border-radius:16px;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Usuários e permissões</h2><button id="tss-users-close" class="btn btn-ghost" type="button">Fechar</button></div>
+    <p>Informe um e-mail e escolha o que a pessoa pode fazer. Quem ainda não tem conta receberá um convite para definir a senha.</p>
+    <form id="tss-users-form" class="form-grid">
+      <div><label>E-mail *</label><input id="tss-user-email" type="email" required autocomplete="off"></div>
+      <div><label>Perfil *</label><select id="tss-user-role"><option value="cadastro">Cadastro</option><option value="sesmt">SESMT</option><option value="portaria">Portaria</option><option value="admin">ADM</option></select></div>
+      <div class="full" style="display:flex;gap:18px;flex-wrap:wrap"><label><input id="tss-perm-consultar" type="checkbox" checked> Consultar</label><label><input id="tss-perm-cadastrar" type="checkbox" checked> Cadastrar e editar</label><label><input id="tss-perm-liberar" type="checkbox"> Liberar por exceção</label><label><input id="tss-user-active" type="checkbox" checked> Acesso ativo</label></div>
+      <div class="full"><button class="btn btn-primary" type="submit">Salvar usuário</button><span id="tss-users-message" role="status" style="margin-left:12px"></span></div>
+    </form>
+    <h3>Contas cadastradas</h3><div id="tss-users-list"></div>
+  </div>
+</div>
 
 <main>
 
@@ -6603,6 +6620,16 @@
   const EXCEPTIONS_ENDPOINT = SUPABASE_URL + '/rest/v1/sst_excecoes';
   let session = null;
   let exceptionCache = {};
+  let membership = null;
+  const USER_FUNCTION = SUPABASE_URL + '/functions/v1/sst-usuarios';
+  const ROLE_DEFAULTS = {
+    admin:{consultar:true,cadastrar:true,liberar:true},
+    cadastro:{consultar:true,cadastrar:true,liberar:false},
+    sesmt:{consultar:true,cadastrar:false,liberar:true},
+    portaria:{consultar:true,cadastrar:false,liberar:false}
+  };
+  const can = action => membership?.ativo === true && (membership.role === 'admin' || membership.permissoes?.[action] === true);
+  window.tssPode = can;
 
   const DATA_KEYS = {
     terceiros: 'terceiros',
@@ -6727,6 +6754,7 @@
     document.body.classList.add('tss-authenticated');
     document.getElementById('tss-auth-overlay').hidden = true;
     authError('');
+    configurePermissionUi();
     if (!document.getElementById('tss-logout')) {
       const button = document.createElement('button');
       button.id = 'tss-logout';
@@ -6736,7 +6764,113 @@
       document.body.appendChild(button);
     }
   }
-  window.tssSair = function(){ session = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
+  window.tssSair = function(){ session = null; membership = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
+  async function loadMembership(){
+    const userRes = await authorizedFetch(SUPABASE_URL + '/auth/v1/user');
+    if (!userRes.ok) throw new Error('Conta não validada');
+    const user = await userRes.json();
+    const res = await authorizedFetch(SUPABASE_URL + '/rest/v1/sst_members?user_id=eq.' + encodeURIComponent(user.id) + '&select=role,permissoes,ativo&limit=1');
+    if (!res.ok) throw new Error('Permissões indisponíveis');
+    membership = (await res.json())[0] || null;
+    if (!can('consultar')) throw new Error('Conta sem permissão para consultar');
+  }
+  function configurePermissionUi(){
+    const userButton = document.getElementById('tss-users-open');
+    userButton.hidden = membership?.role !== 'admin';
+    document.querySelectorAll('nav button').forEach(button => {
+      if (['Cadastro','Dados'].includes(button.textContent.trim())) button.hidden = !can('cadastrar');
+    });
+    document.querySelectorAll('#page-dashboard button').forEach(button => {
+      if (button.textContent.includes('Novo Terceiro')) button.hidden = !can('cadastrar');
+    });
+    document.querySelectorAll('#page-empresas .page-actions button, #page-treinamentos .page-actions button').forEach(button => {
+      button.hidden = !can('cadastrar');
+    });
+  }
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const userMessage = message => { document.getElementById('tss-users-message').textContent = message; };
+  const permissionInputs = {
+    consultar:document.getElementById('tss-perm-consultar'),
+    cadastrar:document.getElementById('tss-perm-cadastrar'),
+    liberar:document.getElementById('tss-perm-liberar')
+  };
+  document.getElementById('tss-user-role').addEventListener('change', event => {
+    const defaults = ROLE_DEFAULTS[event.target.value];
+    Object.keys(permissionInputs).forEach(key => { permissionInputs[key].checked = defaults[key]; });
+  });
+  document.getElementById('tss-users-open').addEventListener('click', async () => {
+    if (membership?.role !== 'admin') return;
+    document.getElementById('tss-users-modal').hidden = false;
+    await refreshUsers();
+  });
+  document.getElementById('tss-users-close').addEventListener('click', () => { document.getElementById('tss-users-modal').hidden = true; });
+  async function refreshUsers(){
+    const res = await authorizedFetch(USER_FUNCTION, {method:'GET'});
+    if (!res.ok) { userMessage('Não foi possível carregar usuários.'); return; }
+    const users = (await res.json()).users || [];
+    const list = document.getElementById('tss-users-list');
+    list.innerHTML = users.map((u,i) => `<button type="button" data-user-index="${i}" class="btn btn-ghost" style="display:block;width:100%;text-align:left;margin:6px 0">${esc(u.email)} — ${esc(u.role.toUpperCase())} — ${['consultar','cadastrar','liberar'].filter(p=>u.permissoes?.[p]).join(', ')} ${u.ativo ? '' : '(desativado)'}</button>`).join('') || '<p>Nenhuma conta encontrada.</p>';
+    list.querySelectorAll('[data-user-index]').forEach(button => button.addEventListener('click', () => {
+      const u = users[Number(button.dataset.userIndex)];
+      document.getElementById('tss-user-email').value = u.email || '';
+      document.getElementById('tss-user-role').value = u.role;
+      document.getElementById('tss-user-active').checked = u.ativo;
+      Object.keys(permissionInputs).forEach(key => { permissionInputs[key].checked = u.permissoes?.[key] === true; });
+      userMessage('Editando ' + u.email);
+    }));
+  }
+  document.getElementById('tss-users-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (membership?.role !== 'admin') return;
+    const body = {
+      email:document.getElementById('tss-user-email').value.trim(),
+      role:document.getElementById('tss-user-role').value,
+      permissoes:Object.fromEntries(Object.entries(permissionInputs).map(([k,input])=>[k,input.checked])),
+      ativo:document.getElementById('tss-user-active').checked
+    };
+    userMessage('Salvando...');
+    const res = await authorizedFetch(USER_FUNCTION, {method:'POST',body:JSON.stringify(body)}).catch(()=>null);
+    const result = await res?.json().catch(()=>({}));
+    if (!res?.ok) { userMessage(result?.error || 'Falha ao salvar usuário.'); return; }
+    userMessage(result.invited ? 'Usuário salvo e convite enviado.' : 'Permissões atualizadas.');
+    await refreshUsers();
+  });
+  let guardsInstalled = false;
+  function installPermissionGuards(){
+    if (guardsInstalled) return;
+    guardsInstalled = true;
+    const originalShowPage = window.showPage;
+    window.showPage = function(page){
+      if (!can('cadastrar') && ['cadastro','dados'].includes(page)) {
+        toast('⚠ Seu perfil permite apenas consultar e/ou liberar por exceção.');
+        return;
+      }
+      return originalShowPage.apply(this, arguments);
+    };
+    showPage = window.showPage;
+    for (const name of ['salvarTerceiro','salvarEdicao','salvarEmpresa','salvarTreinamento','excluir','excluirEmpresa','importarPlanilhaExcel','abrirModalNovaEmpresa','abrirModalEditarEmpresa','abrirModalNovoTreinamento','abrirModalEditarTreinamento']) {
+      const original = window[name];
+      if (typeof original !== 'function') continue;
+      window[name] = function(){
+        if (!can('cadastrar')) { toast('⚠ Sem permissão para cadastrar.'); return; }
+        if (['excluir','excluirEmpresa'].includes(name) && membership?.role !== 'admin') { toast('⚠ Exclusão exige ADM.'); return; }
+        return original.apply(this,arguments);
+      };
+      try { eval(name + ' = window[name]'); } catch(e) {}
+    }
+    const originalException = window.salvarLiberacaoExcecao;
+    window.salvarLiberacaoExcecao = function(){
+      if (!can('liberar')) { toast('⚠ Sem permissão para liberar por exceção.'); return; }
+      return originalException.apply(this,arguments);
+    };
+    salvarLiberacaoExcecao = window.salvarLiberacaoExcecao;
+    const originalBox = window.renderExcecaoBox;
+    window.renderExcecaoBox = function(id){
+      if (!can('liberar')) return '<p class="muted-note">Seu perfil pode consultar a situação, sem liberar por exceção.</p>';
+      return originalBox(id);
+    };
+    renderExcecaoBox = window.renderExcecaoBox;
+  }
   window.tssExceptionStore = {
     getAll:()=>exceptionCache,
     async reload(){
@@ -6747,6 +6881,7 @@
       return exceptionCache;
     },
     async save(id, dados){
+      if (!can('liberar')) throw new Error('Sem permissão para liberar');
       const res = await authorizedFetch(EXCEPTIONS_ENDPOINT + '?on_conflict=terceiro_id', {
         method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
         body:JSON.stringify({terceiro_id:id,dados,updated_at:new Date().toISOString()})
@@ -6769,6 +6904,7 @@
 
   async function saveRemoteState(){
     if (isApplyingRemote) return false;
+    if (!can('cadastrar')) throw new Error('Sem permissão para cadastrar');
     const startedAt = Date.now();
     lastSaveStartedAt = startedAt;
     const localState = readLocalState();
@@ -6777,10 +6913,11 @@
       data: localState,
       updated_at: nowIso()
     };
-    const res = await authorizedFetch(ENDPOINT + '?on_conflict=key', {
-      method: 'POST',
-      headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
-      body: JSON.stringify(payload)
+    const adminWrite = membership?.role === 'admin';
+    const res = await authorizedFetch(adminWrite ? ENDPOINT + '?on_conflict=key' : ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY), {
+      method: adminWrite ? 'POST' : 'PATCH',
+      headers: { Prefer: adminWrite ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal' },
+      body: JSON.stringify(adminWrite ? payload : {data:payload.data,updated_at:payload.updated_at})
     });
     if (!res.ok) {
       const txt = await res.text().catch(()=> '');
@@ -6846,7 +6983,12 @@
       const original = window[name];
       if (typeof original !== 'function' || original.__tssWrappedV28) return;
       const wrapped = function(){
+        if (name !== 'registrarHistorico' && !can('cadastrar')) {
+          if (typeof toast === 'function') toast('⚠ Seu perfil não permite alterar cadastros.');
+          return false;
+        }
         const result = original.apply(this, arguments);
+        if (!can('cadastrar')) return result;
         markLocalChanged();
         scheduleRemoteSync();
         return result;
@@ -6868,6 +7010,8 @@
     updateBancoBadge('loading');
     try {
       if (!await ensureSession()) { lockApp(); return; }
+      await loadMembership();
+      installPermissionGuards();
       const remote = await fetchRemoteState();
       if (!remote?.data) throw new Error('Base não encontrada no banco.');
       applyRemoteState(remote.data);
@@ -6907,7 +7051,7 @@
   });
 
   const recoveryParams = new URLSearchParams(location.hash.slice(1));
-  if (recoveryParams.get('type') === 'recovery' && recoveryParams.get('access_token')) {
+  if (['recovery','invite'].includes(recoveryParams.get('type')) && recoveryParams.get('access_token')) {
     session = {
       access_token:recoveryParams.get('access_token'),
       refresh_token:recoveryParams.get('refresh_token'),
