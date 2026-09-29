@@ -747,6 +747,26 @@
   </style>
 </head>
 <body>
+<style>
+  body:not(.tss-authenticated) > :not(#tss-auth-overlay):not(script):not(style) { visibility: hidden; }
+  #tss-auth-overlay { position:fixed; inset:0; z-index:100000; display:grid; place-items:center; background:#f1f5f9; font-family:system-ui,sans-serif; }
+  #tss-auth-overlay[hidden] { display:none; }
+  #tss-auth-overlay form { width:min(380px,calc(100vw - 32px)); padding:28px; border-radius:16px; background:white; box-shadow:0 12px 40px #0002; display:grid; gap:12px; }
+  #tss-auth-overlay input, #tss-auth-overlay button { padding:12px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; }
+  #tss-auth-overlay button { background:#155eef; color:white; cursor:pointer; }
+  #tss-auth-error { color:#b91c1c; font-size:13px; min-height:18px; }
+</style>
+<div id="tss-auth-overlay">
+  <form id="tss-auth-form">
+    <h2 style="margin:0">SST Manager</h2>
+    <p style="margin:0;color:#475569">Acesso restrito ao controle de terceiros.</p>
+    <label>E-mail<input id="tss-auth-email" type="email" autocomplete="username" required style="display:block;width:100%;box-sizing:border-box;margin-top:5px"></label>
+    <label>Senha<input id="tss-auth-password" type="password" autocomplete="current-password" required style="display:block;width:100%;box-sizing:border-box;margin-top:5px"></label>
+    <button type="submit">Entrar</button>
+    <button type="button" id="tss-auth-recover" style="background:#fff;color:#155eef">Redefinir senha por e-mail</button>
+    <div id="tss-auth-error" role="alert"></div>
+  </form>
+</div>
 
 <header>
   <div class="brand">
@@ -3314,11 +3334,11 @@
   })();
 
   function getAllExcecoes() {
-    return JSON.parse(localStorage.getItem('liberacoesExcecao') || '{}');
+    return window.tssExceptionStore?.getAll() || {};
   }
 
   function saveAllExcecoes(data) {
-    localStorage.setItem('liberacoesExcecao', JSON.stringify(data || {}));
+    throw new Error('Use o salvamento individual de exceções no banco.');
   }
 
   function getExcecaoTerceiro(id) {
@@ -3354,7 +3374,9 @@
     const ex = getExcecaoTerceiro(t.id);
 
     // A exceção operacional não substitui o ASO válido do prestador de serviço.
-    if (ex && statusData(t.aso).classe !== 'blocked' && !statusData(t.aso).semData && (base.bloqueado || base.pendente)) {
+    const pendenciasAtuais = [...base.motivos, ...base.avisos];
+    const cobrePendencias = Array.isArray(ex?.pendenciasAutorizadas) && pendenciasAtuais.every(p => ex.pendenciasAutorizadas.includes(p));
+    if (ex && cobrePendencias && statusData(t.aso).classe !== 'blocked' && !statusData(t.aso).semData && (base.bloqueado || base.pendente)) {
       return {
         ...base,
         ok: true,
@@ -3412,13 +3434,14 @@
     renderDashboard();
   }
 
-  function cancelarLiberacaoExcecao(id) {
+  async function cancelarLiberacaoExcecao(id) {
     const ex = getExcecaoTerceiro(id);
     if (!ex) return;
     if (!confirm('Cancelar a liberação por exceção deste terceiro?')) return;
-    const all = getAllExcecoes();
+    const all = { ...getAllExcecoes() };
     all[id] = { ...all[id], ativo:false, canceladoEm:new Date().toISOString() };
-    saveAllExcecoes(all);
+    try { await window.tssExceptionStore.save(id, all[id]); }
+    catch(e) { toast('⚠ A exceção não foi cancelada no banco.'); return; }
     registrarHistorico('terceiro', id, 'Liberação por exceção cancelada.');
     toast('Liberação por exceção cancelada.');
     abrirAnalise(id);
@@ -3597,7 +3620,7 @@
     return ex;
   };
 
-  salvarLiberacaoExcecao = function(id) {
+  salvarLiberacaoExcecao = async function(id) {
     const t = getAll().find(x => x.id === id);
     if (!t) return;
 
@@ -3625,7 +3648,7 @@
       return;
     }
 
-    const all = getAllExcecoes();
+    const all = { ...getAllExcecoes() };
     all[id] = {
       id: uid(),
       terceiroId: id,
@@ -3641,7 +3664,8 @@
       obs,
       criadoEm: new Date().toISOString()
     };
-    saveAllExcecoes(all);
+    try { await window.tssExceptionStore.save(id, all[id]); }
+    catch(e) { toast('⚠ A exceção não foi salva no banco.'); return; }
     registrarHistorico('terceiro', id, `Liberação por exceção registrada por ${aprovador} (${cargo}). Motivo: ${motivo}. De ${fmtData(dataLiberacao)} até ${fmtData(dataAte)}.`);
     toast('✓ Liberação por exceção registrada.');
     abrirAnalise(id);
@@ -4504,16 +4528,23 @@
     if (!ex || !ex.ativo) return null;
     // Registros antigos sem vigência completa não concedem acesso.
     if (!ex.dataLiberacao || !ex.dataAte) return null;
+    if (!Array.isArray(ex.pendenciasAutorizadas)) return null;
     if (ex.dataLiberacao > hoje() || ex.dataAte < hoje()) return null;
     return ex;
   };
 
-  salvarLiberacaoExcecao = function(id) {
+  salvarLiberacaoExcecao = async function(id) {
     const t = getAll().find(x => x.id === id);
     if (!t) return;
     const aso = statusData(t.aso);
     if (aso.semData || aso.classe === 'blocked') {
       toast('⚠ Regularize o ASO antes de registrar uma exceção.');
+      return;
+    }
+    const situacaoAtual = getStatusBaseSemExcecao(t);
+    const pendenciasAutorizadas = [...situacaoAtual.motivos, ...situacaoAtual.avisos];
+    if (!pendenciasAutorizadas.length) {
+      toast('Não há pendências para liberar por exceção.');
       return;
     }
 
@@ -4543,7 +4574,7 @@
       return;
     }
 
-    const all = getAllExcecoes();
+    const all = { ...getAllExcecoes() };
     all[id] = {
       id: uid(),
       terceiroId: id,
@@ -4560,10 +4591,12 @@
       motivos,
       documentos,
       obs,
+      pendenciasAutorizadas,
       criadoEm: new Date().toISOString()
     };
 
-    saveAllExcecoes(all);
+    try { await window.tssExceptionStore.save(id, all[id]); }
+    catch(e) { toast('⚠ A exceção não foi salva no banco.'); return; }
     registrarHistorico(
       'terceiro',
       id,
@@ -6566,13 +6599,16 @@
   const LOCAL_SYNC_MARK = 'tss_supabase_last_sync';
   const LOCAL_CHANGE_MARK = 'tss_local_last_change';
   const INSTANCE_ID = 'tss_instance_id';
+  const SESSION_KEY = 'tss_auth_session';
+  const EXCEPTIONS_ENDPOINT = SUPABASE_URL + '/rest/v1/sst_excecoes';
+  let session = null;
+  let exceptionCache = {};
 
   const DATA_KEYS = {
     terceiros: 'terceiros',
     empresas: 'empresas',
     treinamentos: 'treinamentos',
     historico: 'historico',
-    excecoes: 'liberacoesExcecao',
     anexosTerceiros: 'anexosTerceiros',
     anexosEmpresas: 'anexosEmpresas',
     arquivosTerceirosV16: 'arquivosTerceirosV16',
@@ -6604,7 +6640,6 @@
       empresas: readKey(DATA_KEYS.empresas, []),
       treinamentos: readKey(DATA_KEYS.treinamentos, []),
       historico: readKey(DATA_KEYS.historico, []),
-      excecoes: readKey(DATA_KEYS.excecoes, {}),
       anexosTerceiros: readKey(DATA_KEYS.anexosTerceiros, {}),
       anexosEmpresas: readKey(DATA_KEYS.anexosEmpresas, {}),
       arquivosTerceirosV16: readKey(DATA_KEYS.arquivosTerceirosV16, {}),
@@ -6618,7 +6653,6 @@
       (Array.isArray(s.terceiros) && s.terceiros.length) ||
       (Array.isArray(s.empresas) && s.empresas.length) ||
       (Array.isArray(s.treinamentos) && s.treinamentos.length) ||
-      (s.excecoes && typeof s.excecoes === 'object' && Object.keys(s.excecoes).length) ||
       (s.arquivosTerceirosV16 && typeof s.arquivosTerceirosV16 === 'object' && Object.keys(s.arquivosTerceirosV16).length) ||
       (s.arquivosEmpresasV26 && typeof s.arquivosEmpresasV26 === 'object' && Object.keys(s.arquivosEmpresasV26).length)
     );
@@ -6637,7 +6671,6 @@
       if (Array.isArray(state.empresas)) writeKey(DATA_KEYS.empresas, state.empresas);
       if (Array.isArray(state.treinamentos)) writeKey(DATA_KEYS.treinamentos, state.treinamentos);
       if (Array.isArray(state.historico)) writeKey(DATA_KEYS.historico, state.historico);
-      if (state.excecoes && typeof state.excecoes === 'object') writeKey(DATA_KEYS.excecoes, state.excecoes);
       if (state.anexosTerceiros && typeof state.anexosTerceiros === 'object') writeKey(DATA_KEYS.anexosTerceiros, state.anexosTerceiros);
       if (state.anexosEmpresas && typeof state.anexosEmpresas === 'object') writeKey(DATA_KEYS.anexosEmpresas, state.anexosEmpresas);
       if (state.arquivosTerceirosV16 && typeof state.arquivosTerceirosV16 === 'object') writeKey(DATA_KEYS.arquivosTerceirosV16, state.arquivosTerceirosV16);
@@ -6653,14 +6686,79 @@
   function sbHeaders(extra){
     return Object.assign({
       apikey: SUPABASE_ANON_KEY,
-      Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + (session?.access_token || ''),
       'Content-Type': 'application/json'
     }, extra || {});
   }
 
+  function authError(message){ document.getElementById('tss-auth-error').textContent = message || ''; }
+  async function authToken(grant, credentials){
+    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=' + grant, {
+      method:'POST', headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify(credentials)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.access_token) throw new Error('Não foi possível entrar. Confira o e-mail e a senha.');
+    session = data;
+    session.expires_at = Math.floor(Date.now()/1000) + (data.expires_in || 3600);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
+  async function ensureSession(){
+    if (!session) {
+      try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { session = null; }
+    }
+    if (!session?.refresh_token) return false;
+    if ((session.expires_at || 0) < Math.floor(Date.now()/1000) + 90) {
+      try { await authToken('refresh_token', {refresh_token:session.refresh_token}); }
+      catch(e) { session = null; sessionStorage.removeItem(SESSION_KEY); return false; }
+    }
+    return true;
+  }
+  async function authorizedFetch(url, options={}){
+    if (!await ensureSession()) throw new Error('Sessão expirada. Entre novamente.');
+    return fetch(url, {...options, headers:sbHeaders(options.headers)});
+  }
+  function lockApp(message){
+    document.body.classList.remove('tss-authenticated');
+    document.getElementById('tss-auth-overlay').hidden = false;
+    if (message) authError(message);
+  }
+  function unlockApp(){
+    document.body.classList.add('tss-authenticated');
+    document.getElementById('tss-auth-overlay').hidden = true;
+    authError('');
+    if (!document.getElementById('tss-logout')) {
+      const button = document.createElement('button');
+      button.id = 'tss-logout';
+      button.textContent = 'Sair';
+      button.style.cssText = 'position:fixed;right:12px;bottom:52px;z-index:99999;padding:7px 12px;border-radius:8px;border:1px solid #cbd5e1;background:white;cursor:pointer';
+      button.onclick = () => window.tssSair();
+      document.body.appendChild(button);
+    }
+  }
+  window.tssSair = function(){ session = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
+  window.tssExceptionStore = {
+    getAll:()=>exceptionCache,
+    async reload(){
+      const res = await authorizedFetch(EXCEPTIONS_ENDPOINT + '?select=terceiro_id,dados');
+      if (!res.ok) throw new Error('Falha ao consultar exceções: ' + res.status);
+      const rows = await res.json();
+      exceptionCache = Object.fromEntries(rows.map(row => [row.terceiro_id,row.dados]));
+      return exceptionCache;
+    },
+    async save(id, dados){
+      const res = await authorizedFetch(EXCEPTIONS_ENDPOINT + '?on_conflict=terceiro_id', {
+        method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({terceiro_id:id,dados,updated_at:new Date().toISOString()})
+      });
+      if (!res.ok) throw new Error('Falha ao salvar exceção: ' + res.status);
+      exceptionCache[id] = dados;
+    }
+  };
+
   async function fetchRemoteState(){
     const url = ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY) + '&select=key,data,updated_at&limit=1';
-    const res = await fetch(url, { headers: sbHeaders() });
+    const res = await authorizedFetch(url);
     if (!res.ok) {
       const txt = await res.text().catch(()=> '');
       throw new Error('Falha ao consultar Supabase: ' + res.status + ' ' + txt.slice(0,180));
@@ -6679,7 +6777,7 @@
       data: localState,
       updated_at: nowIso()
     };
-    const res = await fetch(ENDPOINT + '?on_conflict=key', {
+    const res = await authorizedFetch(ENDPOINT + '?on_conflict=key', {
       method: 'POST',
       headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(payload)
@@ -6705,7 +6803,7 @@
       }).catch(err => {
         console.warn('[TSS] Supabase sync:', err);
         updateBancoBadge('offline');
-        if (typeof toast === 'function') toast('⚠ Banco offline: alterações ficaram salvas neste aparelho.');
+        lockApp('Falha ao salvar no banco. Recarregue a página antes de continuar.');
       });
     }, delay ?? 800);
   }
@@ -6759,7 +6857,7 @@
     };
 
     [
-      'saveAll','saveAllEmpresas','saveAllTreinamentos','saveAllExcecoes',
+      'saveAll','saveAllEmpresas','saveAllTreinamentos',
       'setAnexosTerceiro','setArquivosTerceiroV16','setArquivosEmpresaV26',
       'registrarHistorico','importarPlanilhaExcel','importarBackupJSON'
     ].forEach(wrap);
@@ -6769,37 +6867,64 @@
     wrapLocalSavers();
     updateBancoBadge('loading');
     try {
+      if (!await ensureSession()) { lockApp(); return; }
       const remote = await fetchRemoteState();
-      const hasLocal = localHasUsefulData();
-      const localChange = parseTime(localStorage.getItem(LOCAL_CHANGE_MARK) || localStorage.getItem(LOCAL_SYNC_MARK));
-
-      if (remote && remote.data) {
-        const remoteTime = Math.max(parseTime(remote.updated_at), parseTime(remote.data.updatedAt));
-
-        if (!hasLocal || remoteTime >= localChange) {
-          applyRemoteState(remote.data);
-          renderEverythingSafe();
-          updateBancoBadge('online');
-          if (typeof toast === 'function') toast('✓ Dados carregados do Supabase.');
-        } else {
-          await saveRemoteState();
-          updateBancoBadge('online');
-          if (typeof toast === 'function') toast('✓ Dados locais enviados ao Supabase.');
-        }
-      } else if (hasLocal) {
-        await saveRemoteState();
-        updateBancoBadge('online');
-        if (typeof toast === 'function') toast('✓ Base enviada ao Supabase.');
-      } else {
-        updateBancoBadge('online');
-      }
+      if (!remote?.data) throw new Error('Base não encontrada no banco.');
+      applyRemoteState(remote.data);
+      await window.tssExceptionStore.reload();
+      localStorage.removeItem('liberacoesExcecao');
+      renderEverythingSafe();
       bootFinished = true;
+      unlockApp();
+      updateBancoBadge('online');
     } catch (err) {
-      bootFinished = true;
       console.warn('[TSS] Supabase inicialização:', err);
-      updateBancoBadge('offline');
-      if (typeof toast === 'function') toast('⚠ Banco não conectou. Cache local ativo.');
+      lockApp('Não foi possível carregar a base autorizada. Tente entrar novamente.');
     }
+  }
+
+  document.getElementById('tss-auth-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (document.getElementById('tss-new-password')) return;
+    authError('Entrando...');
+    try {
+      await authToken('password', {
+        email:document.getElementById('tss-auth-email').value.trim(),
+        password:document.getElementById('tss-auth-password').value
+      });
+      document.getElementById('tss-auth-password').value = '';
+      await initSupabaseReal();
+    } catch(e) { authError(e.message); }
+  });
+  document.getElementById('tss-auth-recover').addEventListener('click', async () => {
+    const email = document.getElementById('tss-auth-email').value.trim();
+    if (!email) { authError('Informe seu e-mail para receber o link.'); return; }
+    const res = await fetch(SUPABASE_URL + '/auth/v1/recover?redirect_to=' + encodeURIComponent(location.origin + location.pathname), {
+      method:'POST', headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email})
+    }).catch(()=>null);
+    authError(res?.ok ? 'Confira seu e-mail para redefinir a senha.' : 'Não foi possível enviar o link agora.');
+  });
+
+  const recoveryParams = new URLSearchParams(location.hash.slice(1));
+  if (recoveryParams.get('type') === 'recovery' && recoveryParams.get('access_token')) {
+    session = {
+      access_token:recoveryParams.get('access_token'),
+      refresh_token:recoveryParams.get('refresh_token'),
+      expires_at:Math.floor(Date.now()/1000) + Number(recoveryParams.get('expires_in') || 3600)
+    };
+    sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
+    history.replaceState(null,'',location.pathname + location.search);
+    const form = document.getElementById('tss-auth-form');
+    form.innerHTML = '<h2>Nova senha</h2><label>Senha nova<input id="tss-new-password" type="password" minlength="8" required></label><button type="submit">Salvar senha</button><div id="tss-auth-error" role="alert"></div>';
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const res = await authorizedFetch(SUPABASE_URL + '/auth/v1/user', {
+        method:'PUT',body:JSON.stringify({password:document.getElementById('tss-new-password').value})
+      });
+      if (!res.ok) { authError('Não foi possível redefinir a senha.'); return; }
+      location.reload();
+    });
   }
 
   window.tssSupabaseSyncNow = async function(){
@@ -6812,7 +6937,7 @@
     } catch(err) {
       console.error(err);
       updateBancoBadge('offline');
-      if (typeof toast === 'function') toast('⚠ Falha ao sincronizar banco.');
+      lockApp('Falha ao sincronizar. Recarregue a página.');
       return false;
     }
   };
@@ -6823,6 +6948,7 @@
       const remote = await fetchRemoteState();
       if (remote && remote.data) {
         applyRemoteState(remote.data);
+        await window.tssExceptionStore.reload();
         renderEverythingSafe();
         updateBancoBadge('online');
         if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
@@ -6849,10 +6975,12 @@
   // Atalho de emergência para testar no console:
   // tssSupabaseSyncNow() envia este aparelho ao banco.
   // tssSupabaseReload() baixa do banco para este aparelho.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSupabaseReal);
-  } else {
-    setTimeout(initSupabaseReal, 0);
+  if (!document.getElementById('tss-new-password')) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSupabaseReal);
+    } else {
+      setTimeout(initSupabaseReal, 0);
+    }
   }
 })();
 </script>
