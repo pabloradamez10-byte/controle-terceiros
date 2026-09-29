@@ -5584,6 +5584,11 @@
           if (!terc) { terceiros.push({ id:uid(), ...dados, obs:dados.obs || 'Importado de planilha', treinamentosRealizados:[] }); novosTerceiros++; }
           else {
             Object.keys(dados).forEach(k => { if (dados[k] !== '' && dados[k] !== 0) terc[k] = dados[k]; else if (['totalAcessos','acessosAutorizados','acessosNegados'].includes(k)) terc[k] = dados[k]; });
+            // Se a coluna existe, uma célula vazia também é informação: não conservar
+            // um ASO/integração antigo como válido após uma nova importação.
+            if (idxAso >= 0) terc.aso = dados.aso;
+            if (idxInteg >= 0) terc.integ = dados.integ;
+            if (idxSituacaoAcesso >= 0) terc.situacaoAcessoImportada = dados.situacaoAcessoImportada;
             atualizados++;
           }
         }
