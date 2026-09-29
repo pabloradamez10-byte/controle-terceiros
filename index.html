@@ -6809,7 +6809,17 @@
     if (!res.ok) { userMessage('Não foi possível carregar usuários.'); return; }
     const users = (await res.json()).users || [];
     const list = document.getElementById('tss-users-list');
-    list.innerHTML = users.map((u,i) => `<button type="button" data-user-index="${i}" class="btn btn-ghost" style="display:block;width:100%;text-align:left;margin:6px 0">${esc(u.email)} — ${esc(u.role.toUpperCase())} — ${['consultar','cadastrar','liberar'].filter(p=>u.permissoes?.[p]).join(', ')} ${u.ativo ? '' : '(desativado)'}</button>`).join('') || '<p>Nenhuma conta encontrada.</p>';
+    list.innerHTML = users.map((u,i) => `<div style="display:flex;align-items:center;gap:8px"><button type="button" data-user-index="${i}" class="btn btn-ghost" style="display:block;width:100%;text-align:left;margin:6px 0">${esc(u.email)} — ${esc(u.role.toUpperCase())} — ${['consultar','cadastrar','liberar'].filter(p=>u.permissoes?.[p]).join(', ')} ${u.ativo ? '' : '(desativado)'}</button><button type="button" class="btn btn-ghost" data-delete-index="${i}" style="color:#b91c1c">Excluir</button></div>`).join('') || '<p>Nenhuma conta encontrada.</p>';
+    list.querySelectorAll('[data-delete-index]').forEach(button => button.addEventListener('click', async () => {
+      const u = users[Number(button.dataset.deleteIndex)];
+      if (!confirm('Excluir o acesso de ' + u.email + '? A pessoa perderá a conta no SST.')) return;
+      button.disabled = true;
+      const res = await authorizedFetch(USER_FUNCTION, {method:'POST',body:JSON.stringify({action:'delete',user_id:u.user_id})}).catch(()=>null);
+      const result = await res?.json().catch(()=>({}));
+      if (!res?.ok) { userMessage(result?.error || 'Falha ao excluir usuário.'); button.disabled = false; return; }
+      userMessage('Usuário excluído.');
+      await refreshUsers();
+    }));
     list.querySelectorAll('[data-user-index]').forEach(button => button.addEventListener('click', () => {
       const u = users[Number(button.dataset.userIndex)];
       document.getElementById('tss-user-email').value = u.email || '';
