@@ -3122,7 +3122,7 @@
         renderDashboard();
         renderDados();
 
-        const msg = `Importação concluída.\nArquivo: ${file.name}\nLinhas lidas: ${Math.max(rows.length - headerIdx - 1, 0)}\nEmpresas novas: ${novasEmpresas}\nTerceiros novos: ${novosTerceiros}\nTerceiros atualizados: ${atualizados}\nLinhas ignoradas: ${ignorados}\n\nObservação: se existir coluna Situação Acesso, o sistema usará ACESSO LIBERADO para manter terceiros liberados conforme a planilha original. Confira ASO, Integração e Fim Prestação Serviço após importar.`;
+        const msg = `Importação concluída.\nArquivo: ${file.name}\nLinhas lidas: ${Math.max(rows.length - headerIdx - 1, 0)}\nEmpresas novas: ${novasEmpresas}\nTerceiros novos: ${novosTerceiros}\nTerceiros atualizados: ${atualizados}\nLinhas ignoradas: ${ignorados}\n\nA situação de acesso da planilha foi preservada como histórico. A autorização atual é calculada pelo aplicativo. Confira ASO, Integração e Fim Prestação Serviço após importar.`;
         document.getElementById('import-log').textContent = msg;
         toast('✓ Planilha importada.');
       } catch (err) {
@@ -3334,7 +3334,7 @@
     const avisos = [...dp.avisos, ...sesmt.avisos];
     const bloqueado = motivos.length > 0;
     const pendente = !bloqueado && avisos.length > 0;
-    return { ok: !bloqueado, bloqueado, pendente, excecao:false, motivos, avisos, dp, sesmt };
+    return { ok: !bloqueado && !pendente, bloqueado, pendente, excecao:false, motivos, avisos, dp, sesmt };
   }
 
   function statusImportadoLiberado(t) {
@@ -3366,17 +3366,7 @@
       };
     }
 
-    if (statusImportadoLiberado(t) && !base.bloqueado && !base.pendente) {
-      return {
-        ...base,
-        ok: true,
-        bloqueado: false,
-        pendente: false,
-        liberadoImportado: true,
-        statusTexto: 'LIBERADO'
-      };
-    }
-
+    // Situação importada é apenas histórico; nunca determina a autorização atual.
     return { ...base, statusTexto: base.ok && !base.pendente ? 'LIBERADO' : (base.pendente ? 'PENDENTE' : 'BLOQUEADO') };
   };
 
@@ -3536,7 +3526,10 @@
     const wrap = document.getElementById('dash-excecoes-list');
     if (!wrap) return;
     const all = getAllExcecoes();
-    const itens = Object.values(all).filter(x => x && x.ativo).sort((a,b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+    const itens = Object.values(all).filter(x => {
+      const terceiro = x && getAll().find(t => t.id === x.terceiroId);
+      return terceiro && getExcecaoTerceiro(x.terceiroId) && getStatus(terceiro).excecao;
+    }).sort((a,b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
     if (!itens.length) {
       wrap.innerHTML = '<p style="font-size:14px;color:var(--muted);">Nenhuma liberação por exceção ativa.</p>';
       return;
@@ -4509,13 +4502,20 @@
     const all = getAllExcecoes ? getAllExcecoes() : {};
     const ex = all[id];
     if (!ex || !ex.ativo) return null;
-    if (ex.dataAte && ex.dataAte < hoje()) return null;
+    // Registros antigos sem vigência completa não concedem acesso.
+    if (!ex.dataLiberacao || !ex.dataAte) return null;
+    if (ex.dataLiberacao > hoje() || ex.dataAte < hoje()) return null;
     return ex;
   };
 
   salvarLiberacaoExcecao = function(id) {
     const t = getAll().find(x => x.id === id);
     if (!t) return;
+    const aso = statusData(t.aso);
+    if (aso.semData || aso.classe === 'blocked') {
+      toast('⚠ Regularize o ASO antes de registrar uma exceção.');
+      return;
+    }
 
     const dataLiberacao = document.getElementById('exc-data')?.value || '';
     const dataAte = document.getElementById('exc-data-ate')?.value || '';
@@ -5591,7 +5591,7 @@
         popularSelectEmpresas('f-empresa'); popularSelectEmpresas('e-empresa');
         if (typeof preencherFiltroEmpresas === 'function') preencherFiltroEmpresas();
         renderDashboard(); if (typeof renderDados === 'function') renderDados();
-        const msg = `Importação V22 concluída.\nArquivo: ${file.name}\nLinhas lidas: ${Math.max(rows.length-headerIdx-1,0)}\nEmpresas novas: ${novasEmpresas}\nTerceiros novos: ${novosTerceiros}\nTerceiros atualizados: ${atualizados}\nLinhas ignoradas: ${ignorados}\n\nCampos adicionais lidos: último acesso, total de acessos, acessos autorizados, acessos negados, última área, dispositivo, grupo e pessoa visitada.`;
+        const msg = `Importação V22 concluída.\nArquivo: ${file.name}\nLinhas lidas: ${Math.max(rows.length-headerIdx-1,0)}\nEmpresas novas: ${novasEmpresas}\nTerceiros novos: ${novosTerceiros}\nTerceiros atualizados: ${atualizados}\nLinhas ignoradas: ${ignorados}\n\nA situação de acesso da planilha é histórica; o aplicativo calcula a autorização atual. Campos adicionais lidos: último acesso, total de acessos, acessos autorizados, acessos negados, última área, dispositivo, grupo e pessoa visitada.`;
         const log = document.getElementById('import-log'); if (log) log.textContent = msg;
         toast('✓ Planilha importada com dados de acesso.');
       } catch(err) {
