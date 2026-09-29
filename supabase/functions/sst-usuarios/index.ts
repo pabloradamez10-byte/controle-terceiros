@@ -28,6 +28,19 @@ Deno.serve(async req => {
     }
 
     const body = await req.json()
+    if (body.action === 'delete') {
+      const userId = String(body.user_id || '')
+      if (userId === auth.user.id) return json({ error: 'Você não pode excluir seu próprio acesso' }, 400)
+      const { data: target, error: targetError } = await admin.from('sst_members').select('user_id').eq('user_id', userId).single()
+      if (targetError || !target) return json({ error: 'Usuário não encontrado' }, 404)
+      const { error: disableError } = await admin.from('sst_members').update({ ativo: false }).eq('user_id', userId)
+      if (disableError) throw disableError
+      const { error: authDeleteError } = await admin.auth.admin.deleteUser(userId)
+      if (authDeleteError) throw authDeleteError
+      const { error: memberDeleteError } = await admin.from('sst_members').delete().eq('user_id', userId)
+      if (memberDeleteError) throw memberDeleteError
+      return json({ ok: true })
+    }
     const email = String(body.email || '').trim().toLowerCase()
     const role = String(body.role || '')
     const allowedRoles = ['admin', 'cadastro', 'sesmt', 'portaria']
