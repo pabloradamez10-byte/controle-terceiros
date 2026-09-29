@@ -1430,7 +1430,7 @@
     const empresa = getEmpresaById(t.empresaId);
 
     const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) avisos.push('ASO sem data informada');
+    if (asoStatus.semData) motivos.push('ASO sem data informada');
     else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
     else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
 
@@ -3169,7 +3169,7 @@
     const empresa = getEmpresaById(t.empresaId);
 
     const asoStatus = statusData(t.aso);
-    if (asoStatus.semData) avisos.push('ASO sem data informada');
+    if (asoStatus.semData) motivos.push('ASO sem data informada');
     else if (asoStatus.classe === 'blocked') motivos.push('ASO vencido em ' + fmtData(t.aso));
     else if (asoStatus.classe === 'warn') avisos.push('ASO ' + asoStatus.texto.toLowerCase());
 
@@ -3353,7 +3353,8 @@
     const base = getStatusBaseSemExcecao(t);
     const ex = getExcecaoTerceiro(t.id);
 
-    if (ex && (base.bloqueado || base.pendente)) {
+    // A exceção operacional não substitui o ASO válido do prestador de serviço.
+    if (ex && statusData(t.aso).classe !== 'blocked' && !statusData(t.aso).semData && (base.bloqueado || base.pendente)) {
       return {
         ...base,
         ok: true,
@@ -3365,7 +3366,7 @@
       };
     }
 
-    if (statusImportadoLiberado(t)) {
+    if (statusImportadoLiberado(t) && !base.bloqueado && !base.pendente) {
       return {
         ...base,
         ok: true,
