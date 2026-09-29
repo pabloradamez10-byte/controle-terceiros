@@ -13,12 +13,13 @@ Deno.serve(async req => {
   try {
     const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
     if (!token) return json({ error: 'Faça login novamente' }, 401)
-    const userClient = createClient(url, anonKey)
+    const userClient = createClient(url, anonKey, { global: { headers: { Authorization: req.headers.get('Authorization') || '' } } })
     const { data: auth, error: authError } = await userClient.auth.getUser(token)
     if (authError || !auth.user) return json({ error: 'Sessão inválida' }, 401)
+    const { data: actor, error: actorError } = await userClient.from('sst_members').select('role,ativo').eq('user_id', auth.user.id).single()
+    if (actorError) { console.error('sst-usuarios actor:', actorError); return json({ error: 'Falha ao verificar permissões' }, 500) }
+    if (actor?.role !== 'admin' || !actor.ativo) return json({ error: 'Somente ADM pode gerenciar usuários' }, 403)
     const admin = createClient(url, serviceKey)
-    const { data: actor, error: actorError } = await admin.from('sst_members').select('role,ativo').eq('user_id', auth.user.id).single()
-    if (actorError || actor?.role !== 'admin' || !actor.ativo) return json({ error: 'Somente ADM pode gerenciar usuários' }, 403)
 
     if (req.method === 'GET') {
       const { data, error } = await admin.from('sst_members').select('user_id,email,role,permissoes,ativo').order('email')
