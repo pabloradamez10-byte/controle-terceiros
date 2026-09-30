@@ -3222,18 +3222,7 @@
       else if (docSESMT.classe === 'warn') avisos.push('Documentos SESMT ' + docSESMT.texto.toLowerCase());
     }
 
-    const obrigatorios = getTreinosObrigatoriosDaEmpresa(t.empresaId);
-    obrigatorios.forEach(tr => {
-      const reg = getTreinoRealizado(t, tr.id);
-      if (!reg || !isDataValidaSistema(reg.data)) {
-        avisos.push(`${tr.nome} sem data cadastrada`);
-        return;
-      }
-      const vencimento = addMonths(reg.data, tr.validade || 12);
-      const stData = statusData(vencimento);
-      if (stData.classe === 'blocked') motivos.push(`${tr.nome} vencido em ${fmtData(vencimento)}`);
-      else if (stData.classe === 'warn') avisos.push(`${tr.nome} ${stData.texto.toLowerCase()}`);
-    });
+    // BPF integra a integração; treinamentos adicionais são apenas histórico.
 
     return { ok: motivos.length === 0, motivos, avisos, pendente: motivos.length === 0 && avisos.length > 0 };
   };
@@ -3370,7 +3359,10 @@
     const motivos = [...dp.motivos, ...sesmt.motivos];
     const avisos = [...dp.avisos, ...sesmt.avisos];
     const bloqueado = motivos.length > 0;
-    const pendente = !bloqueado && avisos.length > 0;
+    // Avisos de DP ou proximidade do vencimento não geram pendência de acesso.
+    const pendente = !bloqueado && sesmt.avisos.some(aviso =>
+      aviso === 'Integração sem data informada' ||
+      aviso === 'Documentos SESMT sem data informada');
     return { ok: !bloqueado && !pendente, bloqueado, pendente, excecao:false, motivos, avisos, dp, sesmt };
   }
 
@@ -3763,7 +3755,7 @@
         : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
       const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
       const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
-      const badgeTreino = obrig.length === 0 ? '<span class="badge badge-warn">Sem treinos</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const badgeTreino = obrig.length === 0 ? '<span class="badge">Sem treinamentos adicionais</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
       const ex = getExcecaoTerceiro(t.id);
 
       const tr = document.createElement('tr');
@@ -4106,7 +4098,7 @@
         : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
       const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
       const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
-      const badgeTreino = obrig.length === 0 ? '<span class="badge badge-warn">Sem treinos</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const badgeTreino = obrig.length === 0 ? '<span class="badge">Sem treinamentos adicionais</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
       const ex = getExcecaoTerceiro(t.id);
 
       const tr = document.createElement('tr');
@@ -5008,7 +5000,7 @@
         : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
       const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
       const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
-      const badgeTreino = obrig.length === 0 ? '<span class="badge badge-warn">Sem treinos</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const badgeTreino = obrig.length === 0 ? '<span class="badge">Sem treinamentos adicionais</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
       const ex = getExcecaoTerceiro(t.id);
 
       const tr = document.createElement('tr');
