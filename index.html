@@ -811,7 +811,7 @@
   <section class="hero">
     <div>
       <h1>Controle de Terceiros</h1>
-      <p>Base inicial para cadastro de empresas, terceiros, treinamentos obrigatórios, validade de ASO, integração e consulta rápida para portaria.</p>
+      <p>Base inicial para cadastro de empresas, terceiros, treinamentos adicionais, validade de ASO, integração e consulta rápida para portaria.</p>
     </div>
   </section>
 
@@ -836,7 +836,7 @@
     <div class="mini-dashboard">
       <div class="mini-card danger"><div class="mini-label">ASOs vencidos</div><div class="mini-value" id="exec-aso-vencidos">0</div></div>
       <div class="mini-card danger"><div class="mini-label">Integrações vencidas</div><div class="mini-value" id="exec-integ-vencidas">0</div></div>
-      <div class="mini-card warn"><div class="mini-label">Treinos pendentes</div><div class="mini-value" id="exec-treinos-pendentes">0</div></div>
+      <div class="mini-card"><div class="mini-label">Treinamentos registrados</div><div class="mini-value" id="exec-treinos-pendentes">0</div></div>
       <div class="mini-card danger"><div class="mini-label">Contratos vencidos</div><div class="mini-value" id="exec-contratos-vencidos">0</div></div>
     </div>
     <div class="card">
@@ -865,7 +865,7 @@
       <div class="pendency-pill neutral">Sem data informada: <span id="pend-count-semdata">0</span></div>
     </div>
     <div class="card" style="padding:20px;">
-      <div class="card-title">Documentos e treinamentos vencidos</div>
+      <div class="card-title">Documentos vencidos</div>
       <div id="pendencias-vencidas-list"></div>
     </div>
     <div class="card" style="padding:20px;">
@@ -907,7 +907,7 @@
     </div>
 
     <div id="treinos-exigidos-box" class="required-training-box">
-      <div class="required-training-title">Treinamentos exigidos para esta empresa</div>
+      <div class="required-training-title">Treinamentos adicionais para esta empresa</div>
       <div id="treinos-exigidos-list" class="training-tags"></div>
     </div>
 
@@ -958,7 +958,7 @@
       <div class="stat-card stat-ok"><div class="stat-label">Liberados</div><div class="stat-value" id="stat-liberados">0</div></div>
       <div class="stat-card stat-block"><div class="stat-label">Bloqueados</div><div class="stat-value" id="stat-bloqueados">0</div></div>
       <div class="stat-card stat-company"><div class="stat-label">Empresas</div><div class="stat-value" id="stat-empresas">0</div></div>
-      <div class="stat-card stat-block"><div class="stat-label">Pendências treino</div><div class="stat-value" id="stat-pendencias-treino">0</div></div>
+      <div class="stat-card"><div class="stat-label">Treinamentos registrados</div><div class="stat-value" id="stat-pendencias-treino">0</div></div>
     </div>
     <div class="card" style="padding:18px 20px;">
       <div class="search-row">
@@ -1064,7 +1064,7 @@
         </div>
 
         <div id="r-treinos-wrap" style="margin-top:16px;display:none;">
-          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Treinamentos obrigatórios</label>
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Treinamentos adicionais</label>
           <div id="r-treinos-list" class="training-tags" style="margin-top:8px;"></div>
         </div>
 
@@ -1252,7 +1252,7 @@
       <div><label for="e-funcao">Função *</label><input id="e-funcao" type="text"/></div>
       <div><label for="e-aso">Validade do ASO *</label><input id="e-aso" type="date"/></div>
       <div><label for="e-integ">Validade da Integração *</label><input id="e-integ" type="date"/></div>
-      <div class="full"><label>Treinamentos do terceiro</label><small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Informe a data de realização/conclusão dos treinamentos exigidos pela empresa selecionada.</small><div id="e-treinos-box" class="training-date-grid"></div></div>
+      <div class="full"><label>Treinamentos do terceiro</label><small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Informe a data de realização/conclusão dos treinamentos adicionais pela empresa selecionada.</small><div id="e-treinos-box" class="training-date-grid"></div></div>
       <div class="full"><label for="e-obs">Observação</label><textarea id="e-obs"></textarea></div>
     </div>
     <input type="hidden" id="e-id"/>
@@ -1285,8 +1285,8 @@
       <div><label for="emp-doc-dp">Validade documentos DP</label><input id="emp-doc-dp" type="date"/></div>
       <div><label for="emp-doc-sesmt">Validade documentos SESMT</label><input id="emp-doc-sesmt" type="date"/></div>
       <div class="full">
-        <label>Treinamentos obrigatórios</label>
-        <small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Marque quais treinamentos serão exigidos para terceiros desta empresa.</small>
+        <label>Treinamentos adicionais</label>
+        <small style="display:block;margin-bottom:8px;color:var(--muted);font-size:12px;">Marque quais treinamentos ficarão disponíveis para registro dos terceiros desta empresa.</small>
         <div id="emp-treinamentos-checklist" class="training-grid"></div>
       </div>
     </div>
@@ -1566,19 +1566,19 @@
     realizados = realizados || [];
 
     if (!empresaId) {
-      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Selecione uma empresa para visualizar os treinamentos exigidos.</p>';
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Selecione uma empresa para visualizar os treinamentos adicionais.</p>';
       return;
     }
 
     if (!obrigatorios.length) {
-      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Esta empresa não possui treinamentos obrigatórios vinculados.</p>';
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--muted);">Esta empresa não possui treinamentos adicionais vinculados.</p>';
       return;
     }
 
     wrap.innerHTML = obrigatorios.map(tr => {
       const reg = realizados.find(x => x.treinamentoId === tr.id) || {};
       const venc = reg.data ? addMonths(reg.data, tr.validade || 12) : '';
-      const status = !reg.data ? '<span class="status-mini warn">Pendente</span>' : (venc < hoje() ? '<span class="status-mini blocked">Vencido</span>' : '<span class="status-mini ok">OK</span>');
+      const status = '<span class="status-mini">' + (reg.data ? 'Registrado' : 'Opcional') + '</span>';
       return `
         <div class="training-date-card">
           <strong>${tr.nome} ${status}</strong>
@@ -1666,15 +1666,7 @@
       addPend('SESMT', 'ASO', t.aso, 'Documento ocupacional');
       addPend('SESMT', 'Integração', t.integ, 'Integração obrigatória');
 
-      getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
-        const reg = getTreinoRealizado(t, tr.id);
-        if (!reg || !isDataValidaSistema(reg.data)) {
-          semData.push({ terceiroId:t.id, terceiro:t.nome, empresa:t.empresa || 'Sem empresa', cpf:t.cpf || 'Sem CPF', tipo:'Treinamento', item:tr.nome, vencimento:'', dias:null, detalheExtra:'Treinamento obrigatório sem data cadastrada' });
-          return;
-        }
-        const venc = addMonths(reg.data, tr.validade || 12);
-        addPend('Treinamento', tr.nome, venc, `Validade: ${tr.validade || 12} meses`);
-      });
+
     });
 
     vencidas.sort((a,b) => (a.vencimento || '9999-99-99').localeCompare(b.vencimento || '9999-99-99'));
@@ -1777,9 +1769,7 @@
     const treinamentos = (typeof getAllTreinamentos === 'function') ? getAllTreinamentos() : [];
     const liberados = terceiros.filter(t => getStatus(t).ok).length;
     const bloqueados = terceiros.length - liberados;
-    const pendenciasTreino = terceiros.reduce((acc, t) => {
-      return acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
-    }, 0);
+    const pendenciasTreino = contarTreinamentosRegistrados(terceiros);
     const empresasComExigencias = empresas.filter(e => (e.treinamentosObrigatorios || []).length > 0).length;
     const pendenciasGerais = montarPendencias().total;
 
@@ -1851,7 +1841,7 @@
       const integTag= t.integ< h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
       const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
       const pend = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
-      const treinoBadge = obrig.length === 0 ? '<span class="badge badge-warn">Sem exigência</span>' : (pend === 0 ? `<span class="badge badge-ok">${obrig.length}/${obrig.length} OK</span>` : `<span class="badge badge-blocked">${pend} pendência(s)</span>`);
+      const treinoBadge = badgeTreinamentosComplementares(t);
       const stDP = getStatusDP(t);
       const stSESMT = getStatusSESMT(t);
       const dpBadge = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP Bloq.</span>';
@@ -2263,8 +2253,8 @@
     const treinosHtml = obrig.length ? obrig.map(tr => {
       const ts = getStatusTreinamentoTerceiro(t, tr);
       const reg = getTreinoRealizado(t, tr.id);
-      return `<li>${ts.ok ? '✅' : '❌'} ${tr.nome} — ${reg?.data ? 'Realizado em ' + fmtData(reg.data) + ' | vence em ' + fmtData(ts.vencimento) : 'Sem data cadastrada'}</li>`;
-    }).join('') : '<li>Empresa sem treinamentos obrigatórios vinculados.</li>';
+      return `<li>${reg?.data ? '•' : '—'} ${tr.nome} — ${reg?.data ? 'Realizado em ' + fmtData(reg.data) + ' | vence em ' + fmtData(ts.vencimento) : 'Sem data cadastrada'}</li>`;
+    }).join('') : '<li>Empresa sem treinamentos adicionais vinculados.</li>';
 
     document.getElementById('analise-conteudo').innerHTML = `
       <div class="result-status">
@@ -2282,7 +2272,7 @@
         ${renderListaMotivos('SESMT', st.sesmt)}
       </div>
       <div class="analysis-card" style="margin-top:14px;">
-        <strong>Treinamentos exigidos</strong>
+        <strong>Treinamentos adicionais</strong>
         <ul class="analysis-list">${treinosHtml}</ul>
       </div>
     `;
@@ -2395,13 +2385,25 @@
     if (idAntes) registrarHistorico('empresa', idAntes, 'Empresa alterada.');
   };
 
+  function contarTreinamentosRegistrados(terceiros) {
+    return terceiros.reduce((total, t) => total + (t.treinamentosRealizados || []).filter(reg =>
+      isDataValidaSistema(reg.data) && getTreinamentoById(reg.treinamentoId)).length, 0);
+  }
+  function escapeTrainingText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function badgeTreinamentosComplementares(t) {
+    const total = contarTreinamentosRegistrados([t]);
+    return '<span class="badge">' + (total ? total + ' treinamento(s) registrado(s)' : 'Sem treinamentos adicionais') + '</span>';
+  }
+
   function getResumoExecutivo() {
     const terceiros = getAll();
     const empresas = getAllEmpresas();
     const hojeIso = hoje();
     const asoVencidos = terceiros.filter(t => isDataValidaSistema(t.aso) && t.aso < hojeIso).length;
     const integVencidas = terceiros.filter(t => isDataValidaSistema(t.integ) && t.integ < hojeIso).length;
-    const treinosPendentes = terceiros.reduce((acc, t) => acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length, 0);
+    const treinosPendentes = contarTreinamentosRegistrados(terceiros);
     const contratosVencidos = empresas.filter(e => isDataValidaSistema(e.contratoFim) && e.contratoFim < hojeIso).length;
     return { asoVencidos, integVencidas, treinosPendentes, contratosVencidos };
   }
@@ -2413,7 +2415,6 @@
     const itens = [
       { titulo:'ASOs vencidos', qtd:r.asoVencidos, desc:'Terceiros com ASO fora da validade.', acao:"showPage('pendencias')" },
       { titulo:'Integrações vencidas', qtd:r.integVencidas, desc:'Terceiros com integração fora da validade.', acao:"showPage('pendencias')" },
-      { titulo:'Treinamentos pendentes/vencidos', qtd:r.treinosPendentes, desc:'Treinamentos obrigatórios sem data ou vencidos.', acao:"showPage('pendencias')" },
       { titulo:'Contratos de empresa vencidos', qtd:r.contratosVencidos, desc:'Empresas com fim de prestação vencido.', acao:"showPage('empresas')" }
     ].filter(i => i.qtd > 0);
     wrap.innerHTML = itens.length ? itens.map(i => `<div class="quick-action" onclick="${i.acao}"><div><strong>${i.titulo}</strong><small>${i.desc}</small></div><span class="badge badge-blocked">${i.qtd}</span></div>`).join('') : '<p style="font-size:14px;color:var(--muted);">Nenhuma ação urgente no momento.</p>';
@@ -2622,7 +2623,7 @@
       '<button onclick="window.print()" style="padding:10px 16px;border:0;background:#155EEF;color:#fff;border-radius:8px;margin-bottom:18px">Salvar/Imprimir PDF</button>',
       '<h1>Relatório de Controle de Terceiros</h1><p>Gerado em '+data+'</p>',
       '<div class="kpi"><div class="card"><b>Total</b><div class="num blue">'+terceiros.length+'</div></div><div class="card"><b>Liberados</b><div class="num green">'+liberados+'</div></div><div class="card"><b>Bloqueados/Pendentes</b><div class="num red">'+bloqueados+'</div></div><div class="card"><b>Empresas</b><div class="num blue">'+empresas.length+'</div></div></div>',
-      '<h2>Resumo executivo</h2><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>ASOs vencidos</td><td>'+resumo.asoVencidos+'</td></tr><tr><td>Integrações vencidas</td><td>'+resumo.integVencidas+'</td></tr><tr><td>Treinamentos pendentes/vencidos</td><td>'+resumo.treinosPendentes+'</td></tr><tr><td>Contratos vencidos</td><td>'+resumo.contratosVencidos+'</td></tr></table>',
+      '<h2>Resumo executivo</h2><table><tr><th>Indicador</th><th>Quantidade</th></tr><tr><td>ASOs vencidos</td><td>'+resumo.asoVencidos+'</td></tr><tr><td>Integrações vencidas</td><td>'+resumo.integVencidas+'</td></tr><tr><td>Treinamentos adicionais registrados</td><td>'+resumo.treinosPendentes+'</td></tr><tr><td>Contratos vencidos</td><td>'+resumo.contratosVencidos+'</td></tr></table>',
       '</body></html>'
     ];
     const win = window.open('', '_blank');
@@ -2686,7 +2687,7 @@
         <td>${contratoBadge}</td>
         <td>${dpBadge}</td>
         <td>${sesmtBadge}</td>
-        <td><span class="badge badge-warn">${(e.treinamentosObrigatorios || []).length} exigido(s)</span></td>
+        <td><span class="badge badge-warn">${(e.treinamentosObrigatorios || []).length} vinculado(s)</span></td>
         <td>
           <div class="actions">
             <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="abrirModalEditarEmpresa('${e.id}')">Editar</button>
@@ -2867,10 +2868,10 @@
     if (obrigatorios.length) {
       rTreinosList.innerHTML = obrigatorios.map(tr => {
         const st = getStatusTreinamentoTerceiro(found, tr);
-        const cls = st.ok ? 'status-mini ok' : (st.semData ? 'status-mini warn' : 'status-mini blocked');
+        const cls = 'status-mini';
         const reg = getTreinoRealizado(found, tr.id);
         const detalhe = reg?.data && isDataValidaSistema(reg.data) ? `Realizado: ${fmtData(reg.data)}` : 'Sem data cadastrada';
-        return `<span class="training-tag">${tr.nome} <span class="${cls}">${st.label}</span><small style="display:block;color:var(--muted);margin-top:3px;">${detalhe}</small></span>`;
+        return `<span class="training-tag">${tr.nome} <span class="${cls}">${reg?.data ? 'Registrado' : 'Opcional'}</span><small style="display:block;color:var(--muted);margin-top:3px;">${detalhe}</small></span>`;
       }).join('');
       rTreinosWrap.style.display = 'block';
     } else {
@@ -3482,7 +3483,7 @@
           <div><label>Data da liberação *</label><input id="exc-data" type="date" min="${hoje()}" value="${hoje()}"></div>
           <div><label>Cargo do aprovador *</label><select id="exc-cargo"><option value="">Selecione...</option><option>Gerente da Planta</option><option>Supervisor Industrial</option><option>Coordenador Industrial</option><option>Outro</option></select></div>
           <div class="full"><label>Nome do aprovador *</label><input id="exc-aprovador" placeholder="Ex.: João da Silva"></div>
-          <div class="full"><label>Motivo *</label><select id="exc-motivo"><option value="">Selecione...</option><option>ASO pendente</option><option>Integração pendente</option><option>Treinamento pendente</option><option>Documento DP pendente</option><option>Emergência operacional</option><option>Outro</option></select></div>
+          <div class="full"><label>Motivo *</label><select id="exc-motivo"><option value="">Selecione...</option><option>ASO pendente</option><option>Integração pendente</option><option>Documento DP pendente</option><option>Emergência operacional</option><option>Outro</option></select></div>
           <div class="full"><label>Observação</label><textarea id="exc-obs" placeholder="Explique a autorização..."></textarea></div>
         </div>
         <div style="margin-top:12px;"><button class="btn btn-primary" onclick="salvarLiberacaoExcecao('${id}')">Liberar por Exceção</button></div>
@@ -3543,7 +3544,7 @@
     const excecoes = statuses.filter(s => s.excecao).length;
     const pendentes = statuses.filter(s => s.pendente && !s.excecao).length;
     const bloqueados = statuses.filter(s => s.bloqueado && !s.excecao).length;
-    const pendenciasTreino = terceiros.reduce((acc, t) => acc + getTreinosObrigatoriosDaEmpresa(t.empresaId).filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length, 0);
+    const pendenciasTreino = contarTreinamentosRegistrados(terceiros);
     const empresasComExigencias = empresas.filter(e => (e.treinamentosObrigatorios || []).length > 0).length;
     const pendenciasGerais = montarPendencias().total;
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -3708,7 +3709,7 @@
           <div><label>Data da liberação *</label><input id="exc-data" type="date" min="${hoje()}" value="${hoje()}"></div>
           <div><label>Liberado até *</label><input id="exc-data-ate" type="date" min="${hoje()}" value="${hoje()}"></div>
           <div><label>Cargo do aprovador *</label><select id="exc-cargo"><option value="">Selecione...</option><option>Gerente da Planta</option><option>Supervisor Industrial</option><option>Coordenador Industrial</option><option>Outro</option></select></div>
-          <div><label>Motivo *</label><select id="exc-motivo"><option value="">Selecione...</option><option>ASO pendente</option><option>Integração pendente</option><option>Treinamento pendente</option><option>Documento DP pendente</option><option>Emergência operacional</option><option>Outro</option></select></div>
+          <div><label>Motivo *</label><select id="exc-motivo"><option value="">Selecione...</option><option>ASO pendente</option><option>Integração pendente</option><option>Documento DP pendente</option><option>Emergência operacional</option><option>Outro</option></select></div>
           <div class="full"><label>Nome do aprovador *</label><input id="exc-aprovador" placeholder="Ex.: João da Silva"></div>
           <div class="full"><label>Observação</label><textarea id="exc-obs" placeholder="Explique a autorização..."></textarea></div>
         </div>
@@ -3755,7 +3756,7 @@
         : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
       const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
       const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
-      const badgeTreino = obrig.length === 0 ? '<span class="badge">Sem treinamentos adicionais</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const badgeTreino = badgeTreinamentosComplementares(t);
       const ex = getExcecaoTerceiro(t.id);
 
       const tr = document.createElement('tr');
@@ -3836,7 +3837,7 @@
     if (!stats) return;
     stats.insertAdjacentHTML('afterend', `
       <div id="v16-smart-dashboard" class="v16-smart-grid">
-        <div class="v16-card v16-warning" onclick="showPage('pendencias')"><div class="label">Vencem em 30 dias</div><div class="value" id="v16-vencem30">0</div><span class="hint">ASO, integração, contrato e treinos</span></div>
+        <div class="v16-card v16-warning" onclick="showPage('pendencias')"><div class="label">Vencem em 30 dias</div><div class="value" id="v16-vencem30">0</div><span class="hint">ASO, integração e contrato</span></div>
         <div class="v16-card v16-danger" onclick="showPage('pendencias')"><div class="label">Sem data informada</div><div class="value" id="v16-semdata">0</div><span class="hint">Itens que precisam regularizar data</span></div>
         <div class="v16-card v16-warning" onclick="document.getElementById('dash-excecoes-list')?.scrollIntoView({behavior:'smooth'})"><div class="label">Exceções ativas</div><div class="value" id="v16-excecoes">0</div><span class="hint">Terceiros liberados por exceção</span></div>
         <div class="v16-card v16-blue" onclick="showPage('empresas')"><div class="label">Empresas sem contrato</div><div class="value" id="v16-empresas-sem-contrato">0</div><span class="hint">Contrato/fim prestação sem data</span></div>
@@ -3875,11 +3876,7 @@
       v16AddDateItem(proximos, t, 'ASO', t.aso);
       v16AddDateItem(proximos, t, 'Integração', t.integ);
       if (emp) v16AddDateItem(proximos, t, 'Fim prestação/contrato empresa', emp.contratoFim || emp.fimPrestacao || emp.contratoValidade);
-      getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
-        const st = getStatusTreinamentoTerceiro(t, tr);
-        if (!isDataValidaSistema(st.data)) semData++;
-        v16AddDateItem(proximos, t, tr.nome || 'Treinamento', st.data);
-      });
+
     });
     const excecoes = Object.values(getAllExcecoes ? getAllExcecoes() : {}).filter(x => x && x.ativo && (!x.dataAte || x.dataAte >= hoje())).length;
     const empresasSemContrato = empresas.filter(e => !isDataValidaSistema(e.contratoFim || e.fimPrestacao || e.contratoValidade)).length;
@@ -4098,7 +4095,7 @@
         : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
       const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
       const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
-      const badgeTreino = obrig.length === 0 ? '<span class="badge">Sem treinamentos adicionais</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const badgeTreino = badgeTreinamentosComplementares(t);
       const ex = getExcecaoTerceiro(t.id);
 
       const tr = document.createElement('tr');
@@ -4176,7 +4173,6 @@
   const MOTIVOS_EXCECAO_V161 = [
     'ASO pendente',
     'Integração pendente',
-    'Treinamento pendente',
     'Documento DP pendente',
     'Documento SESMT pendente',
     'Contrato de prestação vencido',
@@ -4470,7 +4466,6 @@
   const V17_MOTIVOS_EXCECAO = [
     'ASO pendente',
     'Integração pendente',
-    'Treinamento pendente',
     'Documento DP pendente',
     'Documento SESMT pendente',
     'Contrato de prestação vencido',
@@ -5000,7 +4995,7 @@
         : (st.ok && !st.pendente ? '<span class="badge badge-ok">✓ Liberado</span>' : (st.pendente ? '<span class="badge badge-warn">Pendente</span>' : '<span class="badge badge-blocked">✕ Bloqueado</span>'));
       const badgeDP = stDP.ok ? '<span class="badge badge-ok">DP OK</span>' : '<span class="badge badge-blocked">DP</span>';
       const badgeSESMT = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT</span>';
-      const badgeTreino = obrig.length === 0 ? '<span class="badge">Sem treinamentos adicionais</span>' : (pendTreinos === 0 ? '<span class="badge badge-ok">Treinos OK</span>' : `<span class="badge badge-blocked">${pendTreinos} treino(s)</span>`);
+      const badgeTreino = badgeTreinamentosComplementares(t);
       const ex = getExcecaoTerceiro(t.id);
 
       const tr = document.createElement('tr');
@@ -5136,12 +5131,7 @@
     terceiros.forEach(t => {
       add('aso30', t, 'ASO', t.aso, 'Documento ocupacional');
       add('integracao30', t, 'Integração', t.integ, 'Integração obrigatória');
-      getTreinosObrigatoriosDaEmpresa(t.empresaId).forEach(tr => {
-        const reg = getTreinoRealizado(t, tr.id);
-        if (!reg || !isDataValidaSistema(reg.data)) return;
-        const venc = addMonths(reg.data, tr.validade || 12);
-        add('treinos30', t, tr.nome, venc, `Validade: ${tr.validade || 12} meses`);
-      });
+
     });
     empresas.forEach(e => {
       const dias = v21GetDias(e.contratoFim);
@@ -5166,7 +5156,6 @@
         <div class="v21-alert-card" onclick="abrirAlertasV21('aso30')"><div class="label">ASOs vencendo</div><div class="value" id="v21-alert-aso30">0</div><small>Toque para ver a lista</small></div>
         <div class="v21-alert-card" onclick="abrirAlertasV21('integracao30')"><div class="label">Integrações vencendo</div><div class="value" id="v21-alert-integracao30">0</div><small>Toque para ver a lista</small></div>
         <div class="v21-alert-card danger" onclick="abrirAlertasV21('contratos30')"><div class="label">Contratos vencendo</div><div class="value" id="v21-alert-contratos30">0</div><small>Toque para ver empresas</small></div>
-        <div class="v21-alert-card blue" onclick="abrirAlertasV21('treinos30')"><div class="label">Treinamentos vencendo</div><div class="value" id="v21-alert-treinos30">0</div><small>Toque para ver a lista</small></div>
       </div>`;
     if (ref) ref.insertAdjacentElement('afterend', wrap);
     else page.prepend(wrap);
@@ -5255,7 +5244,7 @@
           <button class="btn btn-ghost" onclick="abrirModalEditarEmpresa('${empresa.id}')">Editar empresa</button>
         </div>
       </div>
-      <div class="card"><div class="card-title">Treinamentos exigidos</div>
+      <div class="card"><div class="card-title">Treinamentos adicionais</div>
         <div class="training-tags">${treinos.length ? treinos.map(t => `<span class="training-tag">${v21Escape(t.nome)}</span>`).join('') : '<span style="color:var(--muted);font-size:14px;">Nenhum treinamento obrigatório vinculado.</span>'}</div>
       </div>
       <div class="card"><div class="card-title">Terceiros vinculados</div><div class="v21-list">
@@ -5384,9 +5373,11 @@
       if (!isValidDate(t.aso)) out.semData.push({...base, item:'ASO sem data informada', detalhe:''});
       if (!isValidDate(t.integ)) out.semData.push({...base, item:'Integração sem data informada', detalhe:''});
 
-      (getTreinosObrigatoriosDaEmpresa(t.empresaId) || []).forEach(tr => {
-        const ts = getStatusTreinamentoTerceiro(t, tr);
-        if (!ts.ok) out.treinamentos.push({...base, item:`Treinamento pendente/vencido: ${tr.nome}`, detalhe:ts.vencimento ? fmt(ts.vencimento) : 'Sem data'});
+
+
+      (t.treinamentosRealizados || []).forEach(reg => {
+        const tr = getTreinamentoById(reg.treinamentoId);
+        if (tr && isValidDate(reg.data)) out.treinamentos.push({...base, item:'Treinamento adicional: ' + tr.nome, detalhe:'Realizado em ' + fmt(reg.data)});
       });
 
       if (emp && isValidDate(emp.contratoFim) && emp.contratoFim < h) out.contrato.push({...base, empresaId:emp.id, item:'Contrato da empresa vencido', detalhe:fmt(emp.contratoFim)});
@@ -5448,7 +5439,7 @@
     const tipo = window.v22ListaTipo || 'aso';
     const dados = pendenciasPorTipoV22();
     const labels = {
-      aso:'ASOs vencidos', integracao:'Integrações vencidas', treinamentos:'Treinamentos pendentes/vencidos', contrato:'Contratos vencidos',
+      aso:'ASOs vencidos', integracao:'Integrações vencidas', treinamentos:'Treinamentos adicionais registrados', contrato:'Contratos vencidos',
       dp:'Pendências DP', sesmt:'Pendências SESMT', semData:'Sem data informada', acesso90:'Sem acesso há 90 dias'
     };
     let lista = dados[tipo] || [];
@@ -5463,7 +5454,7 @@
     wrap.innerHTML = lista.slice(0,max).map(x => `
       <div class="v22-row" onclick="abrirAnalise('${x.id}')">
         <div><strong>${esc(x.nome)}</strong><small>${esc(x.empresa)} ${x.cpf ? '• ' + esc(x.cpf) : ''}</small><small>${esc(x.item)}</small></div>
-        <div class="pendency-detail ${tipo === 'semData' || tipo === 'acesso90' ? 'neutral' : 'danger'}">${esc(x.detalhe || '')}</div>
+        <div class="pendency-detail ${tipo === 'semData' || tipo === 'acesso90' || tipo === 'treinamentos' ? 'neutral' : 'danger'}">${esc(x.detalhe || '')}</div>
       </div>`).join('') + (lista.length > max ? `<p style="text-align:center;color:var(--muted);font-size:12px;">Mostrando ${max} de ${lista.length}. Use a busca para filtrar.</p>` : '');
   };
 
@@ -5485,7 +5476,6 @@
         <div class="v22-grid">
           <div class="v22-card v22-danger" onclick="abrirListaV22('aso')"><div class="label">ASO vencido</div><div class="value">${p.aso.length}</div><span class="hint">Toque para listar</span></div>
           <div class="v22-card v22-danger" onclick="abrirListaV22('integracao')"><div class="label">Integração vencida</div><div class="value">${p.integracao.length}</div><span class="hint">Toque para listar</span></div>
-          <div class="v22-card v22-warn" onclick="abrirListaV22('treinamentos')"><div class="label">Treinamentos</div><div class="value">${p.treinamentos.length}</div><span class="hint">Pendentes ou vencidos</span></div>
           <div class="v22-card v22-danger" onclick="abrirListaV22('contrato')"><div class="label">Contrato vencido</div><div class="value">${p.contrato.length}</div><span class="hint">Terceiros afetados</span></div>
           <div class="v22-card v22-warn" onclick="abrirListaV22('dp')"><div class="label">Pendências DP</div><div class="value">${p.dp.length}</div><span class="hint">Documentação/gestão</span></div>
           <div class="v22-card v22-warn" onclick="abrirListaV22('sesmt')"><div class="label">Pendências SESMT</div><div class="value">${p.sesmt.length}</div><span class="hint">Saúde e segurança</span></div>
@@ -6015,7 +6005,7 @@
         let dataBase = reg?.data || '';
         let venc = '';
         if (typeof addMonths === 'function' && dataBase) venc = addMonths(dataBase, tr.validade || 12);
-        rows.push(linhaSemaforo(tr.nome || 'Treinamento', venc, dataBase ? `realizado em ${fmt(dataBase)}` : 'sem data de realização'));
+        if (dataBase) rows.push('<div class="v24-semaforo-row"><span>Treinamento adicional</span><div>' + escapeTrainingText(tr.nome || 'Treinamento') + ' — realizado em ' + fmt(dataBase) + '</div></div>');
       });
     } catch(e) {}
     return rows.join('');
@@ -6192,7 +6182,7 @@
         const reg = (t.treinamentosRealizados || []).find(function(x){ return x.treinamentoId === tr.id; });
         const dataBase = reg && reg.data ? reg.data : '';
         const venc = (typeof addMonths === 'function' && dataBase) ? addMonths(dataBase, tr.validade || 12) : '';
-        html += linhaSemaforo(tr.nome || 'Treinamento', venc, dataBase ? 'realizado em '+fmt(dataBase) : 'sem data de realização');
+        if (dataBase) html += '<div class="v24-semaforo-row"><span>Treinamento adicional</span><div>' + escapeTrainingText(tr.nome || 'Treinamento') + ' — realizado em ' + fmt(dataBase) + '</div></div>';
       });
     } catch(e) {}
     return html;
