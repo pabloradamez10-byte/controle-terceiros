@@ -56,24 +56,46 @@ Deno.serve(async req => {
     const { data: existing } = await admin.from('sst_members').select('user_id').ilike('email', email).maybeSingle()
     if (existing?.user_id === auth.user.id && (!active || role !== 'admin')) return json({ error: 'O administrador não pode retirar o próprio acesso' }, 400)
     let userId = existing?.user_id
-    let invited = false
+    let needsInvite = false
     if (!userId) {
       for (let page = 1; page <= 10 && !userId; page++) {
         const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 100 })
         if (error) throw error
-        userId = data.users.find(u => u.email?.toLowerCase() === email)?.id
+        const found = data.users.find(u => u.email?.toLowerCase() === email)
+        if (found) { userId = found.id; needsInvite = !found.email_confirmed_at }
         if (data.users.length < 100) break
       }
       if (!userId) {
-        const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: origin + '/controle-terceiros/' })
-        if (error || !data.user) throw error || new Error('Convite não criado')
+        // Save the account independently of email delivery. No password or
+        // email confirmation is granted before the recipient accepts the invite.
+        const { data, error } = await admin.auth.admin.createUser({ email, email_confirm: false })
+        if (error || !data.user) throw error || new Error('Conta não criada')
         userId = data.user.id
-        invited = true
+        needsInvite = true
       }
+    } else {
+      const { data, error } = await admin.auth.admin.getUserById(userId)
+      if (error) throw error
+      needsInvite = !data.user.email_confirmed_at
     }
     const { error } = await admin.from('sst_members').upsert({ user_id: userId, email, role, permissoes: permissions, ativo: active }, { onConflict: 'user_id' })
     if (error) throw error
-    return json({ ok: true, invited })
+    let invited = false
+    let invitationPending = false
+    if (needsInvite && active) {
+      const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: origin + '/controle-terceiros/' })
+      if (inviteError) {
+        console.warn('sst-usuarios convite pendente:', inviteError.code || inviteError.status)
+        invitationPending = true
+      } else {
+        invited = true
+      }
+    }
+    return json({ ok: true, invited, invitationPending,
+      message: invitationPending
+        ? 'Usuário salvo. O convite não foi enviado agora; tente Salvar usuário mais tarde para reenviar. A pessoa precisa definir a senha antes de entrar.'
+        : invited ? 'Usuário salvo e convite enviado.' : 'Permissões atualizadas.' })
+
   } catch (error) {
     console.error('sst-usuarios:', error)
     return json({ error: 'Não foi possível salvar o usuário' }, 500)
