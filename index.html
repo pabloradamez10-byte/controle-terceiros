@@ -274,6 +274,18 @@
       padding-left: 36px;
     }
 
+    .thirdparty-search { display:flex; flex-direction:column; gap:14px; margin-bottom:18px; }
+    .thirdparty-search label { display:block; margin-bottom:7px; }
+    .thirdparty-search .search-wrap { width:100%; }
+    .thirdparty-search-bottom { display:flex; align-items:flex-end; gap:12px; }
+    .thirdparty-company-filter { flex:1; min-width:0; }
+    .thirdparty-company-filter select { width:100%; max-width:none; min-width:0; }
+    .thirdparty-search-bottom > .btn { min-height:44px; flex-shrink:0; }
+    @media(max-width:600px) {
+      .thirdparty-search-bottom { flex-direction:column; align-items:stretch; }
+      .thirdparty-search-bottom > .btn { width:100%; }
+    }
+
     /* ── TABLE ── */
     .table-wrap { overflow-x: auto; }
 
@@ -961,13 +973,21 @@
       <div class="stat-card"><div class="stat-label">Treinamentos registrados</div><div class="stat-value" id="stat-pendencias-treino">0</div></div>
     </div>
     <div class="card" style="padding:18px 20px;">
-      <div class="search-row">
-        <div class="search-wrap" style="flex:1">
+      <div class="thirdparty-search">
+        <div>
+          <label for="busca-lista">Pesquisar terceiro</label>
+          <div class="search-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="busca-lista" placeholder="Buscar por nome ou CPF…" oninput="renderLista()" />
+          <input type="text" id="busca-lista" placeholder="Digite nome, CPF ou empresa…" oninput="renderLista()" />
+          </div>
         </div>
-        <select id="filtro-empresa-lista" class="filter-company" onchange="renderLista()"><option value="">Todas as empresas</option></select>
-        <button class="btn btn-primary" onclick="showPage('cadastro')">+ Cadastrar</button>
+        <div class="thirdparty-search-bottom">
+          <div class="thirdparty-company-filter">
+            <label for="filtro-empresa-lista">Filtrar por empresa</label>
+            <select id="filtro-empresa-lista" class="filter-company" onchange="renderLista()"><option value="">Todas as empresas</option></select>
+          </div>
+          <button class="btn btn-primary" onclick="showPage('cadastro')">+ Cadastrar</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
