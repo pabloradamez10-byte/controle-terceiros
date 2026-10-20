@@ -1357,6 +1357,21 @@
     localStorage.setItem('terceiros', JSON.stringify(data));
   }
 
+  function normalizarBuscaSST(value) {
+    return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  function correspondeBuscaSST(query, textos, documentos) {
+    const q = normalizarBuscaSST(query);
+    if (!q) return true;
+    const digits = q.replace(/\D/g, '');
+    if (digits && /^[\d\s.\-/]+$/.test(q)) {
+      return (documentos || []).some(value => String(value ?? '').replace(/\D/g, '').includes(digits));
+    }
+    const text = normalizarBuscaSST([...(textos || []), ...(documentos || [])].filter(value => value != null).join(' '));
+    return q.split(' ').every(word => text.includes(word));
+  }
+
   // ──────────────────────────────────────────────────
   //  UTILS
   // ──────────────────────────────────────────────────
@@ -1817,9 +1832,7 @@
     atualizarStats();
     const q = document.getElementById('busca-lista').value.toLowerCase().trim();
     let lista = getAll();
-    if (q) lista = lista.filter(t =>
-      t.nome.toLowerCase().includes(q) || t.cpf.replace(/\D/g,'').includes(q.replace(/\D/g,''))
-    );
+    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
 
     const tbody = document.getElementById('tabela-body');
     const empty = document.getElementById('lista-empty');
@@ -2657,11 +2670,7 @@
     atualizarStats();
     const q = (document.getElementById('busca-empresas')?.value || '').toLowerCase().trim();
     let lista = getAllEmpresas();
-    if (q) lista = lista.filter(e =>
-      e.razao.toLowerCase().includes(q) ||
-      (e.fantasia || '').toLowerCase().includes(q) ||
-      e.cnpj.replace(/\D/g,'').includes(q.replace(/\D/g,''))
-    );
+    if (q) lista = lista.filter(e => correspondeBuscaSST(q, [e.razao, e.fantasia], [e.cnpj]));
 
     const tbody = document.getElementById('tabela-empresas');
     const empty = document.getElementById('empresas-empty');
@@ -3727,11 +3736,7 @@
     const empresaFiltro = filtroEl?.value || '';
     let lista = getAll();
 
-    if (q) lista = lista.filter(t =>
-      (t.nome || '').toLowerCase().includes(q) ||
-      (t.cpf || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')) ||
-      (t.empresa || '').toLowerCase().includes(q)
-    );
+    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
     if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
 
     const tbody = document.getElementById('tabela-body');
@@ -4065,11 +4070,7 @@
     const empresaFiltro = filtroEl?.value || '';
     let lista = getAll();
 
-    if (q) lista = lista.filter(t =>
-      (t.nome || '').toLowerCase().includes(q) ||
-      (t.cpf || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')) ||
-      (t.empresa || '').toLowerCase().includes(q)
-    );
+    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
     if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
     lista = aplicarFiltroStatusLista(lista);
 
@@ -4953,11 +4954,7 @@
     const empresaFiltro = filtroEl?.value || '';
     let lista = getAll();
 
-    if (q) lista = lista.filter(t =>
-      (t.nome || '').toLowerCase().includes(q) ||
-      (t.cpf || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')) ||
-      (t.empresa || '').toLowerCase().includes(q)
-    );
+    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
     if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
     lista = v191FiltrarListaPorStatus(lista, filtroStatus);
 
@@ -5186,7 +5183,7 @@
     const tipo = window.v21AlertaAtual || 'aso30';
     const all = montarAlertasV21()[tipo] || [];
     const q = (document.getElementById('v21-alertas-busca')?.value || '').toLowerCase().trim();
-    const lista = q ? all.filter(x => (x.terceiro || '').toLowerCase().includes(q) || (x.empresa || '').toLowerCase().includes(q) || (x.cpf || '').replace(/\D/g,'').includes(q.replace(/\D/g,''))) : all;
+    const lista = q ? all.filter(x => correspondeBuscaSST(q, [x.terceiro, x.empresa], [x.cpf])) : all;
     const titulo = document.getElementById('v21-alertas-titulo');
     if (titulo) titulo.textContent = `${labelAlertaV21(tipo)} (${lista.length})`;
     const wrap = document.getElementById('v21-alertas-lista');
@@ -5274,7 +5271,7 @@
     if (!tbody) return;
     const q = (document.getElementById('busca-empresas')?.value || '').toLowerCase().trim();
     let lista = getAllEmpresas();
-    if (q) lista = lista.filter(e => (e.razao || '').toLowerCase().includes(q) || (e.fantasia || '').toLowerCase().includes(q) || (e.cnpj || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')));
+    if (q) lista = lista.filter(e => correspondeBuscaSST(q, [e.razao, e.fantasia], [e.cnpj]));
     Array.from(tbody.querySelectorAll('tr')).forEach((tr, idx) => {
       const e = lista[idx];
       if (!e) return;
