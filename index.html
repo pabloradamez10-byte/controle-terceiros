@@ -831,7 +831,7 @@
   <div id="page-dashboard" class="page active">
     <div class="page-actions">
       <h2>Dashboard</h2>
-      <div class="report-actions"><button class="btn btn-ghost" onclick="gerarRelatorioExecutivo()">Exportar relatório</button><button class="btn btn-primary" onclick="showPage('cadastro')">+ Novo Terceiro</button></div>
+      <div class="report-actions"><button class="btn btn-ghost" onclick="abrirExportacaoRelatorio()">Exportar relatório</button><button class="btn btn-primary" onclick="showPage('cadastro')">+ Novo Terceiro</button></div>
     </div>
     <div class="stats-grid">
       <div class="stat-card stat-click" onclick="abrirListaPorStatus('todos')"><div class="stat-label">Total de terceiros</div><div class="stat-value" id="dash-total">0</div><span class="stat-hint">Toque para ver todos</span></div>
@@ -6785,7 +6785,7 @@
       document.body.appendChild(button);
     }
   }
-  window.tssSair = function(){ document.getElementById('tss-report-open')?.remove(); document.getElementById('tss-audit-open')?.remove(); window.tssUsuarioAtual=()=>null; session = null; membership = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
+  window.tssSair = function(){ document.getElementById('tss-audit-open')?.remove(); window.tssUsuarioAtual=()=>null; session = null; membership = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
   async function loadMembership(){
     const userRes = await authorizedFetch(SUPABASE_URL + '/auth/v1/user');
     if (!userRes.ok) throw new Error('Conta não validada');
@@ -6796,11 +6796,14 @@
     membership = (await res.json())[0] || null;
     if (!can('consultar')) throw new Error('Conta sem permissão para consultar');
   }
+  window.abrirExportacaoRelatorio = function(){
+    if (membership?.role !== 'admin') return window.gerarRelatorioExecutivo();
+    window.sstAbrirRelatorio({request:body=>authorizedFetch(SUPABASE_URL+'/rest/v1/rpc/sst_audit_report',{method:'POST',body:JSON.stringify(body)})});
+  };
   function installAuditButton(){
     if(document.getElementById('tss-audit-open')) return;
     const button=document.createElement('button'); button.id='tss-audit-open'; button.className='btn btn-ghost'; button.textContent='Auditoria';
     document.getElementById('tss-users-open').after(button);
-    const reportButton=document.createElement('button'); reportButton.id='tss-report-open'; reportButton.textContent='Relatório auditável'; reportButton.onclick=()=>window.sstAbrirRelatorio({request:body=>authorizedFetch(SUPABASE_URL+'/rest/v1/rpc/sst_audit_report',{method:'POST',body:JSON.stringify(body)})}); button.after(reportButton);
     button.onclick=()=>{
       const overlay=document.createElement('div');
       overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:#0008;padding:24px;overflow:auto';
@@ -6826,7 +6829,7 @@
     const userButton = document.getElementById('tss-users-open');
     userButton.hidden = membership?.role !== 'admin';
     if (membership?.role === 'admin') installAuditButton();
-    ['tss-audit-open','tss-report-open'].forEach(id=>{const b=document.getElementById(id);if(b)b.hidden=membership?.role !== 'admin';});
+    ['tss-audit-open'].forEach(id=>{const b=document.getElementById(id);if(b)b.hidden=membership?.role !== 'admin';});
     document.querySelectorAll('nav button').forEach(button => {
       if (['Cadastro','Dados'].includes(button.textContent.trim())) button.hidden = !can('cadastrar');
     });

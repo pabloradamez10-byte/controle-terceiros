@@ -1,4 +1,4 @@
-const CACHE_NAME = 'portal-terceiros-sst-relatorios-20261020-8';
+const CACHE_NAME = 'portal-terceiros-sst-relatorios-20261020-9';
 const APP_SHELL = [
   './',
   './index.html',
