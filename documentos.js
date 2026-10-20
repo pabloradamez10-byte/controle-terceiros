@@ -93,7 +93,7 @@
     if (historyText && typeof registrarHistorico === 'function') registrarHistorico(kind,id,historyText);
     localStorage.setItem('tss_local_last_change', new Date().toISOString());
     if (typeof window.tssSupabaseSyncNow !== 'function' || !await window.tssSupabaseSyncNow()) {
-      throw new Error('Documento guardado neste navegador, mas não foi possível confirmar a sincronização. Não feche a página; recarregue o banco após verificar a conexão.');
+      throw new Error('Alteração não confirmada no banco. Se você cancelou o motivo, os dados anteriores foram restaurados. Caso contrário, verifique a conexão e recarregue o banco antes de tentar novamente.');
     }
   }
 
@@ -158,7 +158,7 @@
         form.style.cssText = 'padding:12px 16px;border-top:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
         const canApply = kind === 'terceiro' && ['ASO','Integração','Certificado NR'].includes(item.tipo);
         const trainings = typeof getAllTreinamentos === 'function' ? getAllTreinamentos().filter(t => t.ativo !== false) : [];
-        form.innerHTML = `<label style="flex:1;min-width:180px">Responsável pela conferência<input required maxlength="100" name="responsavel" placeholder="Seu nome" style="display:block;width:100%"></label>
+        form.innerHTML = `<label style="flex:1;min-width:180px">Responsável pela conferência<input readonly required maxlength="254" name="responsavel" value="${esc(window.tssUsuarioAtual?.().email || '')}" style="display:block;width:100%"></label>
           <label style="min-width:180px">Validade conferida no original<input type="date" name="validade" value="${esc(item.validade || '')}" style="display:block;width:100%"></label>
           ${canApply ? `<div style="width:100%;padding:12px;background:#eff6ff;border-radius:10px">
             <label><input type="checkbox" name="aplicar"> Atualizar o cadastro a partir deste documento</label>
@@ -202,7 +202,7 @@
           if (update) documentItem.atualizacaoCadastro = {campo:update.field,antes:update.before,depois:update.after,data:documentItem.conferidoEm,responsavel:reviewer};
           const submit = form.querySelector('button[type="submit"]'); submit.disabled = true;
           try {
-            const historyText = 'Documento conferido: ' + item.tipo + ' — responsável informado: ' + reviewer + (update ? ` | ${update.label}: ${dateLabel(update.before)} → ${dateLabel(update.after)} | Anexo ${item.id}` : ' | Sem alteração de datas');
+            const historyText = 'Documento conferido: ' + item.tipo + ' — usuário autenticado: ' + reviewer + (update ? ` | ${update.label}: ${dateLabel(update.before)} → ${dateLabel(update.after)} | Anexo ${item.id}` : ' | Sem alteração de datas');
             await save(kind,id,current,update,historyText);
             preview.closest('.v26-doc-preview-overlay').remove();
             if (update) {

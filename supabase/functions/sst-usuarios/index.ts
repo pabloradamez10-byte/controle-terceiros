@@ -28,17 +28,17 @@ Deno.serve(async req => {
     }
 
     const body = await req.json()
+    const reason = String(body.motivo || '').trim()
+    if (reason.length < 3 || reason.length > 1000) return json({ error: 'Informe o motivo (3 a 1000 caracteres)' }, 400)
     if (body.action === 'delete') {
       const userId = String(body.user_id || '')
       if (userId === auth.user.id) return json({ error: 'Você não pode excluir seu próprio acesso' }, 400)
       const { data: target, error: targetError } = await admin.from('sst_members').select('user_id').eq('user_id', userId).single()
       if (targetError || !target) return json({ error: 'Usuário não encontrado' }, 404)
-      const { error: disableError } = await admin.from('sst_members').update({ ativo: false }).eq('user_id', userId)
-      if (disableError) throw disableError
-      const { error: authDeleteError } = await admin.auth.admin.deleteUser(userId)
-      if (authDeleteError) throw authDeleteError
-      const { error: memberDeleteError } = await admin.from('sst_members').delete().eq('user_id', userId)
+      const { error: memberDeleteError } = await userClient.rpc('sst_save_member', { p_data: {user_id:userId}, p_reason:reason, p_delete:true })
       if (memberDeleteError) throw memberDeleteError
+      const { error: authDeleteError } = await admin.auth.admin.deleteUser(userId)
+      if (authDeleteError) return json({ error: 'Acesso removido e auditado. Falhou a exclusão da conta de autenticação.' }, 500)
       return json({ ok: true })
     }
     const email = String(body.email || '').trim().toLowerCase()
@@ -78,7 +78,7 @@ Deno.serve(async req => {
       if (error) throw error
       needsInvite = !data.user.email_confirmed_at
     }
-    const { error } = await admin.from('sst_members').upsert({ user_id: userId, email, role, permissoes: permissions, ativo: active }, { onConflict: 'user_id' })
+    const { error } = await userClient.rpc('sst_save_member', { p_data:{ user_id:userId,email,role,permissoes:permissions,ativo:active },p_reason:reason,p_delete:false })
     if (error) throw error
     let invited = false
     let invitationPending = false

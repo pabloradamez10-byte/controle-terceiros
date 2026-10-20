@@ -6785,19 +6785,47 @@
       document.body.appendChild(button);
     }
   }
-  window.tssSair = function(){ session = null; membership = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
+  window.tssSair = function(){ document.getElementById('tss-audit-open')?.remove(); window.tssUsuarioAtual=()=>null; session = null; membership = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
   async function loadMembership(){
     const userRes = await authorizedFetch(SUPABASE_URL + '/auth/v1/user');
     if (!userRes.ok) throw new Error('Conta não validada');
     const user = await userRes.json();
+    window.tssUsuarioAtual = () => ({id:user.id,email:user.email});
     const res = await authorizedFetch(SUPABASE_URL + '/rest/v1/sst_members?user_id=eq.' + encodeURIComponent(user.id) + '&select=role,permissoes,ativo&limit=1');
     if (!res.ok) throw new Error('Permissões indisponíveis');
     membership = (await res.json())[0] || null;
     if (!can('consultar')) throw new Error('Conta sem permissão para consultar');
   }
+  function installAuditButton(){
+    if(document.getElementById('tss-audit-open')) return;
+    const button=document.createElement('button'); button.id='tss-audit-open'; button.className='btn btn-ghost'; button.textContent='Auditoria';
+    document.getElementById('tss-users-open').after(button);
+    button.onclick=()=>{
+      const overlay=document.createElement('div');
+      overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:#0008;padding:24px;overflow:auto';
+      overlay.innerHTML='<section style="background:white;padding:20px;border-radius:12px;max-width:1100px;margin:auto"><button class="btn btn-ghost" data-close>Fechar</button><h2>Auditoria de alterações</h2><p>Autor pelo login · horário do banco · motivo informado. Registros anteriores à ativação não possuem esta auditoria.</p><label>Pesquisar nos registros carregados <input data-search placeholder="Nome, e-mail ou motivo"></label><div data-rows></div><button class="btn btn-ghost" data-more>Carregar mais</button></section>';
+      document.body.appendChild(overlay); overlay.querySelector('[data-close]').onclick=()=>overlay.remove();
+      let rows=[],offset=0;
+      function render(){
+        const term=overlay.querySelector('[data-search]').value.toLocaleLowerCase('pt-BR');
+        overlay.querySelector('[data-rows]').innerHTML=rows.filter(r=>JSON.stringify(r).toLocaleLowerCase('pt-BR').includes(term)).map(r=>`<article style="padding:12px 0;border-bottom:1px solid #ddd"><strong>${esc(r.action)} · ${esc(r.entity_type)} · ${esc(r.entity_id)}</strong><p>${esc(r.actor_email)} · ${esc(new Date(r.occurred_at).toLocaleString('pt-BR'))}</p><p><b>Motivo:</b> ${esc(r.reason)}</p><details><summary>Valores anteriores e novos</summary><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px"><div><b>Antes</b><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(r.before_data,null,2))}</pre></div><div><b>Depois</b><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(r.after_data,null,2))}</pre></div></div></details></article>`).join('') || '<p>Nenhum registro encontrado.</p>';
+      }
+      async function load(){
+        const more=overlay.querySelector('[data-more]'); more.disabled=true;
+        try {
+          const res=await authorizedFetch(SUPABASE_URL+'/rest/v1/sst_audit_log?select=*&order=occurred_at.desc,id.desc&limit=50&offset='+offset);
+          if(!res.ok) throw new Error('Falha ao carregar auditoria.');
+          const page=await res.json(); rows.push(...page); offset+=page.length; more.hidden=page.length<50; render();
+        } catch(e) { overlay.querySelector('[data-rows]').textContent=e.message; } finally {more.disabled=false;}
+      }
+      overlay.querySelector('[data-search]').oninput=render; overlay.querySelector('[data-more]').onclick=load; load();
+    };
+  }
   function configurePermissionUi(){
     const userButton = document.getElementById('tss-users-open');
     userButton.hidden = membership?.role !== 'admin';
+    if (membership?.role === 'admin') installAuditButton();
+    const auditButton=document.getElementById('tss-audit-open'); if(auditButton) auditButton.hidden=membership?.role !== 'admin';
     document.querySelectorAll('nav button').forEach(button => {
       if (['Cadastro','Dados'].includes(button.textContent.trim())) button.hidden = !can('cadastrar');
     });
@@ -6834,8 +6862,9 @@
     list.querySelectorAll('[data-delete-index]').forEach(button => button.addEventListener('click', async () => {
       const u = users[Number(button.dataset.deleteIndex)];
       if (!confirm('Excluir o acesso de ' + u.email + '? A pessoa perderá a conta no SST.')) return;
+      const motivo = auditReason(); if (!motivo) return;
       button.disabled = true;
-      const res = await authorizedFetch(USER_FUNCTION, {method:'POST',body:JSON.stringify({action:'delete',user_id:u.user_id})}).catch(()=>null);
+      const res = await authorizedFetch(USER_FUNCTION, {method:'POST',body:JSON.stringify({action:'delete',user_id:u.user_id,motivo})}).catch(()=>null);
       const result = await res?.json().catch(()=>({}));
       if (!res?.ok) { userMessage(result?.error || 'Falha ao excluir usuário.'); button.disabled = false; return; }
       userMessage('Usuário excluído.');
@@ -6859,6 +6888,7 @@
       permissoes:Object.fromEntries(Object.entries(permissionInputs).map(([k,input])=>[k,input.checked])),
       ativo:document.getElementById('tss-user-active').checked
     };
+    body.motivo = auditReason(); if (!body.motivo) return;
     userMessage('Salvando...');
     const res = await authorizedFetch(USER_FUNCTION, {method:'POST',body:JSON.stringify(body)}).catch(()=>null);
     const result = await res?.json().catch(()=>({}));
@@ -6913,9 +6943,10 @@
     },
     async save(id, dados){
       if (!can('liberar')) throw new Error('Sem permissão para liberar');
-      const res = await authorizedFetch(EXCEPTIONS_ENDPOINT + '?on_conflict=terceiro_id', {
-        method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
-        body:JSON.stringify({terceiro_id:id,dados,updated_at:new Date().toISOString()})
+      const reason = auditReason();
+      if (!reason) { await window.tssExceptionStore.reload(); throw new Error('Alteração cancelada.'); }
+      const res = await authorizedFetch(SUPABASE_URL + '/rest/v1/rpc/sst_save_exception', {
+        method:'POST',body:JSON.stringify({p_id:id,p_data:dados,p_reason:reason})
       });
       if (!res.ok) throw new Error('Falha ao salvar exceção: ' + res.status);
       exceptionCache[id] = dados;
@@ -6930,36 +6961,47 @@
       throw new Error('Falha ao consultar Supabase: ' + res.status + ' ' + txt.slice(0,180));
     }
     const rows = await res.json();
+    if(rows[0]) { auditStamp=rows[0].updated_at; auditBaseline=rows[0].data; }
     return rows && rows[0] ? rows[0] : null;
   }
 
-  async function saveRemoteState(){
+  let auditBaseline = null, auditStamp = null, auditSaving = null;
+  const stableAuditValue = value => Array.isArray(value) ? value.map(stableAuditValue) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(k=>[k,stableAuditValue(value[k])])) : value;
+  const businessState = value => JSON.stringify(stableAuditValue(Object.fromEntries(Object.entries(value || {}).filter(([k])=>!['updatedAt','updatedBy','historico'].includes(k)))));
+  function auditReason(){
+    let value = prompt('Motivo da alteração (obrigatório, de 3 a 1000 caracteres):');
+    while(value !== null && (value.trim().length < 3 || value.trim().length > 1000)) value = prompt('Explique o motivo usando de 3 a 1000 caracteres:');
+    return value === null ? null : value.trim();
+  }
+  async function performAuditedSave(){
     if (isApplyingRemote) return false;
     if (!can('cadastrar')) throw new Error('Sem permissão para cadastrar');
-    const startedAt = Date.now();
-    lastSaveStartedAt = startedAt;
     const localState = readLocalState();
-    const payload = {
-      key: STATE_KEY,
-      data: localState,
-      updated_at: nowIso()
-    };
-    const adminWrite = membership?.role === 'admin';
-    const res = await authorizedFetch(adminWrite ? ENDPOINT + '?on_conflict=key' : ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY), {
-      method: adminWrite ? 'POST' : 'PATCH',
-      headers: { Prefer: adminWrite ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal' },
-      body: JSON.stringify(adminWrite ? payload : {data:payload.data,updated_at:payload.updated_at})
+    if (auditBaseline && businessState(localState) === businessState(auditBaseline)) return true;
+    const reason = auditReason();
+    if (!reason) {
+      if (auditBaseline) { applyRemoteState(auditBaseline); renderEverythingSafe(); }
+      throw new Error('Alteração cancelada: nenhum dado foi salvo.');
+    }
+    const res = await authorizedFetch(SUPABASE_URL + '/rest/v1/rpc/sst_save_state', {
+      method:'POST', body:JSON.stringify({p_data:localState,p_reason:reason,p_expected:auditStamp})
     });
     if (!res.ok) {
-      const txt = await res.text().catch(()=> '');
-      throw new Error('Falha ao salvar no Supabase: ' + res.status + ' ' + txt.slice(0,180));
+      const problem = await res.json().catch(()=>({}));
+      throw new Error(problem.message || 'Falha ao salvar alteração.');
     }
-    if (lastSaveStartedAt === startedAt) {
-      const stamp = payload.data.updatedAt;
-      localStorage.setItem(LOCAL_SYNC_MARK, stamp);
-      localStorage.setItem(LOCAL_CHANGE_MARK, stamp);
-    }
+    auditStamp = await res.json(); auditBaseline = localState;
+    localStorage.setItem(LOCAL_SYNC_MARK,localState.updatedAt);
+    localStorage.setItem(LOCAL_CHANGE_MARK,localState.updatedAt);
     return true;
+  }
+  function saveRemoteState(){
+    if (auditSaving) return auditSaving;
+    auditSaving = performAuditedSave().then(result=>{
+      if (auditBaseline && businessState(readLocalState()) !== businessState(auditBaseline)) scheduleRemoteSync();
+      return result;
+    }).finally(()=>{auditSaving=null;});
+    return auditSaving;
   }
 
   function scheduleRemoteSync(delay){
@@ -6971,7 +7013,7 @@
       }).catch(err => {
         console.warn('[TSS] Supabase sync:', err);
         updateBancoBadge('offline');
-        lockApp('Falha ao salvar no banco. Recarregue a página antes de continuar.');
+        alert(err.message + '\nSe necessário, recarregue o banco antes de tentar novamente.');
       });
     }, delay ?? 800);
   }
@@ -7112,12 +7154,13 @@
     } catch(err) {
       console.error(err);
       updateBancoBadge('offline');
-      lockApp('Falha ao sincronizar. Recarregue a página.');
+      alert(err.message);
       return false;
     }
   };
 
   window.tssSupabaseReload = async function(){
+    if (auditSaving || (auditBaseline && businessState(readLocalState()) !== businessState(auditBaseline))) return false;
     updateBancoBadge('loading');
     try {
       const remote = await fetchRemoteState();
@@ -7161,6 +7204,6 @@
 </script>
 
 
-<script src="./documentos.js?v=20261020-2"></script>
+<script src="./documentos.js?v=20261020-3"></script>
 </body>
 </html>
