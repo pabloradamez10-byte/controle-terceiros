@@ -978,7 +978,7 @@
           <label for="busca-lista">Pesquisar terceiro</label>
           <div class="search-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="busca-lista" placeholder="Digite nome, CPF ou empresa…" oninput="renderLista()" />
+          <input type="text" id="busca-lista" placeholder="Digite o nome ou CPF do terceiro…" oninput="renderLista()" />
           </div>
         </div>
         <div class="thirdparty-search-bottom">
@@ -1390,6 +1390,20 @@
     }
     const text = normalizarBuscaSST([...(textos || []), ...(documentos || [])].filter(value => value != null).join(' '));
     return q.split(' ').every(word => text.includes(word));
+  }
+
+  function correspondeBuscaTerceiroSST(query, terceiro) {
+    const q = normalizarBuscaSST(query);
+    if (!q) return true;
+    const digits = q.replace(/\D/g, '');
+    if (digits && /^[\d\s.\-/]+$/.test(q)) {
+      return String(terceiro.cpf ?? '').replace(/\D/g, '').includes(digits);
+    }
+    const words = value => normalizarBuscaSST(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
+    const nome = words(terceiro.nome), busca = words(q);
+    if (!busca) return false;
+    // Um nome isolado deve ser uma palavra completa; nome composto exige igualdade.
+    return busca.includes(' ') ? nome === busca : nome.split(' ').includes(busca);
   }
 
   // ──────────────────────────────────────────────────
@@ -1852,7 +1866,7 @@
     atualizarStats();
     const q = document.getElementById('busca-lista').value.toLowerCase().trim();
     let lista = getAll();
-    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
+    if (q) lista = lista.filter(t => correspondeBuscaTerceiroSST(q, t));
 
     const tbody = document.getElementById('tabela-body');
     const empty = document.getElementById('lista-empty');
@@ -3756,7 +3770,7 @@
     const empresaFiltro = filtroEl?.value || '';
     let lista = getAll();
 
-    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
+    if (q) lista = lista.filter(t => correspondeBuscaTerceiroSST(q, t));
     if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
 
     const tbody = document.getElementById('tabela-body');
@@ -4090,7 +4104,7 @@
     const empresaFiltro = filtroEl?.value || '';
     let lista = getAll();
 
-    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
+    if (q) lista = lista.filter(t => correspondeBuscaTerceiroSST(q, t));
     if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
     lista = aplicarFiltroStatusLista(lista);
 
@@ -4974,7 +4988,7 @@
     const empresaFiltro = filtroEl?.value || '';
     let lista = getAll();
 
-    if (q) lista = lista.filter(t => correspondeBuscaSST(q, [t.nome, t.empresa], [t.cpf]));
+    if (q) lista = lista.filter(t => correspondeBuscaTerceiroSST(q, t));
     if (empresaFiltro) lista = lista.filter(t => t.empresaId === empresaFiltro || t.empresa === empresaFiltro);
     lista = v191FiltrarListaPorStatus(lista, filtroStatus);
 
