@@ -31,15 +31,66 @@
     }
     const cpf = text.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
     const nome = text.match(/(?:nome\s*(?:do\s*(?:trabalhador|colaborador|funcion[aá]rio))?|trabalhador|funcion[aá]rio)\s*:\s*([^\n\r]{3,100})/i);
-    return {tipo:matched.length === 1 ? matched[0][0] : '', validade, cpf:cpf?.[0] || '', nome:nome?.[1]?.trim() || '', ambiguo:matched.length > 1};
+    const performed = text.match(/(?:data\s*(?:de\s*)?(?:realiza[cç][aã]o|conclus[aã]o|treinamento)|realizado\s+em)\s*[:\-]?\s*(\d{2})[\/.\-](\d{2})[\/.\-](\d{4})/i);
+    const performedISO = performed ? `${performed[3]}-${performed[2]}-${performed[1]}` : '';
+    const nrNumbers = [...new Set(Array.from(normalized.matchAll(/\bNR\s*[-–]?\s*0*(\d{1,2})\b/g), m => String(Number(m[1]))))];
+    return {tipo:matched.length === 1 ? matched[0][0] : '', validade, dataRealizacao:validDate(performedISO) ? performedISO : '', nrNumero:nrNumbers.length === 1 ? nrNumbers[0] : '', cpf:cpf?.[0] || '', nome:nome?.[1]?.trim() || '', ambiguo:matched.length > 1};
   }
   window.sstDocumentosClassificar = classify;
 
-  async function save(kind, id, items) {
+  function validDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+    const parsed = new Date(value + 'T12:00:00Z');
+    return !Number.isNaN(+parsed) && parsed.toISOString().slice(0,10) === value;
+  }
+  const dateLabel = value => value ? value.split('-').reverse().join('/') : 'Não informada';
+  function buildUpdate(person, item, selection, trainings) {
+    if (!person) throw new Error('Terceiro não encontrado.');
+    const next = JSON.parse(JSON.stringify(person));
+    let field, before, after;
+    if (item.tipo === 'ASO' || item.tipo === 'Integração') {
+      field = item.tipo === 'ASO' ? 'aso' : 'integ';
+      if (!validDate(selection.validade)) throw new Error('Informe a validade conferida no documento.');
+      before = person[field] || ''; after = selection.validade; next[field] = after;
+    } else if (item.tipo === 'Certificado NR') {
+      const training = trainings.find(t => t.id === selection.treinamentoId && t.ativo !== false);
+      if (!training) throw new Error('Selecione o treinamento correspondente ao certificado.');
+      const nr = String(training.nome || '').match(/\bNR\s*[-–]?\s*0*(\d{1,2})\b/i);
+      if (item.nrNumero && (!nr || Number(nr[1]) !== Number(item.nrNumero))) throw new Error('A NR selecionada difere da NR identificada no documento.');
+      if (!validDate(selection.dataRealizacao) || selection.dataRealizacao > today()) throw new Error('Informe a data de realização válida, sem data futura.');
+      const list = next.treinamentosRealizados || [];
+      const index = list.findIndex(t => t.treinamentoId === training.id);
+      before = index >= 0 ? list[index].data || '' : ''; after = selection.dataRealizacao;
+      const record = {...(index >= 0 ? list[index] : {}),treinamentoId:training.id,data:after,documentoId:item.id};
+      if (index >= 0) list[index] = record; else list.push(record);
+      next.treinamentosRealizados = list; field = 'Treinamento: ' + training.nome;
+    } else throw new Error('Este tipo de documento não atualiza datas automaticamente.');
+    const label = field === 'aso' ? 'Validade ASO' : field === 'integ' ? 'Validade integração' : field + ' (realização)';
+    return {person:next,field,before,after,label};
+  }
+  window.sstDocumentosPlanejarAtualizacao = buildUpdate;
+
+  async function save(kind, id, items, update, historyText) {
     if (!canEdit()) throw new Error('Seu perfil não permite alterar documentos.');
     const all = JSON.parse(localStorage.getItem(keys[kind]) || '{}');
     all[id] = items;
-    localStorage.setItem(keys[kind], JSON.stringify(all));
+    let peopleJSON = null;
+    if (update) {
+      if (kind !== 'terceiro' || update.person.id !== id) throw new Error('Vínculo do documento inválido.');
+      const people = typeof getAll === 'function' ? getAll() : [];
+      if (!people.some(t => t.id === id)) throw new Error('Terceiro não encontrado.');
+      peopleJSON = JSON.stringify(people.map(t => t.id === id ? update.person : t));
+    }
+    const documentsJSON = JSON.stringify(all), oldDocuments = localStorage.getItem(keys[kind]), oldPeople = localStorage.getItem('terceiros');
+    try {
+      localStorage.setItem(keys[kind], documentsJSON);
+      if (peopleJSON !== null) localStorage.setItem('terceiros',peopleJSON);
+    } catch(error) {
+      if (oldDocuments !== null) localStorage.setItem(keys[kind],oldDocuments); else localStorage.removeItem(keys[kind]);
+      if (update && oldPeople !== null) localStorage.setItem('terceiros',oldPeople);
+      throw error;
+    }
+    if (historyText && typeof registrarHistorico === 'function') registrarHistorico(kind,id,historyText);
     localStorage.setItem('tss_local_last_change', new Date().toISOString());
     if (typeof window.tssSupabaseSyncNow !== 'function' || !await window.tssSupabaseSyncNow()) {
       throw new Error('Documento guardado neste navegador, mas não foi possível confirmar a sincronização. Não feche a página; recarregue o banco após verificar a conexão.');
@@ -59,7 +110,7 @@
     active = {kind, id, generation};
     const items = records(kind, id);
     box.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>Documentos ${kind === 'terceiro' ? 'do terceiro' : 'da empresa'}</strong><span id="sst-doc-summary">${items.length} anexo(s) · ${items.filter(a => !a.conferidoEm).length} a conferir</span></div>
-      <p class="v26-doc-owner-note">Anexe, leia e confira o documento. Os dados sugeridos não alteram a liberação de acesso.</p>
+      <p class="v26-doc-owner-note">Anexe, leia e confira o documento. Na conferência, você pode aplicar a data ao cadastro; o sistema recalcula as pendências pelas regras existentes.</p>
       ${canEdit() ? `<div class="v16-doc-form">
         <div class="full"><label for="sst-doc-file">PDF ou imagem · até 900 KB por arquivo</label><input id="sst-doc-file" type="file" accept="application/pdf,image/png,image/jpeg,image/webp"></div>
         <div class="full" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="sst-doc-read" type="button" class="btn btn-ghost">Ler documento e sugerir campos</button><span id="sst-doc-progress" role="status" aria-live="polite"></span></div>
@@ -79,7 +130,7 @@
       const current = records(kind,id);
       el('summary').textContent = `${current.length} anexo(s) · ${current.filter(a => !a.conferidoEm).length} a conferir`;
       const filtered = current.filter(a => (!filter || status(a) === filter) && `${a.nome} ${a.tipo} ${a.obs || ''}`.toLocaleLowerCase('pt-BR').includes(query));
-      el('list').innerHTML = filtered.length ? filtered.map(a => `<div class="v16-doc-item" data-document-id="${esc(a.id)}"><div><strong>${esc(a.tipo)} — ${esc(a.nome)}</strong><small>${esc(status(a))}${a.validade ? ' · Validade: ' + esc(a.validade.split('-').reverse().join('/')) : ' · Validade não informada'} · ${Math.round((a.tamanho || 0)/1024)} KB</small><small>${a.leituraMetodo ? 'Leitura assistida · ' : ''}${a.conferidoEm ? 'Conferido em ' + esc(new Date(a.conferidoEm).toLocaleString('pt-BR')) : 'Conferência pendente'}${a.conferidoPor ? ' · ' + esc(a.conferidoPor) : ''}</small>${a.obs ? `<small>${esc(a.obs)}</small>` : ''}</div><div class="v26-doc-actions"><button type="button" class="btn btn-primary" data-action="view">Ver</button><button type="button" class="btn btn-ghost" data-action="download">Baixar</button>${canEdit() ? `<button type="button" class="btn btn-ghost" data-action="review">${a.conferidoEm ? 'Reabrir conferência' : 'Conferir'}</button><button type="button" class="btn btn-danger" data-action="remove">Remover</button>` : ''}</div></div>`).join('') : '<p class="v26-doc-owner-note">Nenhum documento encontrado.</p>';
+      el('list').innerHTML = filtered.length ? filtered.map(a => `<div class="v16-doc-item" data-document-id="${esc(a.id)}"><div><strong>${esc(a.tipo)} — ${esc(a.nome)}</strong><small>${esc(status(a))}${a.validade ? ' · Validade: ' + esc(a.validade.split('-').reverse().join('/')) : ' · Validade não informada'} · ${Math.round((a.tamanho || 0)/1024)} KB</small><small>${a.leituraMetodo ? 'Leitura assistida · ' : ''}${a.conferidoEm ? 'Conferido em ' + esc(new Date(a.conferidoEm).toLocaleString('pt-BR')) : 'Conferência pendente'}${a.conferidoPor ? ' · ' + esc(a.conferidoPor) : ''}</small>${a.atualizacaoCadastro ? `<small>Data aplicada ao cadastro: ${esc(dateLabel(a.atualizacaoCadastro.depois))} · ${esc(a.atualizacaoCadastro.campo)}</small>` : ''}${a.obs ? `<small>${esc(a.obs)}</small>` : ''}</div><div class="v26-doc-actions"><button type="button" class="btn btn-primary" data-action="view">Ver</button><button type="button" class="btn btn-ghost" data-action="download">Baixar</button>${canEdit() ? `<button type="button" class="btn btn-ghost" data-action="review">${a.conferidoEm ? 'Reabrir conferência' : 'Conferir'}</button><button type="button" class="btn btn-danger" data-action="remove">Remover</button>` : ''}</div></div>`).join('') : '<p class="v26-doc-owner-note">Nenhum documento encontrado.</p>';
     }
     el('search').oninput = renderList; el('filter').onchange = renderList;
     el('list').onclick = async event => {
@@ -93,7 +144,7 @@
       }
       if (!canEdit()) return;
       if (button.dataset.action === 'remove') {
-        if (!confirm('Remover este documento anexado?')) return;
+        if (!confirm('Remover este documento anexado? Datas já aplicadas ao cadastro não serão desfeitas.')) return;
         button.disabled = true;
         try { await save(kind,id,list.filter(a => a.id !== item.id)); registrarHistorico(kind,id,'Documento removido: ' + item.tipo + ' — ' + item.nome); renderList(); }
         catch(error) { notice(error.message); } finally { button.disabled = false; }
@@ -105,23 +156,66 @@
         if (!preview) return;
         const form = document.createElement('form');
         form.style.cssText = 'padding:12px 16px;border-top:1px solid #ddd;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
-        form.innerHTML = '<label style="flex:1">Responsável pela conferência<input required maxlength="100" name="responsavel" placeholder="Seu nome" style="display:block;width:100%"></label><button type="submit" class="btn btn-primary">Confirmar conferência do original</button><small style="width:100%">Esta conferência não altera a liberação de acesso.</small>';
+        const canApply = kind === 'terceiro' && ['ASO','Integração','Certificado NR'].includes(item.tipo);
+        const trainings = typeof getAllTreinamentos === 'function' ? getAllTreinamentos().filter(t => t.ativo !== false) : [];
+        form.innerHTML = `<label style="flex:1;min-width:180px">Responsável pela conferência<input required maxlength="100" name="responsavel" placeholder="Seu nome" style="display:block;width:100%"></label>
+          <label style="min-width:180px">Validade conferida no original<input type="date" name="validade" value="${esc(item.validade || '')}" style="display:block;width:100%"></label>
+          ${canApply ? `<div style="width:100%;padding:12px;background:#eff6ff;border-radius:10px">
+            <label><input type="checkbox" name="aplicar"> Atualizar o cadastro a partir deste documento</label>
+            <div data-apply-fields hidden style="margin-top:12px">
+              ${item.tipo === 'Certificado NR' ? `<label>Treinamento correspondente<select name="treinamentoId" style="display:block;width:100%"><option value="">Selecione o treinamento</option>${trainings.map(t => `<option value="${esc(t.id)}">${esc(t.nome)}</option>`).join('')}</select></label><label style="display:block;margin-top:8px">Data de realização do treinamento<input type="date" name="dataRealizacao" value="${esc(item.dataRealizacao || '')}" max="${today()}" style="display:block;width:100%"></label><small>A validade do treinamento seguirá o prazo já configurado no cadastro. A data de vencimento não substitui a data de realização.</small>` : ''}
+              <p data-update-preview style="margin:8px 0;font-size:13px;white-space:pre-line"></p>
+              <label><input type="checkbox" name="identidade"> Conferi que o documento pertence a este terceiro e que os dados estão corretos.</label>
+            </div></div>` : '<small style="width:100%">Este tipo será conferido sem alterar datas do cadastro.</small>'}
+          <button type="submit" class="btn btn-primary">Confirmar conferência</button><small style="width:100%">A atualização de uma data pode alterar a situação de acesso. As demais pendências continuam sendo verificadas.</small>`;
         preview.appendChild(form);
+        const input = name => form.querySelector('[name="' + name + '"]');
+        const selection = () => ({validade:input('validade').value,treinamentoId:input('treinamentoId')?.value || '',dataRealizacao:input('dataRealizacao')?.value || ''});
+        const person = () => typeof getAll === 'function' ? getAll().find(t => t.id === id) : null;
+        function showUpdatePreview() {
+          if (!canApply) return;
+          form.querySelector('[data-apply-fields]').hidden = !input('aplicar').checked;
+          if (!input('aplicar').checked) return;
+          try {
+            const plan = buildUpdate(person(),item,selection(),trainings);
+            form.querySelector('[data-update-preview]').textContent = `${plan.label}\nAtual: ${dateLabel(plan.before)} → Nova: ${dateLabel(plan.after)}${plan.after < today() && item.tipo !== 'Certificado NR' ? '\nA data está vencida; o documento continuará gerando pendência.' : ''}`;
+          } catch(error) { form.querySelector('[data-update-preview]').textContent = error.message; }
+        }
+        form.onchange = showUpdatePreview;
         form.onsubmit = async event => {
           event.preventDefault();
           if (!canEdit()) return notice('Seu perfil não permite alterar documentos.');
-          const reviewer = form.querySelector('input').value.trim();
+          const reviewer = input('responsavel').value.trim();
           if (!reviewer) return;
           const current = records(kind,id), documentItem = current.find(a => a.id === item.id);
           if (!documentItem) return notice('Documento não encontrado.');
+          let update = null;
+          if (canApply && input('aplicar').checked) {
+            if (!input('identidade').checked) return notice('Confirme a identidade do terceiro e os dados do documento.');
+            try { update = buildUpdate(person(),documentItem,selection(),trainings); }
+            catch(error) { return notice(error.message); }
+            if (!confirm(`${update.label}\nAtual: ${dateLabel(update.before)}\nNova: ${dateLabel(update.after)}\n\nAplicar esta alteração e recalcular as pendências?`)) return;
+          }
+          documentItem.validade = input('validade').value;
+          if (input('dataRealizacao')) documentItem.dataRealizacao = input('dataRealizacao').value;
           documentItem.conferidoEm = new Date().toISOString(); documentItem.conferidoPor = reviewer;
-          const submit = form.querySelector('button'); submit.disabled = true;
-          try { await save(kind,id,current); registrarHistorico(kind,id,'Documento conferido: ' + item.tipo + ' — responsável informado: ' + reviewer); preview.closest('.v26-doc-preview-overlay').remove(); renderList(); }
+          if (update) documentItem.atualizacaoCadastro = {campo:update.field,antes:update.before,depois:update.after,data:documentItem.conferidoEm,responsavel:reviewer};
+          const submit = form.querySelector('button[type="submit"]'); submit.disabled = true;
+          try {
+            const historyText = 'Documento conferido: ' + item.tipo + ' — responsável informado: ' + reviewer + (update ? ` | ${update.label}: ${dateLabel(update.before)} → ${dateLabel(update.after)} | Anexo ${item.id}` : ' | Sem alteração de datas');
+            await save(kind,id,current,update,historyText);
+            preview.closest('.v26-doc-preview-overlay').remove();
+            if (update) {
+              ['renderDashboard','renderLista','renderPendencias','renderCentralPendencias','renderPortariaExpress'].forEach(name => { try { if (typeof window[name] === 'function') window[name](); } catch(error) { console.warn(name,error); } });
+              window.abrirAnalise(id);
+              notice('Documento conferido, cadastro atualizado e pendências recalculadas.');
+            } else renderList();
+          }
           catch(error) { notice(error.message); } finally { submit.disabled = false; }
         };
         return;
       } else {
-        if (!confirm('Reabrir a conferência deste documento?')) return;
+        if (!confirm('Reabrir a conferência deste documento? Datas já aplicadas ao cadastro não serão desfeitas.')) return;
         delete item.conferidoEm; delete item.conferidoPor;
       }
       button.disabled = true;
@@ -148,7 +242,7 @@
         if (!canEdit()) throw new Error('Sua sessão não permite esta operação.');
         if (!result.text.trim()) throw new Error('Não foi possível reconhecer texto. Você pode escolher o tipo e anexar manualmente.');
         const suggestion = classify(result.text,kind);
-        draft = {file,text:result.text,method:result.method};
+        draft = {file,text:result.text,method:result.method,dataRealizacao:suggestion.dataRealizacao,nrNumero:suggestion.nrNumero};
         el('text').value = result.text;
         el('type').value = suggestion.tipo; el('expiry').value = suggestion.validade;
         const person = kind === 'terceiro' && typeof getAll === 'function' ? getAll().find(a => a.id === id) : null;
@@ -170,7 +264,7 @@
       try {
         const dataUrl = await new Promise((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Não foi possível abrir o arquivo.')); reader.readAsDataURL(file); });
         if (active?.generation !== generation) return;
-        list.unshift({id:uid(),donoTipo:kind,donoId:id,tipo,validade:el('expiry').value,obs:el('note').value.trim(),nome:file.name,tamanho:file.size,mime:file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),dataUrl,criadoEm:new Date().toISOString(),leituraMetodo:draft?.file === file ? draft.method : ''});
+        list.unshift({id:uid(),donoTipo:kind,donoId:id,tipo,validade:el('expiry').value,obs:el('note').value.trim(),nome:file.name,tamanho:file.size,mime:file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),dataUrl,criadoEm:new Date().toISOString(),leituraMetodo:draft?.file === file ? draft.method : '',dataRealizacao:draft?.file === file ? draft.dataRealizacao : '',nrNumero:draft?.file === file ? draft.nrNumero : ''});
         await save(kind,id,list);
         registrarHistorico(kind,id,'Documento anexado para conferência: ' + tipo + ' — ' + file.name);
         notice('Documento salvo e sincronizado. Conferência pendente.'); mount(kind,id);

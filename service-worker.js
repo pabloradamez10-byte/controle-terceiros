@@ -1,8 +1,8 @@
-const CACHE_NAME = 'portal-terceiros-sst-docs-20261020-1';
+const CACHE_NAME = 'portal-terceiros-sst-docs-20261020-2';
 const APP_SHELL = [
   './',
   './index.html',
-  './documentos.js?v=20261020-1',
+  './documentos.js?v=20261020-2',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
