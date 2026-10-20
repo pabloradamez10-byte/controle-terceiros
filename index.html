@@ -1402,8 +1402,16 @@
     const words = value => normalizarBuscaSST(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
     const nome = words(terceiro.nome), busca = words(q);
     if (!busca) return false;
-    // Um nome isolado deve ser uma palavra completa; nome composto exige igualdade.
-    return busca.includes(' ') ? nome === busca : nome.split(' ').includes(busca);
+    // Palavras concluídas são exatas; a última pode ser um sobrenome em digitação.
+    const nameWords = nome.split(' '), queryWords = busca.split(' ');
+    if (queryWords.length === 1) return nameWords.includes(busca);
+    if (nome === busca) return true;
+    return queryWords.every((part, index) => {
+      const current = nameWords[index];
+      if (!current) return false;
+      if (index !== queryWords.length - 1) return current === part;
+      return current.startsWith(part) && (current !== part || nameWords.length === queryWords.length);
+    });
   }
 
   // ──────────────────────────────────────────────────
