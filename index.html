@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob: 'sha256-7PfVOE5hAyri04qbzFpt0jpG7qmQLlXtbtpmN2UPa2g=' 'sha256-yW7E+EXBj60XyU9T7GYBPy9QReRN5/w8sI/RdfM4Ofw=' 'sha256-7U/vPv8CYJ6249NkHXwX90RfK3y5c90yHV+zn4VYxxc=' 'sha256-FH5AmZO0HsOIOYjfCuZf6YpuuxB0oDPdmfBGT+jBDAY=' 'sha256-VuKEL2yCONcl0A9onWzL94OKcgu18OpIvFAOEJBN3QM=' 'sha256-vibn1PVWu9bg7TcBoAwAxLvFO/cFvjatoDSRiz4XBTQ=' 'sha256-fOWWcv5m3aF8E86SAdF18IPSrwXDjy2WX5A3Y4KBZXM='; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://obzycbtfbadjwwwfpsed.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob: 'sha256-7PfVOE5hAyri04qbzFpt0jpG7qmQLlXtbtpmN2UPa2g=' 'sha256-yW7E+EXBj60XyU9T7GYBPy9QReRN5/w8sI/RdfM4Ofw=' 'sha256-7U/vPv8CYJ6249NkHXwX90RfK3y5c90yHV+zn4VYxxc=' 'sha256-Wz1/qAhTjTn4wM5u66g85BGb8AqYY5xD16ngUbm12iY=' 'sha256-2hqxJKZ6XZtKXdO+MMfAqtTlX29a3r/+Sl2wUdEmDX0=' 'sha256-vibn1PVWu9bg7TcBoAwAxLvFO/cFvjatoDSRiz4XBTQ=' 'sha256-f8cmZCkAto7e/Uvi6vXrvZk1GVIvkCOnKuhPb+3cb1g='; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://obzycbtfbadjwwwfpsed.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'self'">
   <script src="./vendor/purify-3.4.17.min.js" integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx" crossorigin="anonymous"></script>
-  <script src="./security.js?v=20261021-1"></script>
+  <script src="./security.js?v=20261021-2"></script>
+<script src="./access.js?v=20261021-2"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Portal Terceiros SST</title>
   <meta name="theme-color" content="#1B4FD8" />
@@ -6029,6 +6030,7 @@
 
   function statusExpress(t){
     const s = (typeof getStatus === 'function') ? getStatus(t) : {ok:false,motivos:['Não foi possível calcular status'],avisos:[]};
+    if (s.confirmado===false) return {classe:'blocked',titulo:'NÃO CONFIRMADO',sub:'Atualize a consulta online antes de autorizar acesso',simbolo:'?',s:s,status:s};
     if (s.excecao) return {classe:'warn', titulo:'LIBERADO POR EXCEÇÃO', sub:'Acesso permitido por autorização registrada', simbolo:'!', status:s};
     if (s.ok) return {classe:'ok', titulo:'LIBERADO', sub: s.pendente ? 'Acesso permitido — possui pendências/avisos' : 'Acesso permitido', simbolo:'✓', status:s};
     return {classe:'blocked', titulo:'BLOQUEADO', sub:'Acesso não autorizado', simbolo:'×', status:s};
@@ -6055,6 +6057,7 @@
   }
 
   function renderExpress(t){
+    window.sstSelectedPersonId=t.id;
     const res = byId('v24-result');
     const matches = byId('v24-matches');
     if (matches) { matches.style.display='none'; matches.innerHTML=''; }
@@ -6069,9 +6072,9 @@
       <div class="v24-motivos warn">
         <strong>Liberação por exceção</strong>
         <ul>
-          <li>Autorização: ${exception.numero || '—'}</li>
+          <li>Autorização: ${exception.numeroAutorizacao || '—'}</li>
           <li>Aprovador: ${exception.aprovador || '—'} ${exception.cargo ? '• '+exception.cargo : ''}</li>
-          <li>Liberado até: ${exception.ate ? fmt(exception.ate) : '—'}</li>
+          <li>Liberado até: ${exception.dataAte ? fmt(exception.dataAte) : '—'}</li>
           ${(exception.motivos || []).map(m => `<li>${m}</li>`).join('')}
         </ul>
       </div>` : '';
@@ -6206,6 +6209,7 @@
   }
   function status(t){
     const s = typeof getStatus === 'function' ? getStatus(t) : {ok:false,motivos:['Não foi possível calcular o status.'],avisos:[]};
+    if (s.confirmado===false) return {classe:'blocked',titulo:'NÃO CONFIRMADO',sub:'Atualize a consulta online antes de autorizar acesso',simbolo:'?',s:s,status:s};
     if (s.excecao) return {classe:'warn', titulo:'LIBERADO POR EXCEÇÃO', sub:'Acesso permitido por autorização registrada', simbolo:'!', s:s};
     if (s.ok) return {classe:'ok', titulo:'LIBERADO', sub: s.pendente ? 'Acesso permitido — possui pendências/avisos' : 'Acesso permitido', simbolo:'✓', s:s};
     return {classe:'blocked', titulo:'BLOQUEADO', sub:'Acesso não autorizado', simbolo:'×', s:s};
@@ -6248,6 +6252,7 @@
     });
   }
   function renderDetalhe(t){
+    window.sstSelectedPersonId=t.id;
     const box = byId('v24-result');
     const matches = byId('v24-matches');
     if (matches) { matches.style.display = 'none'; matches.innerHTML = ''; }
@@ -6258,9 +6263,9 @@
     const avisos = (se.s && se.s.avisos) ? se.s.avisos : [];
     const ex = (se.s && se.s.excecaoDados) ? se.s.excecaoDados : null;
     const excecaoHtml = ex ? '<div class="v24-motivos warn"><strong>Liberação por exceção</strong><ul>'+
-      '<li>Autorização: '+(ex.numero || '—')+'</li>'+
+      '<li>Autorização: '+(ex.numeroAutorizacao || '—')+'</li>'+
       '<li>Aprovador: '+(ex.aprovador || '—')+(ex.cargo ? ' • '+ex.cargo : '')+'</li>'+
-      '<li>Liberado até: '+(ex.ate ? fmt(ex.ate) : '—')+'</li>'+
+      '<li>Liberado até: '+(ex.dataAte ? fmt(ex.dataAte) : '—')+'</li>'+
       ((ex.motivos || []).map(function(m){ return '<li>'+m+'</li>'; }).join(''))+
       '</ul></div>' : '';
     const problemas = motivos.length || avisos.length ? '<div class="v24-motivos '+(motivos.length ? '' : 'warn')+'"><strong>'+(motivos.length ? 'Motivos do bloqueio' : 'Pendências / avisos não bloqueantes')+'</strong><ul>'+motivos.concat(avisos).slice(0,15).map(function(m){ return '<li>'+m+'</li>'; }).join('')+'</ul></div>' : '';
@@ -6777,6 +6782,50 @@
     if(generation!==sessionGeneration)throw new Error('Sessão encerrada.');
     return response;
   }
+  window.sstPrivateDocuments = {
+    async request(body){
+      const res=await authorizedFetch(SUPABASE_URL+'/functions/v1/sst-documentos',{method:'POST',body:JSON.stringify(body)});
+      const result=await res.json();if(!res.ok)throw new Error(result.error||'Operação documental não confirmada.');return result;
+    },
+    async upload(kind,ownerId,file){
+      const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error('Falha na leitura do arquivo.'));r.readAsDataURL(file);});
+      return this.request({action:'upload',kind,ownerId,filename:file.name,mime:file.type||(/\.pdf$/i.test(file.name)?'application/pdf':/\.png$/i.test(file.name)?'image/png':/\.webp$/i.test(file.name)?'image/webp':'image/jpeg'),base64:String(dataUrl).split(',')[1]});
+    },
+    async dataURL(item){
+      if(item.storageId)return (await this.request({action:'download',id:item.storageId})).dataUrl;
+      return window.sstSafeDocumentURL(item.dataUrl);
+    }
+  };
+  let checkedRevision=-1, checkedBaseline=null, checkedClean=false;
+  const accessController=window.sstCreateAccessController({
+    version:()=>auditStamp,
+    clean:()=>{
+      if(checkedRevision!==window.sstPrivateRevision || checkedBaseline!==auditBaseline){
+        checkedRevision=window.sstPrivateRevision;checkedBaseline=auditBaseline;
+        checkedClean=!!auditBaseline && businessState(readLocalState())===businessState(auditBaseline);
+      }
+      return !!session && can('consultar') && checkedClean;
+    },
+    query:async()=>{
+      const res=await authorizedFetch(SUPABASE_URL+'/rest/v1/rpc/sst_access_now',{method:'POST',body:'{}'});
+      if(!res.ok)throw new Error('Consulta não confirmada.');return res.json();
+    },
+    onChange:()=>{
+      if(!bootFinished)return;
+      renderEverythingSafe();
+      let banner=document.getElementById('sst-access-confirmation');
+      if(!banner){banner=document.createElement('p');banner.id='sst-access-confirmation';banner.setAttribute('role','status');document.querySelector('main')?.prepend(banner);}
+      const check=accessController.get((typeof getAll==='function'?getAll():[])[0]?.id);
+      banner.textContent=check.confirmado?'Situações confirmadas pelo servidor em '+new Date(check.confirmadoEm).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+' (Brasília). Atualização automática a cada 20 segundos.':'Situações de acesso sem confirmação atual do servidor. Não autorize entrada com esta consulta.';
+      banner.style.cssText='padding:10px 14px;border-radius:8px;background:'+(check.confirmado?'#eff6ff':'#fef2f2')+';color:#172033';
+      if(window.sstSelectedPersonId && document.getElementById('v24-result')?.classList.contains('show'))(window.v242AbrirExpress||window.v24AbrirExpress)?.(window.sstSelectedPersonId);
+      else if(document.getElementById('v24-busca')?.value)window.v24ConsultarExpress?.();
+    }
+  });
+  window.getStatus=function(t){return accessController.get(t.id);};
+  window.addEventListener('offline',()=>accessController.invalidate());
+  document.addEventListener('visibilitychange',()=>{accessController.invalidate();});
+  setInterval(()=>{if(bootFinished && session && !document.hidden)window.tssSupabaseReload().catch(()=>{});},20000);
   function lockApp(message){
     document.body.classList.remove('tss-authenticated');
     document.getElementById('tss-auth-overlay').hidden = false;
@@ -6798,6 +6847,7 @@
   }
   function forgetSession(){
     sessionGeneration++; clearTimeout(syncTimer);
+    accessController.invalidate(); window.sstSelectedPersonId=null;
     session=null; membership=null; exceptionCache={}; auditBaseline=null; auditStamp=null;
     window.tssUsuarioAtual=()=>null; window.sstClearPrivateData();
     document.querySelector('main')?.replaceChildren();
@@ -6984,6 +7034,7 @@
       });
       if (!res.ok) throw new Error('Falha ao salvar exceção: ' + res.status);
       exceptionCache[id] = dados;
+      accessController.invalidate(); await accessController.refresh();
     }
   };
 
@@ -6995,7 +7046,6 @@
     }
     const rows = await res.json();
     if(!session||!can('consultar'))throw new Error('Sessão encerrada.');
-    if(rows[0]) { auditStamp=rows[0].updated_at; auditBaseline=rows[0].data; }
     return rows && rows[0] ? rows[0] : null;
   }
 
@@ -7043,6 +7093,7 @@
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => {
       saveRemoteState().then(() => {
+        accessController.invalidate(); accessController.refresh();
         updateBancoBadge('online');
       }).catch(err => {
         console.warn('[TSS] Supabase sync:', err);
@@ -7080,7 +7131,7 @@
       el.style.background = '#b45309';
     } else {
       el.style.display = 'block';
-      el.textContent = 'Banco offline/cache local';
+      el.textContent = 'Banco sem confirmação online';
       el.style.background = '#991b1b';
     }
   }
@@ -7122,9 +7173,11 @@
       installPermissionGuards();
       const remote = await fetchRemoteState();
       if (!remote?.data) throw new Error('Base não encontrada no banco.');
+      auditStamp=remote.updated_at; auditBaseline=remote.data;
       applyRemoteState(remote.data);
       await window.tssExceptionStore.reload();
       localStorage.removeItem('liberacoesExcecao');
+      await accessController.refresh();
       renderEverythingSafe();
       bootFinished = true;
       unlockApp();
@@ -7183,6 +7236,7 @@
     updateBancoBadge('loading');
     try {
       await saveRemoteState();
+      await accessController.refresh();
       updateBancoBadge('online');
       if (typeof toast === 'function') toast('✓ Banco sincronizado.');
       return true;
@@ -7198,10 +7252,14 @@
     if (auditSaving || (auditBaseline && businessState(readLocalState()) !== businessState(auditBaseline))) return false;
     updateBancoBadge('loading');
     try {
+      const revision=window.sstPrivateRevision;
       const remote = await fetchRemoteState();
+      if(revision!==window.sstPrivateRevision || auditSaving)return false;
       if (remote && remote.data) {
+        auditStamp=remote.updated_at; auditBaseline=remote.data;
         applyRemoteState(remote.data);
         await window.tssExceptionStore.reload();
+        await accessController.refresh();
         renderEverythingSafe();
         updateBancoBadge('online');
         if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
@@ -7239,7 +7297,7 @@
 </script>
 
 
-<script src="./documentos.js?v=20261021-1"></script>
+<script src="./documentos.js?v=20261021-2"></script>
 <script src="./relatorios.js?v=20261020-1"></script>
 </body>
 </html>

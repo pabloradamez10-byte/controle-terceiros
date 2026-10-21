@@ -1,17 +1,18 @@
 /* SST browser boundary: sanitized HTML, finite UI actions, volatile private state. */
 (function(){
   'use strict';
+  window.sstPrivateRevision=0;
   const privateKeys = new Set(['terceiros','empresas','treinamentos','historico','anexosTerceiros','anexosEmpresas','arquivosTerceirosV16','arquivosEmpresasV26','liberacoesExcecao','tss_supabase_last_sync','tss_local_last_change','tss_instance_id']);
   const memory = new Map(), storage = window.localStorage;
   const nativeGet=Storage.prototype.getItem,nativeSet=Storage.prototype.setItem,nativeRemove=Storage.prototype.removeItem;
   for(const key of privateKeys) nativeRemove.call(storage,key);
   Storage.prototype.getItem=function(key){key=String(key);return this===storage&&privateKeys.has(key)?memory.get(key)??null:nativeGet.call(this,key)};
-  Storage.prototype.setItem=function(key,value){key=String(key);if(this===storage&&privateKeys.has(key)){memory.set(key,String(value));return;}return nativeSet.call(this,key,value)};
-  Storage.prototype.removeItem=function(key){key=String(key);if(this===storage&&privateKeys.has(key)){memory.delete(key);return;}return nativeRemove.call(this,key)};
-  window.sstClearPrivateData = function(){memory.clear();for(const key of privateKeys)nativeRemove.call(storage,key);sessionStorage.removeItem('tss_auth_session');};
+  Storage.prototype.setItem=function(key,value){key=String(key);if(this===storage&&privateKeys.has(key)){memory.set(key,String(value));window.sstPrivateRevision++;return;}return nativeSet.call(this,key,value)};
+  Storage.prototype.removeItem=function(key){key=String(key);if(this===storage&&privateKeys.has(key)){memory.delete(key);window.sstPrivateRevision++;return;}return nativeRemove.call(this,key)};
+  window.sstClearPrivateData = function(){window.sstPrivateRevision++;memory.clear();for(const key of privateKeys)nativeRemove.call(storage,key);sessionStorage.removeItem('tss_auth_session');};
   window.sstPurgePrivateCaches = async function(){
     if(!window.caches)return;
-    for(const key of await caches.keys())if(key.startsWith('portal-terceiros-sst-')&&key!=='portal-terceiros-sst-security-20261021-1')await caches.delete(key);
+    for(const key of await caches.keys())if(key.startsWith('portal-terceiros-sst-')&&key!=='portal-terceiros-sst-security-20261021-2')await caches.delete(key);
   };
   window.sstPurgePrivateCaches().catch(()=>{});
   if(!window.DOMPurify?.isSupported){window.sstSecurityReady=false;return;}

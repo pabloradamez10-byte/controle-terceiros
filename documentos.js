@@ -130,7 +130,7 @@
       const current = records(kind,id);
       el('summary').textContent = `${current.length} anexo(s) · ${current.filter(a => !a.conferidoEm).length} a conferir`;
       const filtered = current.filter(a => (!filter || status(a) === filter) && `${a.nome} ${a.tipo} ${a.obs || ''}`.toLocaleLowerCase('pt-BR').includes(query));
-      el('list').innerHTML = filtered.length ? filtered.map(a => `<div class="v16-doc-item" data-document-id="${esc(a.id)}"><div><strong>${esc(a.tipo)} — ${esc(a.nome)}</strong><small>${esc(status(a))}${a.validade ? ' · Validade: ' + esc(a.validade.split('-').reverse().join('/')) : ' · Validade não informada'} · ${Math.round((a.tamanho || 0)/1024)} KB</small><small>${a.leituraMetodo ? 'Leitura assistida · ' : ''}${a.conferidoEm ? 'Conferido em ' + esc(new Date(a.conferidoEm).toLocaleString('pt-BR')) : 'Conferência pendente'}${a.conferidoPor ? ' · ' + esc(a.conferidoPor) : ''}</small>${a.atualizacaoCadastro ? `<small>Data aplicada ao cadastro: ${esc(dateLabel(a.atualizacaoCadastro.depois))} · ${esc(a.atualizacaoCadastro.campo)}</small>` : ''}${a.obs ? `<small>${esc(a.obs)}</small>` : ''}</div><div class="v26-doc-actions"><button type="button" class="btn btn-primary" data-action="view">Ver</button><button type="button" class="btn btn-ghost" data-action="download">Baixar</button>${canEdit() ? `<button type="button" class="btn btn-ghost" data-action="review">${a.conferidoEm ? 'Reabrir conferência' : 'Conferir'}</button><button type="button" class="btn btn-danger" data-action="remove">Remover</button>` : ''}</div></div>`).join('') : '<p class="v26-doc-owner-note">Nenhum documento encontrado.</p>';
+      el('list').innerHTML = filtered.length ? filtered.map(a => `<div class="v16-doc-item" data-document-id="${esc(a.id)}"><div><strong>${esc(a.tipo)} — ${esc(a.nome)}</strong><small>${esc(status(a))}${a.validade ? ' · Validade: ' + esc(a.validade.split('-').reverse().join('/')) : ' · Validade não informada'} · ${Math.round((a.tamanho || 0)/1024)} KB</small><small>${a.leituraMetodo ? 'Leitura assistida · ' : ''}${a.conferidoEm ? 'Conferido em ' + esc(new Date(a.conferidoEm).toLocaleString('pt-BR')) : 'Conferência pendente'}${a.conferidoPor ? ' · ' + esc(a.conferidoPor) : ''}</small>${a.atualizacaoCadastro ? `<small>Data aplicada ao cadastro: ${esc(dateLabel(a.atualizacaoCadastro.depois))} · ${esc(a.atualizacaoCadastro.campo)}</small>` : ''}${a.obs ? `<small>${esc(a.obs)}</small>` : ''}</div><div class="v26-doc-actions"><button type="button" class="btn btn-primary" data-action="view">Ver</button><button type="button" class="btn btn-ghost" data-action="download">Baixar</button>${canEdit() ? `${!a.storageId ? '<button type="button" class="btn btn-ghost" data-action="migrate">Guardar na área privada</button>' : ''}<button type="button" class="btn btn-ghost" data-action="review">${a.conferidoEm ? 'Reabrir conferência' : 'Conferir'}</button><button type="button" class="btn btn-danger" data-action="remove">Remover</button>` : ''}</div></div>`).join('') : '<p class="v26-doc-owner-note">Nenhum documento encontrado.</p>';
     }
     el('search').oninput = renderList; el('filter').onchange = renderList;
     el('list').onclick = async event => {
@@ -138,11 +138,26 @@
       if (!row) return;
       const list = records(kind,id), item = list.find(a => a.id === row.dataset.documentId);
       if (!item || !canView()) return;
-      if (button.dataset.action === 'view') return window.v26VisualizarDataUrl(item.dataUrl,item.mime,item.nome);
+      if (button.dataset.action === 'view') { try { return window.v26VisualizarDataUrl(await window.sstPrivateDocuments.dataURL(item),item.mime,item.nome); } catch(error) { return notice(error.message); } }
       if (button.dataset.action === 'download') {
-        const a = document.createElement('a'); a.href = window.sstSafeDocumentURL(item.dataUrl); a.download = item.nome; a.click(); return;
+        try { const a = document.createElement('a'); a.href = window.sstSafeDocumentURL(await window.sstPrivateDocuments.dataURL(item)); a.download = item.nome; a.click(); } catch(error) { notice(error.message); } return;
       }
       if (!canEdit()) return;
+      if (button.dataset.action === 'migrate') {
+        button.disabled=true;
+        try {
+          const original=window.sstSafeDocumentURL(item.dataUrl),encoded=original.split(',')[1];
+          const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+          const file=new File([bytes],item.nome,{type:item.mime});
+          const stored=await window.sstPrivateDocuments.upload(kind,id,file);
+          const copied=await window.sstPrivateDocuments.dataURL(stored);
+          if(copied.split(',')[1]!==encoded)throw new Error('Cópia não confirmada. O anexo original foi mantido.');
+          const migrated={...item,...stored};delete migrated.dataUrl;
+          await save(kind,id,list.map(a=>a.id===item.id?migrated:a),null,'Anexo legado copiado para armazenamento privado; conteúdo verificado: '+item.nome);
+          notice('Arquivo guardado na área privada, com conteúdo verificado.');renderList();
+        }catch(error){notice(error.message);}finally{button.disabled=false;}
+        return;
+      }
       if (button.dataset.action === 'remove') {
         if (!confirm('Remover este documento anexado? Datas já aplicadas ao cadastro não serão desfeitas.')) return;
         button.disabled = true;
@@ -151,7 +166,7 @@
         return;
       }
       if (!item.conferidoEm) {
-        window.v26VisualizarDataUrl(item.dataUrl,item.mime,item.nome);
+        try { window.v26VisualizarDataUrl(await window.sstPrivateDocuments.dataURL(item),item.mime,item.nome); } catch(error) { notice(error.message); return; }
         const preview = Array.from(document.querySelectorAll('.v26-doc-preview')).pop();
         if (!preview) return;
         const form = document.createElement('form');
@@ -262,9 +277,9 @@
       if (list.some(a => a.nome === file.name && a.tamanho === file.size) && !confirm('Já existe um arquivo com este nome e tamanho. Anexar novamente?')) return;
       el('save').disabled = true;
       try {
-        const dataUrl = await new Promise((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Não foi possível abrir o arquivo.')); reader.readAsDataURL(file); });
+        const stored = await window.sstPrivateDocuments.upload(kind,id,file);
         if (active?.generation !== generation) return;
-        list.unshift({id:uid(),donoTipo:kind,donoId:id,tipo,validade:el('expiry').value,obs:el('note').value.trim(),nome:file.name,tamanho:file.size,mime:file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),dataUrl,criadoEm:new Date().toISOString(),leituraMetodo:draft?.file === file ? draft.method : '',dataRealizacao:draft?.file === file ? draft.dataRealizacao : '',nrNumero:draft?.file === file ? draft.nrNumero : ''});
+        list.unshift({id:uid(),donoTipo:kind,donoId:id,tipo,validade:el('expiry').value,obs:el('note').value.trim(),nome:file.name,tamanho:file.size,...stored,leituraMetodo:draft?.file === file ? draft.method : '',dataRealizacao:draft?.file === file ? draft.dataRealizacao : '',nrNumero:draft?.file === file ? draft.nrNumero : ''});
         await save(kind,id,list);
         registrarHistorico(kind,id,'Documento anexado para conferência: ' + tipo + ' — ' + file.name);
         notice('Documento salvo e sincronizado. Conferência pendente.'); mount(kind,id);
