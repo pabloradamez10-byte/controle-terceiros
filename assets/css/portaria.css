@@ -1,0 +1,41 @@
+
+  /* V24 - Portaria Express + Semáforo Inteligente */
+  .v24-express-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+  .v24-portaria-card { border-radius:22px; padding:22px; border:1px solid var(--border); background:#fff; box-shadow:var(--shadow); }
+  .v24-portaria-search { display:flex; gap:10px; align-items:center; }
+  .v24-portaria-search input { font-size:18px; padding:16px 18px; }
+  .v24-status-box { display:none; margin-top:18px; border-radius:22px; padding:22px; border:2px solid var(--border); background:#fff; }
+  .v24-status-box.show { display:block; }
+  .v24-status-head { display:flex; gap:14px; align-items:center; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px; }
+  .v24-status-icon { width:58px; height:58px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; }
+  .v24-status-icon.ok { background:var(--ok-lt); color:var(--ok); }
+  .v24-status-icon.warn { background:var(--warn-lt); color:var(--warn); }
+  .v24-status-icon.blocked { background:var(--danger-lt); color:var(--danger); }
+  .v24-status-title { font-size:30px; font-weight:900; line-height:1; }
+  .v24-status-title.ok { color:var(--ok); }
+  .v24-status-title.warn { color:var(--warn); }
+  .v24-status-title.blocked { color:var(--danger); }
+  .v24-status-sub { margin-top:5px; color:var(--muted); font-size:13px; font-weight:600; }
+  .v24-info-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .v24-info { border:1px solid var(--border); border-radius:14px; padding:12px; background:var(--bg-soft); }
+  .v24-info small { display:block; color:var(--muted); text-transform:uppercase; font-size:11px; font-weight:800; letter-spacing:.06em; margin-bottom:5px; }
+  .v24-info strong { display:block; font-size:14px; }
+  .v24-semaforo { display:grid; gap:10px; margin-top:16px; }
+  .v24-semaforo-row { display:flex; justify-content:space-between; gap:12px; align-items:center; border:1px solid var(--border); border-radius:14px; padding:12px; background:#fff; }
+  .v24-semaforo-row strong { font-size:14px; }
+  .v24-semaforo-row span { font-size:12px; font-weight:900; border-radius:999px; padding:6px 10px; white-space:nowrap; }
+  .v24-semaforo-row.ok span { color:var(--ok); background:var(--ok-lt); }
+  .v24-semaforo-row.warn span { color:var(--warn); background:var(--warn-lt); }
+  .v24-semaforo-row.blocked span { color:var(--danger); background:var(--danger-lt); }
+  .v24-semaforo-row.neutral span { color:var(--muted); background:#F1F5F9; }
+  .v24-motivos { margin-top:16px; border-radius:16px; padding:14px; background:var(--danger-lt); border-left:5px solid var(--danger); }
+  .v24-motivos.warn { background:var(--warn-lt); border-left-color:var(--warn); }
+  .v24-motivos strong { display:block; margin-bottom:8px; }
+  .v24-motivos ul { padding-left:18px; }
+  .v24-motivos li { margin-bottom:5px; font-size:13.5px; font-weight:600; }
+  .v24-match-list { display:grid; gap:10px; margin-top:14px; }
+  .v24-match-card { border:1px solid var(--border); border-radius:16px; background:#fff; padding:14px; text-align:left; cursor:pointer; font-family:'Inter',sans-serif; }
+  .v24-match-card:hover { border-color:var(--accent); box-shadow:0 0 0 3px rgba(21,94,239,.10); }
+  .v24-match-card strong { display:block; font-size:15px; }
+  .v24-match-card small { display:block; margin-top:4px; color:var(--muted); }
+  @media (max-width:700px){ .v24-portaria-search{flex-direction:column;} .v24-info-grid{grid-template-columns:1fr;} .v24-status-title{font-size:26px;} }

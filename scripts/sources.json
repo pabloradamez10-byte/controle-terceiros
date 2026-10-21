@@ -1,0 +1,154 @@
+{
+  "groups": [
+    {
+      "target": "assets/js/core.js",
+      "sources": [
+        "src/shared/storage-dates-search.js",
+        "src/navigation/forms.js",
+        "src/features/pendencias/base.js",
+        "src/features/dashboard/base.js",
+        "src/features/terceiros/lista-edicao.js",
+        "src/features/treinamentos/cadastro.js",
+        "src/features/empresas/cadastro-analise.js",
+        "src/features/auditoria/historico-anexos.js",
+        "src/features/dashboard/executivo.js",
+        "src/features/treinamentos/sugestoes-relatorio.js",
+        "src/features/empresas/listagem.js",
+        "src/features/portaria/consulta.js",
+        "src/features/dados/importacao-exportacao.js",
+        "src/features/acesso/regras-legadas.js",
+        "src/features/excecoes/base-compatibilidade.js",
+        "src/features/documentos/indicadores-anexos-legados.js",
+        "src/features/terceiros/filtros-pwa.js",
+        "src/features/excecoes/selecoes-legadas.js",
+        "src/features/excecoes/autorizacao.js",
+        "src/features/dashboard/filtros-interativos.js",
+        "src/features/empresas/alertas-painel.js"
+      ],
+      "extractedSha256": "ecf7d5384e61032ae2d38a9bcc5a6dd23a46eea9902e55ed6eda6637650f6b68"
+    },
+    {
+      "target": "assets/js/pendencias.js",
+      "sources": [
+        "src/features/pendencias.js"
+      ],
+      "extractedSha256": "c96ec4f845c18fad17c94f53ec66013f2f5045e44de7fc3cb08fd175f33839fc"
+    },
+    {
+      "target": "assets/js/matriz-treinamentos.js",
+      "sources": [
+        "src/features/matriz-treinamentos.js"
+      ],
+      "extractedSha256": "ed4fef3eff02609eb6e3d3641d7c17f7445f2b7cb973dd321d5fb39f8558c717"
+    },
+    {
+      "target": "assets/js/portaria-express.js",
+      "sources": [
+        "src/features/portaria-express.js"
+      ],
+      "extractedSha256": "5b3d7fa808538d39f8c0ce6eeba83ce4119bf00a98639c43d7a9e051b9b5da26"
+    },
+    {
+      "target": "assets/js/portaria-semaforo.js",
+      "sources": [
+        "src/features/portaria-semaforo.js"
+      ],
+      "extractedSha256": "da1ab124a67a5d9b4a5dd3be30c7c0aad4e55f6f5adebffe4a5db051d1260d7d"
+    },
+    {
+      "target": "assets/js/documentos-compatibilidade.js",
+      "sources": [
+        "src/features/documentos-compatibilidade.js"
+      ],
+      "extractedSha256": "be26e7d4f556bbd6e0ed3701a00c00c4bbc53bf705be36ada034918b3e170534"
+    },
+    {
+      "target": "assets/js/backend-sessao-usuarios.js",
+      "sources": [
+        "src/backend/contexto.part.js",
+        "src/backend/estado-local.part.js",
+        "src/backend/requisicoes-autenticadas.part.js",
+        "src/backend/documentos-confirmacao-acesso.part.js",
+        "src/backend/sessao-perfil.part.js",
+        "src/backend/consulta-auditoria.part.js",
+        "src/backend/interface-permissoes.part.js",
+        "src/backend/gestao-usuarios.part.js",
+        "src/backend/guardas-permissoes.part.js",
+        "src/backend/persistencia-excecoes.part.js",
+        "src/backend/persistencia-auditada.part.js",
+        "src/backend/sincronizacao-interface.part.js",
+        "src/backend/inicializacao-login.part.js"
+      ],
+      "extractedSha256": "7fc726642900b68edefd4be2eaf5ebbd993519522f9023a72ae84f6feddc6f58"
+    },
+    {
+      "target": "assets/css/base.css",
+      "sources": [
+        "src/styles/base.css"
+      ],
+      "extractedSha256": "c83479f3a0fd9e8b862c3a9b68eba446ec67235d990203e594b08bbd3770cf0b"
+    },
+    {
+      "target": "assets/css/autenticacao.css",
+      "sources": [
+        "src/styles/autenticacao.css"
+      ],
+      "extractedSha256": "c62b10af04261877b97b6f55d414b413098c43d2dd43a6083fb865b54cd3ef47"
+    },
+    {
+      "target": "assets/css/pendencias.css",
+      "sources": [
+        "src/styles/pendencias.css"
+      ],
+      "extractedSha256": "cf67789b3757e35fc188298966cf167ccaa269cfda3859a9bc69a39e52be83d8"
+    },
+    {
+      "target": "assets/css/portaria.css",
+      "sources": [
+        "src/styles/portaria.css"
+      ],
+      "extractedSha256": "34f1d28da16caf8a4b6c64009321ed176392a0ca19b90b429d283d81baed2f77"
+    },
+    {
+      "target": "assets/css/portaria-acabamento.css",
+      "sources": [
+        "src/styles/portaria-acabamento.css"
+      ],
+      "extractedSha256": "a43f06e631181255d6e5a8a8616cb83357c44cc02b477231c1c95da3a63b661a"
+    },
+    {
+      "target": "security.js",
+      "sources": [
+        "src/security/browser.js"
+      ],
+      "extractedSha256": "7677469cfb8867ff92d2cad4b15f55c1d21e6f522f7efe9a5532fdbef72cd4a2"
+    },
+    {
+      "target": "access.js",
+      "sources": [
+        "src/features/acesso/confirmacao.js"
+      ],
+      "extractedSha256": "b2359524eee9fe474c34101f3f07f799082c1220a94266412469fe131dcd3ff5"
+    },
+    {
+      "target": "documentos.js",
+      "sources": [
+        "src/features/documentos/leitura-conferencia.js"
+      ],
+      "extractedSha256": "ee8fd47f031afed4523dfab75d4b072d8806eee66afbcebd3aff5bdf5ee630cd"
+    },
+    {
+      "target": "relatorios.js",
+      "sources": [
+        "src/features/auditoria/relatorios.js"
+      ],
+      "extractedSha256": "59c4640eaeee8f92dd979bc9c7561492e78c036121cfc15fa4a3cda34343d297"
+    },
+    {
+      "target": "service-worker.js",
+      "sources": [
+        "src/platform/service-worker.js"
+      ]
+    }
+  ]
+}

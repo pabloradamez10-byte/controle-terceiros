@@ -1,0 +1,10 @@
+
+  body:not(.tss-authenticated) > :not(#tss-auth-overlay):not(script):not(style) { visibility: hidden; }
+  #tss-auth-overlay { position:fixed; inset:0; z-index:100000; display:grid; place-items:center; background:#f1f5f9; font-family:system-ui,sans-serif; }
+  #tss-auth-overlay[hidden] { display:none; }
+  #tss-auth-overlay form { width:min(380px,calc(100vw - 32px)); padding:28px; border-radius:16px; background:white; box-shadow:0 12px 40px #0002; display:grid; gap:12px; }
+  #tss-auth-overlay input, #tss-auth-overlay button { padding:12px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; }
+  #tss-auth-overlay button { background:#155eef; color:white; cursor:pointer; }
+  #tss-auth-error { color:#b91c1c; font-size:13px; min-height:18px; }
+  #tss-users-modal[hidden], #tss-users-open[hidden] { display:none !important; }
+  button[hidden] { display:none !important; }

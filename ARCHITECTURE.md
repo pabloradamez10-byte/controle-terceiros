@@ -1,0 +1,63 @@
+# Organização do SST Manager
+
+## Onde corrigir
+
+O código editável fica em `src/`. `index.html` contém a estrutura das telas e os links de carregamento, sem blocos de JavaScript ou CSS embutidos. A marcação dos formulários e alguns atributos de estilo ainda ficam no HTML; a retirada de todo estilo inline não faz parte desta mudança.
+
+| Pasta | Responsabilidade |
+|---|---|
+| `src/shared/` | Armazenamento local temporário, datas, busca e utilitários compartilhados |
+| `src/navigation/` | Navegação e eventos de formulários |
+| `src/features/terceiros/` | Cadastro, edição, lista e filtros de terceiros |
+| `src/features/empresas/` | Cadastro, análise, lista, alertas e painel de empresas |
+| `src/features/treinamentos/` | Treinamentos, sugestões e relatórios relacionados |
+| `src/features/portaria/` | Consulta de portaria da base existente |
+| `src/features/excecoes/` | Autorizações, seleções e compatibilidade de exceções |
+| `src/features/documentos/` | Leitura, revisão, migração de anexos e indicadores legados |
+| `src/features/acesso/` | Regras legadas e confirmação atual pelo servidor |
+| `src/features/auditoria/` | Histórico e relatórios auditáveis |
+| `src/features/dashboard/` | Indicadores, resumo executivo e filtros interativos |
+| `src/features/dados/` | Importação e exportação |
+| `src/features/*.js` | Complementos existentes: pendências, matriz de treinamentos, portaria e visualização documental |
+| `src/backend/` | Contexto, requisições autenticadas, sessão/perfil, permissões, usuários, persistência e inicialização |
+| `src/security/` | Sanitização e proteção de conteúdo no navegador |
+| `src/platform/` | Service worker e limites do cache público |
+| `src/styles/` | Aparência geral, autenticação, pendências e portaria |
+| `supabase/` | Funções e controles do servidor e do banco |
+| `tests/` | Verificações de segurança, regras, sincronização e instalação |
+| `deploy/internal/` | Preparação de instalação independente e backup |
+
+## Fonte e arquivos gerados
+
+`scripts/sources.json` é o mapa oficial: informa quais fontes compõem cada arquivo entregue ao navegador e em qual ordem. `scripts/build.cjs` junta essas fontes sem acrescentar escopos, renomear funções, executar código ou transformar as regras. Não usa downloads nem ferramentas de compilação externas.
+
+Os arquivos `assets/js/*`, `assets/css/*`, `security.js`, `access.js`, `documentos.js`, `relatorios.js` e `service-worker.js` são **gerados**. Os nomes da raiz foram mantidos para compatibilidade. Não corrigir os gerados diretamente: a próxima montagem substituiria a correção. Editar a fonte em `src/` e gerar novamente.
+
+```sh
+npm ci
+npm run build
+npm test
+```
+
+`npm run build` monta os arquivos e atualiza a política de carregamento do HTML. `npm test` recusa arquivos gerados diferentes de suas fontes e verifica sintaxe, propriedade única de cada fonte, ordem de carregamento, cache e os testes funcionais existentes. A CI também monta e exige que essa montagem não deixe diferenças em relação ao commit.
+
+Para adicionar uma fonte, registrar no grupo adequado de `scripts/sources.json`. Para criar um novo arquivo entregue ao navegador, registrar também sua posição em `index.html` e no cache público em `src/platform/service-worker.js`; a verificação de estrutura acusa referências ausentes. Ao publicar mudanças em arquivos já existentes, atualizar a versão das URLs afetadas no HTML/cache e o nome do cache tanto em `src/platform/service-worker.js` quanto na lista de cache preservado em `src/security/browser.js`. Isso evita reutilizar conteúdo antigo no navegador. O pacote interno obtém os arquivos gerados pelo mesmo mapa, sem copiar todo o repositório para a pasta pública.
+
+## Por que ainda há compatibilidade legada
+
+A base possui substituições sucessivas de funções e estado global. Nesta primeira organização, a ordem, o escopo original e os corpos das funções foram preservados: 7 blocos de JavaScript e 5 blocos de estilos extraídos mantiveram seus bytes originais. A divisão do bloco principal por área foi feita em fronteiras de declarações; a montagem preserva o mesmo bloco inteiro para manter o comportamento de funções declaradas adiante.
+
+Os arquivos `src/backend/*.part.js` são fragmentos de uma única função de inicialização fechada: compartilham variáveis privadas e **não devem ser carregados individualmente**, executados com Node ou convertidos isoladamente para módulos. Seu conjunto é verificado sintaticamente após a montagem. Esse cuidado preserva o encapsulamento já existente de sessão e permissões.
+
+`extractedSha256` no mapa registra a origem desta extração; não é o hash da versão atual nem bloqueia futuras alterações. As verificações permanentes comparam os gerados com suas fontes atuais.
+
+Esta organização não afirma que todas as dependências globais ou versões legadas foram removidas. A próxima refatoração pode retirar substituições antigas e introduzir interfaces explícitas por área, uma de cada vez, com testes. Até lá, ao localizar várias definições de uma função, conferir qual atribuição vence na ordem do mapa antes de editar. A confirmação oficial de acesso continua no servidor; as regras legadas não devem substituir essa confirmação.
+
+## Controle e validação desta mudança
+
+- HTML reduzido de 370.229 para aproximadamente 35 mil bytes, mantendo a marcação das telas.
+- Nenhuma tabela, política, conta, documento ou registro de negócio alterado.
+- Testes existentes executam os arquivos separados na ordem real. Testes isolados de regras e sincronização usam um carregador que reconstitui os antigos blocos apenas no ambiente de teste.
+- O pacote interno continua gerando uma configuração independente, com dependências de leitura locais e sem endereço do serviço hospedado.
+- Testes com backend simulado não são login real; homologação autenticada, restauração de backup e ensaio de servidor continuam pendentes.
+- Para reversão de código, usar o commit anterior completo, incluindo HTML e cache; não reverter apenas um arquivo gerado. Não é necessário reverter banco nesta organização.

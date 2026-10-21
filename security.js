@@ -12,7 +12,7 @@
   window.sstClearPrivateData = function(){window.sstPrivateRevision++;memory.clear();for(const key of privateKeys)nativeRemove.call(storage,key);sessionStorage.removeItem('tss_auth_session');};
   window.sstPurgePrivateCaches = async function(){
     if(!window.caches)return;
-    for(const key of await caches.keys())if(key.startsWith('portal-terceiros-sst-')&&key!=='portal-terceiros-sst-security-20261021-2')await caches.delete(key);
+    for(const key of await caches.keys())if(key.startsWith('portal-terceiros-sst-')&&key!=='portal-terceiros-sst-organization-20261021-1')await caches.delete(key);
   };
   window.sstPurgePrivateCaches().catch(()=>{});
   if(!window.DOMPurify?.isSupported){window.sstSecurityReady=false;return;}

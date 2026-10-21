@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const html=require('./source-loader.cjs').inlineEquivalent(fs.readFileSync(__dirname+'/../index.html','utf8'));
 const block=html.slice(html.indexOf('  let auditBaseline = null'),html.indexOf('\n  function scheduleRemoteSync'));
 let local={schema:'test',terceiros:[{id:'1',nome:'Ana'}]}, prompts=0,writes=0,reason='Correção cadastral',fail=false,scheduled=0;
 const ctx=vm.createContext({JSON,Object,Error,isApplyingRemote:false,can:()=>true,readLocalState:()=>structuredClone(local),prompt:()=>{prompts++;return reason},SUPABASE_URL:'test',authorizedFetch:async(_,opts)=>{writes++;const data=JSON.parse(opts.body);assert.equal(data.p_reason,'Correção cadastral');assert.equal(data.p_expected,'stamp');return {ok:!fail,json:async()=>fail?{message:'Conflito'}:'next'}},localStorage:{setItem(){}},LOCAL_SYNC_MARK:'s',LOCAL_CHANGE_MARK:'c',applyRemoteState:s=>{local=structuredClone(s)},renderEverythingSafe(){},scheduleRemoteSync:()=>scheduled++});

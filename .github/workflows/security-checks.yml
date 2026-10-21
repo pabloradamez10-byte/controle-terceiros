@@ -13,6 +13,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: python3 deploy/internal/download-assets.py "$RUNNER_TEMP/sst-ocr-assets"
+      - run: npm run build
+      - run: git diff --exit-code
       - run: npm test
         env:
           SST_TEST_OCR_ASSETS: ${{ runner.temp }}/sst-ocr-assets

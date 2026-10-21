@@ -1,0 +1,22 @@
+
+  /* V22 - Inteligência de Pendências + Acessos */
+  .v22-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin: 14px 0 20px; }
+  .v22-card { background:#fff; border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow:var(--shadow); cursor:pointer; transition:.15s; }
+  .v22-card:hover { transform: translateY(-2px); border-color:var(--accent); box-shadow:0 0 0 3px rgba(21,94,239,.10), var(--shadow); }
+  .v22-card .label { font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:900; color:var(--muted); }
+  .v22-card .value { font-size:30px; font-weight:900; margin-top:8px; }
+  .v22-card .hint { color:var(--muted); font-size:12px; margin-top:6px; display:block; }
+  .v22-danger .value { color:var(--danger); }
+  .v22-warn .value { color:var(--warn); }
+  .v22-ok .value { color:var(--ok); }
+  .v22-blue .value { color:var(--accent); }
+  .v22-list { display:grid; gap:10px; }
+  .v22-row { border:1px solid var(--border); border-radius:14px; padding:14px; background:#fff; cursor:pointer; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .v22-row:hover { border-color:var(--accent); box-shadow:0 0 0 3px rgba(21,94,239,.10); }
+  .v22-row strong { display:block; font-size:15px; }
+  .v22-row small { display:block; color:var(--muted); margin-top:3px; font-size:12px; }
+  .v22-access-panel { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
+  .v22-access-box { border:1px solid var(--border); border-radius:14px; background:var(--bg-soft); padding:12px; }
+  .v22-access-box label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:900; }
+  .v22-access-box div { margin-top:5px; font-weight:800; }
+  @media(max-width:700px){ .v22-grid{grid-template-columns:1fr;} .v22-row{display:block;} .v22-access-panel{grid-template-columns:1fr;} }

@@ -10,7 +10,7 @@ try{
  assert.throws(()=>build({...options,origin:'http://sst.interno.example'}),/HTTPS/);
  if(assets){
   const result=build(options),html=fs.readFileSync(path.join(options.out,'index.html'),'utf8'),docs=fs.readFileSync(path.join(options.out,'documentos.js'),'utf8');
-  assert.ok(result.files.length>20);assert.ok(!html.includes('obzycbtfbadjwwwfpsed'));assert.ok(!html.includes('fonts.googleapis.com'));assert.ok(html.includes("location.origin + '/backend'"));
+  assert.ok(result.files.length>20);assert.ok(!html.includes('obzycbtfbadjwwwfpsed'));assert.ok(!html.includes('fonts.googleapis.com'));assert.ok(fs.readFileSync(path.join(options.out,'assets/js/backend-sessao-usuarios.js'),'utf8').includes("location.origin + '/backend'"));
   assert.ok(!docs.includes('https://'));assert.ok(docs.includes('corePath:new URL'));assert.ok(docs.includes('langPath:new URL'));assert.ok(docs.includes('workerPath:new URL'));
   for(const s of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))if(s[1].trim())assert.ok(html.includes("'sha256-"+crypto.createHash('sha256').update(s[1]).digest('base64')+"'"));
   assert.ok(!fs.existsSync(path.join(options.out,'supabase')));assert.ok(!fs.existsSync(path.join(options.out,'.env')));

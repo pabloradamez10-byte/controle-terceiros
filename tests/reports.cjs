@@ -21,7 +21,7 @@ assert.throws(()=>core.intervals({...report,snapshots:[{...snap,rule_version:'un
 assert.equal(core.eventLabel({entity_type:'sst_excecoes',before_data:{dados:{ativo:true}},after_data:{dados:{ativo:false}}}),'AUTORIZAÇÃO CANCELADA');
 assert.ok(core.csv([{...rows[0],name:'=HYPERLINK("x")'}]).includes('"\'=HYPERLINK(""x"")"'));
 // Compare historical evaluator with the actual app rules, including exception coverage.
-const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const html=require('./source-loader.cjs').inlineEquivalent(fs.readFileSync(__dirname+'/../index.html','utf8'));
 const dp=html.slice(html.indexOf('  getStatusDP = function(t)'),html.indexOf('  const _renderDashboardV103'));
 const base=html.slice(html.indexOf('  function getStatusBaseSemExcecao'),html.indexOf('  function statusImportadoLiberado'));
 const finalStart=html.indexOf('  getStatus = function(t)',html.indexOf('  function statusImportadoNegado'));

@@ -28,6 +28,7 @@ async function main(){
  // CSP permits only the exact inline script bodies and disables inline event handlers.
  const html=read('index.html'),policy=html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];assert.ok(policy.includes("script-src-attr 'none'"));assert.ok(!policy.match(/script-src [^;]*'unsafe-inline'/));assert.ok(!policy.includes("'unsafe-eval'"));
  for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))if(m[1].trim())assert.ok(policy.includes("'sha256-"+crypto.createHash('sha256').update(m[1]).digest('base64')+"'"),'Inline CSP hash out of date');
+ assert.equal([...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].filter(m=>m[1].trim()).length,0,'No application JavaScript in HTML');
  // Real application scripts, fake authenticated backend: render, navigation and logout.
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message)});
  const app=new JSDOM(html,{url:'https://sst.invalid/controle-terceiros/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc}),a=app.window;
@@ -36,7 +37,7 @@ async function main(){
  a.fetch=async(url,options={})=>{requests.push({url,options});let body;if(url.includes('/auth/v1/user'))body={id:'fixture-user',email:'fixture@example.invalid'};else if(url.includes('/sst_members?'))body=[{role:'admin',ativo:true,permissoes:{consultar:true,cadastrar:true,liberar:true}}];else if(url.endsWith('/rpc/sst_read_state'))body=[{key:'controle_terceiros_sst_state_v1',data:state,updated_at:'2026-10-21T12:00:00'}];else if(url.endsWith('/rpc/sst_read_exceptions'))body=[];else if(url.endsWith('/rpc/sst_access_now'))body={rule_version:'sst-access-v1',generated_at:'2026-10-21T12:00:00Z',server_day:'2026-10-21',state_version:'2026-10-21T12:00:00',statuses:{p1:{status:'LIBERADO',ok:true,motivos:[],avisos:[],dp:{motivos:[],avisos:[]},sesmt:{motivos:[],avisos:[]}}}};else if(url.includes('/auth/v1/logout'))body={};else throw Error('Unexpected request '+url);return {ok:true,status:200,json:async()=>body,text:async()=>JSON.stringify(body)}};
  a.sessionStorage.setItem('tss_auth_session',JSON.stringify({access_token:'fixture',refresh_token:'fixture',expires_at:Math.floor(Date.now()/1000)+3600}));
  a.eval(read('vendor/purify-3.4.17.min.js'));a.eval(read('security.js'));a.eval(read('access.js'));a.eval(read('vendor/xlsx-0.20.3.full.min.js'));
- for(const script of a.document.querySelectorAll('script:not([src])'))if(script.textContent.trim())a.eval(script.textContent);
+ for(const script of a.document.querySelectorAll('script[src^="./assets/js/"]'))a.eval(read(script.getAttribute('src').slice(2)));
  a.eval(read('documentos.js'));a.eval(read('relatorios.js'));
  a.document.dispatchEvent(new a.Event('DOMContentLoaded'));await new Promise(r=>setTimeout(r,180));
  assert.equal(a.document.body.classList.contains('tss-authenticated'),true,errors.join('\n'));
