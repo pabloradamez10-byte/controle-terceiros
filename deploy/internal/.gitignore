@@ -1,0 +1,8 @@
+.env
+releases/
+ocr-assets/
+backups/
+tls/
+*.dump
+*.age
+*.partial

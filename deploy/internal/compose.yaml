@@ -1,0 +1,18 @@
+# Frontend only. The backend is the official, reviewed Supabase self-hosted stack.
+# Pin an approved Nginx image by digest in the server's environment.
+services:
+  sst-web:
+    image: ${SST_NGINX_IMAGE:?Set an approved nginx image with sha256 digest}
+    restart: unless-stopped
+    ports:
+      - "${SST_BIND_IP:?Set the internal LAN address}:443:443"
+    volumes:
+      - ${SST_RELEASE_DIR:?Set absolute release path}:/srv/sst:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${SST_TLS_DIR:?Set certificate directory}:/etc/nginx/tls:ro
+    networks:
+      - sst-backend
+networks:
+  sst-backend:
+    external: true
+    name: ${SST_BACKEND_NETWORK:?Set the official stack private network with kong alias}
