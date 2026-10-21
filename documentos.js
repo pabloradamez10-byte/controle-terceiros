@@ -140,7 +140,7 @@
       if (!item || !canView()) return;
       if (button.dataset.action === 'view') return window.v26VisualizarDataUrl(item.dataUrl,item.mime,item.nome);
       if (button.dataset.action === 'download') {
-        const a = document.createElement('a'); a.href = item.dataUrl; a.download = item.nome; a.click(); return;
+        const a = document.createElement('a'); a.href = window.sstSafeDocumentURL(item.dataUrl); a.download = item.nome; a.click(); return;
       }
       if (!canEdit()) return;
       if (button.dataset.action === 'remove') {

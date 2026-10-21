@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob: 'sha256-7PfVOE5hAyri04qbzFpt0jpG7qmQLlXtbtpmN2UPa2g=' 'sha256-yW7E+EXBj60XyU9T7GYBPy9QReRN5/w8sI/RdfM4Ofw=' 'sha256-7U/vPv8CYJ6249NkHXwX90RfK3y5c90yHV+zn4VYxxc=' 'sha256-FH5AmZO0HsOIOYjfCuZf6YpuuxB0oDPdmfBGT+jBDAY=' 'sha256-VuKEL2yCONcl0A9onWzL94OKcgu18OpIvFAOEJBN3QM=' 'sha256-vibn1PVWu9bg7TcBoAwAxLvFO/cFvjatoDSRiz4XBTQ=' 'sha256-fOWWcv5m3aF8E86SAdF18IPSrwXDjy2WX5A3Y4KBZXM='; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://obzycbtfbadjwwwfpsed.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <script src="./vendor/purify-3.4.17.min.js" integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx" crossorigin="anonymous"></script>
+  <script src="./security.js?v=20261021-1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Portal Terceiros SST</title>
   <meta name="theme-color" content="#1B4FD8" />
@@ -1363,7 +1366,7 @@
 <!-- ═══════════ TOAST ═══════════ -->
 <div id="toast-container"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="./vendor/xlsx-0.20.3.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 
 <script>
   // ──────────────────────────────────────────────────
@@ -1862,7 +1865,7 @@
     }
     wrap.innerHTML = bloqueados.map(t => `
       <div class="dash-item" role="button" tabindex="0" onclick="abrirAnalise('${t.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){abrirAnalise('${t.id}')}">
-        <div><strong>${t.nome}</strong><small>${t.empresa || 'Sem empresa'} • ${t.cpf || 'CPF não informado'}</small></div>
+        <div><strong>${escapeHtmlSafeV131(t.nome)}</strong><small>${escapeHtmlSafeV131(t.empresa || 'Sem empresa')} • ${t.cpf || 'CPF não informado'}</small></div>
         <div class="dash-motivos">${t.status.motivos.slice(0,3).join('<br>')}</div>
       </div>`).join('');
   }
@@ -1903,8 +1906,8 @@
       const sesmtBadge = stSESMT.ok ? '<span class="badge badge-ok">SESMT OK</span>' : '<span class="badge badge-blocked">SESMT Bloq.</span>';
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="td-name">${t.nome}</td>
-        <td class="td-cpf">${t.cpf}</td>
+        <td class="td-name">${escapeHtmlSafeV131(t.nome)}</td>
+        <td class="td-cpf">${escapeHtmlSafeV131(t.cpf)}</td>
         <td class="td-company">${t.empresa}</td>
         <td>${fmtData(t.aso)}${asoTag}</td>
         <td>${fmtData(t.integ)}${integTag}</td>
@@ -2115,7 +2118,7 @@
       const ativo = t.ativo !== false;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="td-name">${t.nome}</td>
+        <td class="td-name">${escapeHtmlSafeV131(t.nome)}</td>
         <td>${t.validade || 12} meses</td>
         <td>${ativo ? '<span class="badge badge-ok">Ativo</span>' : '<span class="badge badge-blocked">Inativo</span>'}</td>
         <td>
@@ -2140,7 +2143,7 @@
     wrap.innerHTML = lista.map(t => `
       <label class="check-card">
         <input type="checkbox" class="emp-treino-check" value="${t.id}" ${selectedIds.includes(t.id) ? 'checked' : ''}>
-        <span><strong>${t.nome}</strong><small>Validade padrão: ${t.validade || 12} meses</small></span>
+        <span><strong>${escapeHtmlSafeV131(t.nome)}</strong><small>Validade padrão: ${t.validade || 12} meses</small></span>
       </label>`).join('');
   }
 
@@ -2314,11 +2317,11 @@
     document.getElementById('analise-conteudo').innerHTML = `
       <div class="result-status">
         <div class="status-icon ${st.ok ? 'ok' : 'blocked'}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${st.ok ? '<polyline points="20 6 9 17 4 12"/>' : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'}</svg></div>
-        <div><div class="status-label ${st.ok ? 'ok' : 'blocked'}">${st.ok ? 'ACESSO LIBERADO' : 'ACESSO NEGADO'}</div><div class="status-sub">${t.nome} • ${t.empresa || 'Sem empresa'}</div></div>
+        <div><div class="status-label ${st.ok ? 'ok' : 'blocked'}">${st.ok ? 'ACESSO LIBERADO' : 'ACESSO NEGADO'}</div><div class="status-sub">${escapeHtmlSafeV131(t.nome)} • ${escapeHtmlSafeV131(t.empresa || 'Sem empresa')}</div></div>
       </div>
       <div class="result-info">
-        <div class="info-item"><label>CPF</label><span>${t.cpf}</span></div>
-        <div class="info-item"><label>Função</label><span>${t.funcao || '—'}</span></div>
+        <div class="info-item"><label>CPF</label><span>${escapeHtmlSafeV131(t.cpf)}</span></div>
+        <div class="info-item"><label>Função</label><span>${escapeHtmlSafeV131(t.funcao || '—')}</span></div>
         <div class="info-item"><label>Contrato Empresa</label><span>${empresa?.contratoFim ? fmtData(empresa.contratoFim) + ' ' + tagData(empresa.contratoFim) : 'Não informado'}</span></div>
         <div class="info-item"><label>ASO</label><span>${fmtData(t.aso)} ${tagData(t.aso)}</span></div>
       </div>
@@ -2572,7 +2575,7 @@
       </div>
       <div class="analysis-section">
         <strong>Histórico de alterações</strong>
-        <div class="history-list">${historico.length ? historico.slice(0,10).map(h => `<div class="history-item"><strong>${new Date(h.data).toLocaleString('pt-BR')}</strong><br>${h.descricao}</div>`).join('') : '<p style="font-size:13px;color:var(--muted);margin-top:8px;">Sem histórico registrado para este terceiro.</p>'}</div>
+        <div class="history-list">${historico.length ? historico.slice(0,10).map(h => `<div class="history-item"><strong>${new Date(h.data).toLocaleString('pt-BR')}</strong><br>${escapeHtmlSafeV131(h.descricao)}</div>`).join('') : '<p style="font-size:13px;color:var(--muted);margin-top:8px;">Sem histórico registrado para este terceiro.</p>'}</div>
       </div>`;
     box.insertAdjacentHTML('beforeend', extra);
   };
@@ -2683,8 +2686,9 @@
     ];
     const win = window.open('', '_blank');
     if (!win) { toast('Não foi possível abrir o relatório. Verifique bloqueio de pop-up.'); return; }
-    win.document.write(linhas.join(''));
+    win.document.write(window.sstSanitizeHTML(linhas.join(''),true));
     win.document.close();
+    win.document.querySelectorAll('[data-sst-click]').forEach(button=>{try{if(JSON.parse(button.getAttribute('data-sst-click')).kind==='print')button.addEventListener('click',()=>win.print());}catch(error){}});
   }
 
   const _renderDashboardV11 = renderDashboard;
@@ -2834,7 +2838,7 @@
         <button class="match-item" onclick="consultarPortariaPorId('${t.id}')">
           <span>
             <strong>${t.nome || 'Sem nome'}</strong>
-            <small>${t.empresa || 'Sem empresa'} • ${t.funcao || 'Sem função'} • ${t.cpf || 'Sem CPF'}</small>
+            <small>${escapeHtmlSafeV131(t.empresa || 'Sem empresa')} • ${t.funcao || 'Sem função'} • ${t.cpf || 'Sem CPF'}</small>
           </span>
           ${badge}
         </button>`;
@@ -3304,7 +3308,7 @@
       const classe = t.status.bloqueado ? 'dash-motivos' : 'dash-motivos warn';
       return `
         <div class="dash-item" role="button" tabindex="0" data-terceiro-id="${t.id}" style="cursor:pointer;">
-          <div><strong>${t.nome}</strong><small>${t.empresa || 'Sem empresa'} • ${t.cpf || 'CPF não informado'}</small></div>
+          <div><strong>${escapeHtmlSafeV131(t.nome)}</strong><small>${escapeHtmlSafeV131(t.empresa || 'Sem empresa')} • ${t.cpf || 'CPF não informado'}</small></div>
           <div class="${classe}">${resumo}</div>
         </div>`;
     }).join('');
@@ -3990,7 +3994,7 @@
     const a = getArquivosTerceiroV16(id).find(x => x.id === arqId);
     if (!a) return;
     const link = document.createElement('a');
-    link.href = a.dataUrl;
+    link.href = window.sstSafeDocumentURL(a.dataUrl);
     link.download = a.nome || 'documento';
     document.body.appendChild(link);
     link.click();
@@ -4006,7 +4010,7 @@
     box.insertAdjacentHTML('beforeend', `
       <div class="analysis-section" id="v16-doc-section">
         <strong>Documentos digitais anexados</strong>
-        <p style="font-size:13px;color:var(--muted);margin-top:6px;">Use para anexar ASO, integração, certificados de NR, ficha de EPI, contrato/ficha de registro e outros documentos. Nesta versão, os arquivos ficam salvos no navegador.</p>
+        <p style="font-size:13px;color:var(--muted);margin-top:6px;">Use para anexar ASO, integração, certificados de NR, ficha de EPI, contrato/ficha de registro e outros documentos. Os arquivos são sincronizados com o banco e consultados durante a sessão autorizada.</p>
         <div class="v16-doc-form">
           <div><label>Tipo de documento</label><select id="v16-doc-tipo"><option>ASO</option><option>Integração</option><option>Certificado NR</option><option>Ficha EPI</option><option>Contrato/Ficha Registro</option><option>CNH</option><option>Documento DP</option><option>Outro</option></select></div>
           <div><label>Validade, se houver</label><input id="v16-doc-validade" type="date"></div>
@@ -6085,7 +6089,7 @@
         <div class="v24-info"><small>Nome</small><strong>${t.nome || '—'}</strong></div>
         <div class="v24-info"><small>CPF</small><strong>${t.cpf || 'Sem CPF'}</strong></div>
         <div class="v24-info"><small>Empresa</small><strong>${t.empresa || emp.razao || emp.fantasia || '—'}</strong></div>
-        <div class="v24-info"><small>Função</small><strong>${t.funcao || '—'}</strong></div>
+        <div class="v24-info"><small>Função</small><strong>${escapeHtmlSafeV131(t.funcao || '—')}</strong></div>
       </div>
       <div class="v24-semaforo">
         ${linhaSemaforo('ASO', t.aso)}
@@ -6134,7 +6138,7 @@
     if (matches) {
       matches.innerHTML = found.slice(0,30).map(t => {
         const se = statusExpress(t);
-        return `<button class="v24-match-card" onclick="v24AbrirExpress('${t.id}')"><strong>${t.nome || 'Sem nome'}</strong><small>${t.empresa || 'Sem empresa'} • ${t.funcao || 'Sem função'} • ${t.cpf || 'Sem CPF'} • ${se.titulo}</small></button>`;
+        return `<button class="v24-match-card" onclick="v24AbrirExpress('${t.id}')"><strong>${t.nome || 'Sem nome'}</strong><small>${escapeHtmlSafeV131(t.empresa || 'Sem empresa')} • ${t.funcao || 'Sem função'} • ${t.cpf || 'Sem CPF'} • ${se.titulo}</small></button>`;
       }).join('');
       matches.style.display='grid';
     }
@@ -6456,7 +6460,7 @@
 
   function downloadDataUrl(dataUrl, nome){
     const link = document.createElement('a');
-    link.href = dataUrl;
+    link.href = window.sstSafeDocumentURL(dataUrl);
     link.download = nome || 'documento';
     document.body.appendChild(link);
     link.click();
@@ -6466,6 +6470,7 @@
   window.v26VisualizarDataUrl = function(dataUrl, mime, nome){
     ensureV26Style();
     if (!dataUrl) { msg('Documento não encontrado.'); return; }
+    try {dataUrl=window.sstSafeDocumentURL(dataUrl);}catch(error){msg(error.message);return;}
     const tipo = (mime || '').toLowerCase();
     const overlay = document.createElement('div');
     overlay.className = 'v26-doc-preview-overlay';
@@ -6640,6 +6645,7 @@
   const SESSION_KEY = 'tss_auth_session';
   const EXCEPTIONS_ENDPOINT = SUPABASE_URL + '/rest/v1/sst_excecoes';
   let session = null;
+  let sessionGeneration=0,loggingOut=false;
   let exceptionCache = {};
   let membership = null;
   const USER_FUNCTION = SUPABASE_URL + '/functions/v1/sst-usuarios';
@@ -6741,12 +6747,14 @@
 
   function authError(message){ document.getElementById('tss-auth-error').textContent = message || ''; }
   async function authToken(grant, credentials){
+    const generation=sessionGeneration;
     const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=' + grant, {
       method:'POST', headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},
       body:JSON.stringify(credentials)
     });
     const data = await res.json();
     if (!res.ok || !data.access_token) throw new Error('Não foi possível entrar. Confira o e-mail e a senha.');
+    if(generation!==sessionGeneration)throw new Error('Sessão encerrada.');
     session = data;
     session.expires_at = Math.floor(Date.now()/1000) + (data.expires_in || 3600);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -6763,8 +6771,11 @@
     return true;
   }
   async function authorizedFetch(url, options={}){
-    if (!await ensureSession()) throw new Error('Sessão expirada. Entre novamente.');
-    return fetch(url, {...options, headers:sbHeaders(options.headers)});
+    if (!await ensureSession()) {forgetSession();location.reload();throw new Error('Sessão expirada. Entre novamente.');}
+    const generation=sessionGeneration;
+    const response=await fetch(url, {...options,cache:'no-store',headers:sbHeaders(options.headers)});
+    if(generation!==sessionGeneration)throw new Error('Sessão encerrada.');
+    return response;
   }
   function lockApp(message){
     document.body.classList.remove('tss-authenticated');
@@ -6785,7 +6796,25 @@
       document.body.appendChild(button);
     }
   }
-  window.tssSair = function(){ document.getElementById('tss-audit-open')?.remove(); window.tssUsuarioAtual=()=>null; session = null; membership = null; sessionStorage.removeItem(SESSION_KEY); exceptionCache = {}; lockApp(); };
+  function forgetSession(){
+    sessionGeneration++; clearTimeout(syncTimer);
+    session=null; membership=null; exceptionCache={}; auditBaseline=null; auditStamp=null;
+    window.tssUsuarioAtual=()=>null; window.sstClearPrivateData();
+    document.querySelector('main')?.replaceChildren();
+    document.querySelectorAll('[id^="modal-"],#tss-users-modal,.sst-sensitive-dialog,.sst-report-overlay,.v26-doc-preview-overlay').forEach(node=>{node.replaceChildren();node.hidden=true;});
+    lockApp('Sessão encerrada.');
+  }
+  window.tssSair = async function(){
+    if(loggingOut)return; loggingOut=true;
+    const token=session?.access_token;
+    forgetSession();
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+    try {
+      await window.sstPurgePrivateCaches();
+      if(token)await fetch(SUPABASE_URL+'/auth/v1/logout?scope=local',{method:'POST',cache:'no-store',keepalive:true,signal:controller.signal,headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+token}});
+    }catch(error){console.warn('[SST] Sessão local encerrada; revogação remota não confirmada.');}
+    finally {clearTimeout(timer);location.reload();}
+  };
   async function loadMembership(){
     const userRes = await authorizedFetch(SUPABASE_URL + '/auth/v1/user');
     if (!userRes.ok) throw new Error('Conta não validada');
@@ -6805,7 +6834,7 @@
     const button=document.createElement('button'); button.id='tss-audit-open'; button.className='btn btn-ghost'; button.textContent='Auditoria';
     document.getElementById('tss-users-open').after(button);
     button.onclick=()=>{
-      const overlay=document.createElement('div');
+      const overlay=document.createElement('div'); overlay.className='sst-sensitive-dialog';
       overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:#0008;padding:24px;overflow:auto';
       overlay.innerHTML='<section style="background:white;padding:20px;border-radius:12px;max-width:1100px;margin:auto"><button class="btn btn-ghost" data-close>Fechar</button><h2>Auditoria de alterações</h2><p>Autor pelo login · horário do banco · motivo informado. Registros anteriores à ativação não possuem esta auditoria.</p><label>Pesquisar nos registros carregados <input data-search placeholder="Nome, e-mail ou motivo"></label><div data-rows></div><button class="btn btn-ghost" data-more>Carregar mais</button></section>';
       document.body.appendChild(overlay); overlay.querySelector('[data-close]').onclick=()=>overlay.remove();
@@ -6921,7 +6950,7 @@
         if (['excluir','excluirEmpresa'].includes(name) && membership?.role !== 'admin') { toast('⚠ Exclusão exige ADM.'); return; }
         return original.apply(this,arguments);
       };
-      try { eval(name + ' = window[name]'); } catch(e) {}
+      // The global binding is updated through window[name].
     }
     const originalException = window.salvarLiberacaoExcecao;
     window.salvarLiberacaoExcecao = function(){
@@ -6939,9 +6968,10 @@
   window.tssExceptionStore = {
     getAll:()=>exceptionCache,
     async reload(){
-      const res = await authorizedFetch(EXCEPTIONS_ENDPOINT + '?select=terceiro_id,dados');
+      const res = await authorizedFetch(SUPABASE_URL+'/rest/v1/rpc/sst_read_exceptions',{method:'POST',body:'{}'});
       if (!res.ok) throw new Error('Falha ao consultar exceções: ' + res.status);
       const rows = await res.json();
+      if(!session||!can('consultar'))throw new Error('Sessão encerrada.');
       exceptionCache = Object.fromEntries(rows.map(row => [row.terceiro_id,row.dados]));
       return exceptionCache;
     },
@@ -6958,13 +6988,13 @@
   };
 
   async function fetchRemoteState(){
-    const url = ENDPOINT + '?key=eq.' + encodeURIComponent(STATE_KEY) + '&select=key,data,updated_at&limit=1';
-    const res = await authorizedFetch(url);
+    const res = await authorizedFetch(SUPABASE_URL+'/rest/v1/rpc/sst_read_state',{method:'POST',body:'{}'});
     if (!res.ok) {
       const txt = await res.text().catch(()=> '');
       throw new Error('Falha ao consultar Supabase: ' + res.status + ' ' + txt.slice(0,180));
     }
     const rows = await res.json();
+    if(!session||!can('consultar'))throw new Error('Sessão encerrada.');
     if(rows[0]) { auditStamp=rows[0].updated_at; auditBaseline=rows[0].data; }
     return rows && rows[0] ? rows[0] : null;
   }
@@ -7072,7 +7102,7 @@
       };
       wrapped.__tssWrappedV28 = true;
       window[name] = wrapped;
-      try { eval(name + ' = window["' + name + '"]'); } catch(e) {}
+      // Global function bindings already follow their window property.
     };
 
     [
@@ -7083,6 +7113,7 @@
   }
 
   async function initSupabaseReal(){
+    if(!window.sstSecurityReady){lockApp('Não foi possível carregar a proteção do aplicativo. Atualize a página.');return;}
     wrapLocalSavers();
     updateBancoBadge('loading');
     try {
@@ -7106,7 +7137,7 @@
 
   document.getElementById('tss-auth-form').addEventListener('submit', async event => {
     event.preventDefault();
-    if (document.getElementById('tss-new-password')) return;
+    if (loggingOut || document.getElementById('tss-new-password')) return;
     authError('Entrando...');
     try {
       await authToken('password', {
@@ -7208,7 +7239,7 @@
 </script>
 
 
-<script src="./documentos.js?v=20261020-3"></script>
+<script src="./documentos.js?v=20261021-1"></script>
 <script src="./relatorios.js?v=20261020-1"></script>
 </body>
 </html>

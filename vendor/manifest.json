@@ -1,0 +1,10 @@
+{
+  "xlsx-0.20.3.full.min.js": {
+    "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41",
+    "bytes": 951904
+  },
+  "purify-3.4.17.min.js": {
+    "sha256": "cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31",
+    "bytes": 29828
+  }
+}

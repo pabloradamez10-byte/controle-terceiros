@@ -1,0 +1,1 @@
+{"name":"sst-security-checks","private":true,"version":"1.0.0","scripts":{"test":"node tests/security.cjs && node tests/audit-sync.cjs && node tests/reports.cjs","csp":"node scripts/update-csp.cjs"},"devDependencies":{"jsdom":"26.1.0"}}
