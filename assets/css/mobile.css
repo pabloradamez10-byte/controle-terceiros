@@ -1,7 +1,23 @@
-/* SST Manager - acabamento mobile v1 (2026-10-22) */
+/* SST Manager - acabamento mobile v2 (2026-10-22) */
 
-@media (max-width: 860px) {
+/*
+  A camada mobile entra por largura OU por característica de dispositivo de toque.
+  Isso evita que Android/PWA em modo de viewport "desktop" receba o layout de PC.
+  Em computadores comuns (ponteiro preciso/mouse), nada abaixo é aplicado acima de 860px.
+*/
+@media (max-width: 860px), (hover: none) and (pointer: coarse) {
   body { -webkit-text-size-adjust: 100%; }
+
+  #tss-auth-overlay form {
+    width: min(460px, calc(100vw - 24px));
+    padding: 24px 20px;
+  }
+
+  #tss-auth-overlay h2 { font-size: 24px; }
+  #tss-auth-overlay p { font-size: 14px; line-height: 1.4; }
+  #tss-auth-overlay label { font-size: 14px; }
+  #tss-auth-overlay input,
+  #tss-auth-overlay button { min-height: 48px; font-size: 16px; }
 
   header {
     position: sticky;
@@ -15,15 +31,15 @@
   }
 
   .brand {
-    min-height: 38px;
+    min-height: 40px;
     justify-content: center;
-    font-size: 15px;
+    font-size: 17px;
   }
 
   nav {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     overflow: visible;
     padding: 0;
@@ -31,11 +47,11 @@
 
   nav button {
     width: 100%;
-    min-height: 42px;
-    padding: 7px 4px;
+    min-height: 44px;
+    padding: 8px 5px;
     border: 1px solid transparent;
     border-radius: 11px;
-    font-size: 11.5px;
+    font-size: 13.5px;
     line-height: 1.15;
     text-align: center;
     white-space: normal;
@@ -49,15 +65,15 @@
   main { padding: 16px 12px 36px; }
 
   .hero {
-    padding: 17px 18px;
+    padding: 18px;
     margin-bottom: 16px;
     border-radius: 17px;
   }
 
-  .hero h1 { font-size: 20px; margin-bottom: 4px; }
-  .hero p { font-size: 12.5px; line-height: 1.4; }
+  .hero h1 { font-size: 24px; margin-bottom: 5px; }
+  .hero p { font-size: 14px; line-height: 1.45; }
 
-  h2 { font-size: 22px; margin-bottom: 16px; }
+  h2 { font-size: 24px; margin-bottom: 16px; }
 
   .page-actions {
     align-items: stretch;
@@ -85,7 +101,9 @@
   .btn,
   input,
   select,
-  textarea { min-height: 44px; }
+  textarea { min-height: 46px; font-size: 16px; }
+
+  .btn { font-size: 15px; }
 
   .card {
     padding: 17px;
@@ -93,6 +111,8 @@
     border-radius: 16px;
     box-shadow: var(--shadow-sm);
   }
+
+  .card-title { font-size: 13px; }
 
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -102,18 +122,18 @@
 
   .stat-card {
     min-width: 0;
-    padding: 13px;
+    padding: 15px;
     border-radius: 15px;
   }
 
   .stat-label {
-    font-size: 10.5px;
-    line-height: 1.25;
+    font-size: 12px;
+    line-height: 1.3;
   }
 
   .stat-value {
     margin-top: 6px;
-    font-size: 24px;
+    font-size: 28px;
   }
 
   .stat-hint { display: none; }
@@ -125,13 +145,13 @@
   }
 
   .mini-card {
-    padding: 13px;
+    padding: 14px;
     border-radius: 15px;
     box-shadow: var(--shadow-sm);
   }
 
-  .mini-card .mini-label { font-size: 10px; line-height: 1.25; }
-  .mini-card .mini-value { font-size: 24px; margin-top: 5px; }
+  .mini-card .mini-label { font-size: 11.5px; line-height: 1.3; }
+  .mini-card .mini-value { font-size: 27px; margin-top: 5px; }
 
   .v16-smart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
@@ -143,10 +163,21 @@
     flex-direction: column;
   }
 
+  .quick-action strong,
+  .dash-item strong,
+  .pendency-item strong,
+  .match-item strong { font-size: 15px; }
+
+  .quick-action small,
+  .dash-item small,
+  .pendency-item small,
+  .match-item small { font-size: 13px; line-height: 1.4; }
+
   .dash-motivos,
   .pendency-detail {
     max-width: 100%;
     text-align: left;
+    font-size: 13px;
   }
 
   .rank-row { align-items: flex-start; }
@@ -192,14 +223,15 @@
   #page-empresas tbody td,
   #page-treinamentos tbody td {
     display: grid;
-    grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+    grid-template-columns: minmax(100px, 34%) minmax(0, 1fr);
     gap: 10px;
     align-items: start;
     width: 100%;
     min-height: 0;
-    padding: 9px 0;
+    padding: 10px 0;
     border-bottom: 1px solid var(--border);
     overflow-wrap: anywhere;
+    font-size: 14px;
   }
 
   #page-listagem tbody td:last-child,
@@ -210,7 +242,7 @@
   #page-empresas tbody td::before,
   #page-treinamentos tbody td::before {
     color: var(--muted);
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 800;
     line-height: 1.35;
     letter-spacing: .04em;
@@ -284,6 +316,8 @@
     border-radius: 20px 20px 0 0;
   }
 
+  .modal-title { font-size: 18px; }
+
   .modal-close {
     width: 44px;
     height: 44px;
@@ -335,7 +369,6 @@
 }
 
 @media (max-width: 390px) {
-  nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stats-grid,
   .mini-dashboard,
   .v16-smart-grid { grid-template-columns: 1fr; }
