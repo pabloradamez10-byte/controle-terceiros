@@ -6,7 +6,7 @@
 */
 (function(){
   const SUPABASE_URL = 'https://obzycbtfbadjwwwfpsed.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFkamV3d3dmcHNlZCIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
 
   const STATE_KEY = 'controle_terceiros_sst_state_v1';
   const ENDPOINT = SUPABASE_URL + '/rest/v1/app_data';
@@ -285,7 +285,7 @@
       button.hidden = !can('cadastrar');
     });
   }
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const userMessage = message => { document.getElementById('tss-users-message').textContent = message; };
   const permissionInputs = {
     consultar:document.getElementById('tss-perm-consultar'),
@@ -366,6 +366,7 @@
         if (['excluir','excluirEmpresa'].includes(name) && membership?.role !== 'admin') { toast('⚠ Exclusão exige ADM.'); return; }
         return original.apply(this,arguments);
       };
+      // The global binding is updated through window[name].
     }
     const originalException = window.salvarLiberacaoExcecao;
     window.salvarLiberacaoExcecao = function(){
@@ -518,6 +519,7 @@
       };
       wrapped.__tssWrappedV28 = true;
       window[name] = wrapped;
+      // Global function bindings already follow their window property.
     };
 
     [
@@ -597,6 +599,7 @@
       location.reload();
     });
   }
+
   window.tssSupabaseSyncNow = async function(){
     updateBancoBadge('loading');
     try {
