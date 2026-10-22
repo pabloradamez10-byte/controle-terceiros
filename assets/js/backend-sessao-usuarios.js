@@ -6,7 +6,7 @@
 */
 (function(){
   const SUPABASE_URL = 'https://obzycbtfbadjwwwfpsed.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFkamV3d3dmcHNlZCIsInJlZiI6Im9ienljYnRmYmFkand3d2Zwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODIzMTksImV4cCI6MjA5NzY1ODMxOX0.Ct2U52F6rhIqOSDFFBpcTDYudz6k2FOTzzfMAAcZ05g';
 
   const STATE_KEY = 'controle_terceiros_sst_state_v1';
   const ENDPOINT = SUPABASE_URL + '/rest/v1/app_data';
@@ -191,7 +191,7 @@
   window.getStatus=function(t){return accessController.get(t.id);};
   window.addEventListener('offline',()=>accessController.invalidate());
   document.addEventListener('visibilitychange',()=>{accessController.invalidate();});
-  setInterval(()=>{if(bootFinished && session && !document.hidden)window.tssSupabaseReload().catch(()=>{});},20000);
+  setInterval(()=>{if(bootFinished && session && !document.hidden)window.tssSupabaseReload({silent:true}).catch(()=>{});},20000);
   function lockApp(message){
     document.body.classList.remove('tss-authenticated');
     document.getElementById('tss-auth-overlay').hidden = false;
@@ -247,7 +247,7 @@
   };
   function installAuditButton(){
     if(document.getElementById('tss-audit-open')) return;
-    const button=document.createElement('button'); button.id='tss-audit-open'; button.className='btn btn-ghost'; button.textContent='Auditoria';
+    const button=document.createElement('button'); button.id='tss-audit-open'; button.type='button'; button.textContent='Auditoria';
     document.getElementById('tss-users-open').after(button);
     button.onclick=()=>{
       const overlay=document.createElement('div'); overlay.className='sst-sensitive-dialog';
@@ -285,7 +285,7 @@
       button.hidden = !can('cadastrar');
     });
   }
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const userMessage = message => { document.getElementById('tss-users-message').textContent = message; };
   const permissionInputs = {
     consultar:document.getElementById('tss-perm-consultar'),
@@ -366,7 +366,6 @@
         if (['excluir','excluirEmpresa'].includes(name) && membership?.role !== 'admin') { toast('⚠ Exclusão exige ADM.'); return; }
         return original.apply(this,arguments);
       };
-      // The global binding is updated through window[name].
     }
     const originalException = window.salvarLiberacaoExcecao;
     window.salvarLiberacaoExcecao = function(){
@@ -519,7 +518,6 @@
       };
       wrapped.__tssWrappedV28 = true;
       window[name] = wrapped;
-      // Global function bindings already follow their window property.
     };
 
     [
@@ -541,9 +539,11 @@
       if (!remote?.data) throw new Error('Base não encontrada no banco.');
       auditStamp=remote.updated_at; auditBaseline=remote.data;
       applyRemoteState(remote.data);
-      await window.tssExceptionStore.reload();
+      await Promise.all([
+        window.tssExceptionStore.reload(),
+        accessController.refresh()
+      ]);
       localStorage.removeItem('liberacoesExcecao');
-      await accessController.refresh();
       renderEverythingSafe();
       bootFinished = true;
       unlockApp();
@@ -597,7 +597,6 @@
       location.reload();
     });
   }
-
   window.tssSupabaseSyncNow = async function(){
     updateBancoBadge('loading');
     try {
@@ -614,9 +613,10 @@
     }
   };
 
-  window.tssSupabaseReload = async function(){
+  window.tssSupabaseReload = async function(options={}){
     if (auditSaving || (auditBaseline && businessState(readLocalState()) !== businessState(auditBaseline))) return false;
-    updateBancoBadge('loading');
+    const silent = options?.silent === true;
+    if (!silent) updateBancoBadge('loading');
     try {
       const revision=window.sstPrivateRevision;
       const remote = await fetchRemoteState();
@@ -624,28 +624,34 @@
       if (remote && remote.data) {
         auditStamp=remote.updated_at; auditBaseline=remote.data;
         applyRemoteState(remote.data);
-        await window.tssExceptionStore.reload();
-        await accessController.refresh();
+        await Promise.all([
+          window.tssExceptionStore.reload(),
+          accessController.refresh()
+        ]);
         renderEverythingSafe();
-        updateBancoBadge('online');
-        if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
+        if (!silent) {
+          updateBancoBadge('online');
+          if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
+        }
         return true;
       }
-      updateBancoBadge('online');
-      if (typeof toast === 'function') toast('Nenhum dado encontrado no Supabase.');
+      if (!silent) {
+        updateBancoBadge('online');
+        if (typeof toast === 'function') toast('Nenhum dado encontrado no Supabase.');
+      }
       return false;
     } catch(err) {
       console.error(err);
       updateBancoBadge('offline');
-      if (typeof toast === 'function') toast('⚠ Falha ao recarregar banco.');
+      if (!silent && typeof toast === 'function') toast('⚠ Falha ao recarregar banco.');
       return false;
     }
   };
 
-  // Sincronização leve ao voltar para a aba/app.
+  // Sincronização leve ao voltar para a aba/app, sem bloquear a interface.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && bootFinished) {
-      window.tssSupabaseReload().catch(()=>{});
+      window.tssSupabaseReload({silent:true}).catch(()=>{});
     }
   });
 
