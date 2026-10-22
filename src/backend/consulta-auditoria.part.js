@@ -4,7 +4,7 @@
   };
   function installAuditButton(){
     if(document.getElementById('tss-audit-open')) return;
-    const button=document.createElement('button'); button.id='tss-audit-open'; button.className='btn btn-ghost'; button.textContent='Auditoria';
+    const button=document.createElement('button'); button.id='tss-audit-open'; button.type='button'; button.textContent='Auditoria';
     document.getElementById('tss-users-open').after(button);
     button.onclick=()=>{
       const overlay=document.createElement('div'); overlay.className='sst-sensitive-dialog';
