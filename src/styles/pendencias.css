@@ -19,4 +19,71 @@
   .v22-access-box { border:1px solid var(--border); border-radius:14px; background:var(--bg-soft); padding:12px; }
   .v22-access-box label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:900; }
   .v22-access-box div { margin-top:5px; font-weight:800; }
-  @media(max-width:700px){ .v22-grid{grid-template-columns:1fr;} .v22-row{display:block;} .v22-access-panel{grid-template-columns:1fr;} }
+
+  /* O botão Auditoria pertence ao nav; não deve herdar o aspecto cinza de btn-ghost. */
+  nav #tss-audit-open.btn.btn-ghost {
+    background: none !important;
+    color: var(--muted) !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+  }
+  nav #tss-audit-open.btn.btn-ghost:hover {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+  }
+
+  /* Mobile real: entra por largura OU por aparelho de toque.
+     Isso cobre PWA/Android que reporta viewport maior que a largura visual. */
+  @media (max-width:860px), (hover:none) and (pointer:coarse), (any-hover:none) and (any-pointer:coarse) {
+    .v22-grid {
+      grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+      gap:10px !important;
+    }
+    .v22-card {
+      min-width:0;
+      padding:14px !important;
+    }
+    .v22-card .label {
+      font-size:12.5px !important;
+      line-height:1.3;
+    }
+    .v22-card .value {
+      font-size:28px !important;
+    }
+    .v22-card .hint {
+      font-size:12.5px !important;
+      line-height:1.35;
+    }
+    .v22-row { display:block !important; }
+    .v22-access-panel { grid-template-columns:1fr !important; }
+
+    /* V21 injeta CSS próprio depois do carregamento; !important garante a versão mobile. */
+    .v21-alert-grid,
+    .v21-panel-grid {
+      grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+      gap:10px !important;
+    }
+    .v21-alert-card,
+    .v21-panel-card {
+      min-width:0;
+      padding:14px !important;
+    }
+    .v21-alert-card .label,
+    .v21-panel-card .label {
+      font-size:12.5px !important;
+      line-height:1.3;
+    }
+    .v21-alert-card .value,
+    .v21-panel-card .value {
+      font-size:28px !important;
+    }
+    .v21-alert-card small { font-size:12.5px !important; line-height:1.35; }
+    .v21-info-grid { grid-template-columns:1fr !important; }
+    .v21-row { display:block !important; }
+  }
+
+  @media (max-width:390px) {
+    .v22-grid,
+    .v21-alert-grid,
+    .v21-panel-grid { grid-template-columns:1fr !important; }
+  }
