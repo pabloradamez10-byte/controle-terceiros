@@ -41,4 +41,4 @@
   window.getStatus=function(t){return accessController.get(t.id);};
   window.addEventListener('offline',()=>accessController.invalidate());
   document.addEventListener('visibilitychange',()=>{accessController.invalidate();});
-  setInterval(()=>{if(bootFinished && session && !document.hidden)window.tssSupabaseReload().catch(()=>{});},20000);
+  setInterval(()=>{if(bootFinished && session && !document.hidden)window.tssSupabaseReload({silent:true}).catch(()=>{});},20000);
