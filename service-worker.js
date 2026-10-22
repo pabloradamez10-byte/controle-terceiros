@@ -1,4 +1,4 @@
-const CACHE_NAME = 'portal-terceiros-sst-mobile-20261022-1';
+const CACHE_NAME = 'portal-terceiros-sst-mobile-20261022-2';
 const APP_SHELL = ['./assets/js/core.js','./assets/js/pendencias.js','./assets/js/matriz-treinamentos.js','./assets/js/portaria-express.js','./assets/js/portaria-semaforo.js','./assets/js/documentos-compatibilidade.js','./assets/js/backend-sessao-usuarios.js','./assets/css/base.css','./assets/css/autenticacao.css','./assets/css/mobile.css','./assets/css/pendencias.css','./assets/css/portaria.css','./assets/css/portaria-acabamento.css','./','./index.html','./security.js?v=organization-20261021-1','./access.js?v=20261021-2','./documentos.js?v=20261021-2','./relatorios.js?v=20261020-1','./vendor/purify-3.4.17.min.js','./vendor/xlsx-0.20.3.full.min.js','./manifest.json','./icon-192.png','./icon-512.png'];
 const ALLOWED = new Set(APP_SHELL.map(path=>new URL(path,self.registration.scope).href));
 self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)));});
