@@ -1,0 +1,343 @@
+/* SST Manager - acabamento mobile v1 (2026-10-22) */
+
+@media (max-width: 860px) {
+  body { -webkit-text-size-adjust: 100%; }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px 12px;
+    min-height: auto;
+  }
+
+  .brand {
+    min-height: 38px;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    padding: 0;
+  }
+
+  nav button {
+    width: 100%;
+    min-height: 42px;
+    padding: 7px 4px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    font-size: 11.5px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+
+  nav button.active {
+    border-color: rgba(21, 94, 239, .18);
+    box-shadow: inset 0 0 0 1px rgba(21, 94, 239, .05);
+  }
+
+  main { padding: 16px 12px 36px; }
+
+  .hero {
+    padding: 17px 18px;
+    margin-bottom: 16px;
+    border-radius: 17px;
+  }
+
+  .hero h1 { font-size: 20px; margin-bottom: 4px; }
+  .hero p { font-size: 12.5px; line-height: 1.4; }
+
+  h2 { font-size: 22px; margin-bottom: 16px; }
+
+  .page-actions {
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .page-actions > h2 {
+    width: 100%;
+    margin-bottom: 2px;
+  }
+
+  .page-actions > .btn,
+  .page-actions > .report-actions { width: 100%; }
+
+  .report-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .report-actions .btn { width: 100%; min-width: 0; }
+
+  .btn,
+  input,
+  select,
+  textarea { min-height: 44px; }
+
+  .card {
+    padding: 17px;
+    margin-bottom: 14px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 12px;
+  }
+
+  .stat-card {
+    min-width: 0;
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .stat-label {
+    font-size: 10.5px;
+    line-height: 1.25;
+  }
+
+  .stat-value {
+    margin-top: 6px;
+    font-size: 24px;
+  }
+
+  .stat-hint { display: none; }
+
+  .mini-dashboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin: 12px 0;
+  }
+
+  .mini-card {
+    padding: 13px;
+    border-radius: 15px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mini-card .mini-label { font-size: 10px; line-height: 1.25; }
+  .mini-card .mini-value { font-size: 24px; margin-top: 5px; }
+
+  .v16-smart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .quick-action,
+  .dash-item,
+  .pendency-item,
+  .match-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dash-motivos,
+  .pendency-detail {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .rank-row { align-items: flex-start; }
+
+  .search-row,
+  .portaria-search { gap: 8px; }
+
+  .thirdparty-search { gap: 11px; }
+
+  /* Listas principais deixam de ser tabelas horizontais e viram cartões. */
+  #page-listagem .table-wrap,
+  #page-empresas .table-wrap,
+  #page-treinamentos .table-wrap { overflow: visible; }
+
+  #page-listagem table,
+  #page-empresas table,
+  #page-treinamentos table,
+  #page-listagem tbody,
+  #page-empresas tbody,
+  #page-treinamentos tbody {
+    display: block;
+    width: 100%;
+  }
+
+  #page-listagem thead,
+  #page-empresas thead,
+  #page-treinamentos thead { display: none; }
+
+  #page-listagem tbody tr,
+  #page-empresas tbody tr,
+  #page-treinamentos tbody tr {
+    display: block;
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  #page-listagem tbody td,
+  #page-empresas tbody td,
+  #page-treinamentos tbody td {
+    display: grid;
+    grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    width: 100%;
+    min-height: 0;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+
+  #page-listagem tbody td:last-child,
+  #page-empresas tbody td:last-child,
+  #page-treinamentos tbody td:last-child { border-bottom: 0; }
+
+  #page-listagem tbody td::before,
+  #page-empresas tbody td::before,
+  #page-treinamentos tbody td::before {
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  #page-listagem tbody td:nth-child(1)::before { content: 'Nome'; }
+  #page-listagem tbody td:nth-child(2)::before { content: 'CPF'; }
+  #page-listagem tbody td:nth-child(3)::before { content: 'Empresa'; }
+  #page-listagem tbody td:nth-child(4)::before { content: 'ASO'; }
+  #page-listagem tbody td:nth-child(5)::before { content: 'Integração'; }
+  #page-listagem tbody td:nth-child(6)::before { content: 'Treinamentos'; }
+  #page-listagem tbody td:nth-child(7)::before { content: 'DP'; }
+  #page-listagem tbody td:nth-child(8)::before { content: 'SESMT'; }
+  #page-listagem tbody td:nth-child(9)::before { content: 'Status'; }
+  #page-listagem tbody td:nth-child(10)::before { content: 'Ações'; }
+
+  #page-empresas tbody td:nth-child(1)::before { content: 'Razão social'; }
+  #page-empresas tbody td:nth-child(2)::before { content: 'Fantasia'; }
+  #page-empresas tbody td:nth-child(3)::before { content: 'CNPJ'; }
+  #page-empresas tbody td:nth-child(4)::before { content: 'Responsável'; }
+  #page-empresas tbody td:nth-child(5)::before { content: 'Telefone'; }
+  #page-empresas tbody td:nth-child(6)::before { content: 'Contrato'; }
+  #page-empresas tbody td:nth-child(7)::before { content: 'DP'; }
+  #page-empresas tbody td:nth-child(8)::before { content: 'SESMT'; }
+  #page-empresas tbody td:nth-child(9)::before { content: 'Treinamentos'; }
+  #page-empresas tbody td:nth-child(10)::before { content: 'Ações'; }
+
+  #page-treinamentos tbody td:nth-child(1)::before { content: 'Treinamento'; }
+  #page-treinamentos tbody td:nth-child(2)::before { content: 'Validade'; }
+  #page-treinamentos tbody td:nth-child(3)::before { content: 'Status'; }
+  #page-treinamentos tbody td:nth-child(4)::before { content: 'Ações'; }
+
+  #page-listagem .actions,
+  #page-empresas .actions,
+  #page-treinamentos .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  #page-listagem .actions .btn,
+  #page-empresas .actions .btn,
+  #page-treinamentos .actions .btn {
+    width: 100%;
+    min-width: 0;
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: none;
+    max-height: 92dvh;
+    padding: 19px 16px calc(18px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal-header {
+    position: sticky;
+    top: -19px;
+    z-index: 2;
+    margin: -19px -16px 18px;
+    padding: 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal-close {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  .modal-footer {
+    position: sticky;
+    bottom: calc(-18px - env(safe-area-inset-bottom));
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 18px -16px calc(-18px - env(safe-area-inset-bottom));
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.96);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  .modal-footer .btn { width: 100%; }
+
+  #tss-users-modal { padding: 0 !important; }
+  #tss-users-modal > div {
+    min-height: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 18px 14px calc(24px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+  }
+
+  #tss-users-modal > div > div:first-child {
+    position: sticky;
+    top: -18px;
+    z-index: 3;
+    margin: -18px -14px 16px;
+    padding: 14px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .toast { width: 100%; }
+}
+
+@media (max-width: 390px) {
+  nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stats-grid,
+  .mini-dashboard,
+  .v16-smart-grid { grid-template-columns: 1fr; }
+  .report-actions { grid-template-columns: 1fr; }
+}
