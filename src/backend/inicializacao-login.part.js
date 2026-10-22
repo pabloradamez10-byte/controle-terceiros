@@ -10,9 +10,11 @@
       if (!remote?.data) throw new Error('Base não encontrada no banco.');
       auditStamp=remote.updated_at; auditBaseline=remote.data;
       applyRemoteState(remote.data);
-      await window.tssExceptionStore.reload();
+      await Promise.all([
+        window.tssExceptionStore.reload(),
+        accessController.refresh()
+      ]);
       localStorage.removeItem('liberacoesExcecao');
-      await accessController.refresh();
       renderEverythingSafe();
       bootFinished = true;
       unlockApp();
@@ -83,9 +85,10 @@
     }
   };
 
-  window.tssSupabaseReload = async function(){
+  window.tssSupabaseReload = async function(options={}){
     if (auditSaving || (auditBaseline && businessState(readLocalState()) !== businessState(auditBaseline))) return false;
-    updateBancoBadge('loading');
+    const silent = options?.silent === true;
+    if (!silent) updateBancoBadge('loading');
     try {
       const revision=window.sstPrivateRevision;
       const remote = await fetchRemoteState();
@@ -93,28 +96,34 @@
       if (remote && remote.data) {
         auditStamp=remote.updated_at; auditBaseline=remote.data;
         applyRemoteState(remote.data);
-        await window.tssExceptionStore.reload();
-        await accessController.refresh();
+        await Promise.all([
+          window.tssExceptionStore.reload(),
+          accessController.refresh()
+        ]);
         renderEverythingSafe();
-        updateBancoBadge('online');
-        if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
+        if (!silent) {
+          updateBancoBadge('online');
+          if (typeof toast === 'function') toast('✓ Dados recarregados do Supabase.');
+        }
         return true;
       }
-      updateBancoBadge('online');
-      if (typeof toast === 'function') toast('Nenhum dado encontrado no Supabase.');
+      if (!silent) {
+        updateBancoBadge('online');
+        if (typeof toast === 'function') toast('Nenhum dado encontrado no Supabase.');
+      }
       return false;
     } catch(err) {
       console.error(err);
       updateBancoBadge('offline');
-      if (typeof toast === 'function') toast('⚠ Falha ao recarregar banco.');
+      if (!silent && typeof toast === 'function') toast('⚠ Falha ao recarregar banco.');
       return false;
     }
   };
 
-  // Sincronização leve ao voltar para a aba/app.
+  // Sincronização leve ao voltar para a aba/app, sem bloquear a interface.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && bootFinished) {
-      window.tssSupabaseReload().catch(()=>{});
+      window.tssSupabaseReload({silent:true}).catch(()=>{});
     }
   });
 
