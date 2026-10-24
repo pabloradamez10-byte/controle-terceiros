@@ -1,4 +1,4 @@
-import { ENTITIES, validId } from './protocol.mjs';
+import { validId } from './protocol.mjs';
 
 // Boundary for the existing SST features. No feature imports Hyperswarm/Corestore.
 export class SstRepository {
@@ -41,7 +41,7 @@ export class SstRepository {
     if (await this.device.role() !== 'admin' || user.role !== 'admin') throw Error('Somente administrador importa.');
     if (!state || typeof state !== 'object') throw Error('Estado inválido.');
     const records = [];
-    for (const entity of ENTITIES.filter(entity => entity !== 'excecoes')) {
+    for (const entity of ['terceiros', 'empresas', 'treinamentos']) {
       if (!Array.isArray(state[entity])) throw Error(`Lista ausente: ${entity}`);
       const seen = new Set();
       for (const original of state[entity]) {

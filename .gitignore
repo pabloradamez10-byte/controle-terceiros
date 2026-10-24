@@ -1,5 +1,6 @@
 node_modules/
 .sst-device/
+.sst-native-ui/
 *.invitation.json
 coverage/
 

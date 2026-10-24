@@ -8,9 +8,11 @@
     "src/backend/p2p/device.mjs",
     "src/backend/p2p/repository.mjs",
     "src/platform/native/device-files.mjs",
-    "src/platform/native/identity-vault.mjs"
+    "src/platform/native/identity-vault.mjs",
+    "src/platform/native/frontend-service.mjs",
+    "src/platform/native/browser-host.mjs"
   ],
-  "entrypoints": ["scripts/p2p/device.mjs"],
+  "entrypoints": ["scripts/p2p/device.mjs", "scripts/p2p/browser.mjs"],
   "browserAutoLoad": false
 }
 

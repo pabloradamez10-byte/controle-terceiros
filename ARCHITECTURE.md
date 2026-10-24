@@ -74,3 +74,9 @@ Esta organização não afirma que todas as dependências globais ou versões le
 - Para reversão de código, usar o commit anterior completo, incluindo HTML e cache; não reverter apenas um arquivo gerado. Não é necessário reverter banco nesta organização.
 
 A segurança individual P2P fica em `src/backend/p2p/signatures.mjs` e `session.mjs`; a persistência cifrada de credenciais do host Node fica em `src/platform/native/identity-vault.mjs`. A projeção verifica assinaturas e perfis sem depender das telas. Detalhes e limites em `docs/p2p/AUTHENTICATION.md`.
+
+## Composição alternativa da interface P2P
+
+`scripts/p2p/ui-sources.json` reutiliza os fragmentos backend compartilhados em uma única IIFE, com transporte e inicialização próprios em `src/backend/p2p-ui/`. `sessao-interface.part.js` reúne apenas a interface visual de bloqueio/limpeza, sem transporte. O build padrão mantém seu backend anterior; o pacote isolado é montado por `scripts/p2p/build-ui.cjs`. Não inserir código nativo nos bundles web comuns.
+
+`src/platform/native/frontend-service.mjs` converte os contratos das telas em lotes assinados, usuários e documentos do núcleo. O adaptador loopback em `browser-host.mjs` é por aparelho e somente para homologação; o Android ainda precisa de ponte/empacotamento. Detalhes de segurança, execução e testes em `docs/p2p/INTERFACE.md`. A confirmação de entrada permanece bloqueada no pacote P2P até existir prova temporal independente.

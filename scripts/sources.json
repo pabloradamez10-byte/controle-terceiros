@@ -69,6 +69,7 @@
         "src/backend/estado-local.part.js",
         "src/backend/requisicoes-autenticadas.part.js",
         "src/backend/documentos-confirmacao-acesso.part.js",
+        "src/backend/sessao-interface.part.js",
         "src/backend/sessao-perfil.part.js",
         "src/backend/consulta-auditoria.part.js",
         "src/backend/interface-permissoes.part.js",

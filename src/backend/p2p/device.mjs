@@ -44,13 +44,13 @@ export class SstDevice {
   }
   async requireUser() {
     const user = await this.user();
-    if (!user) throw Error('Autenticação individual necessária ou usuário revogado.');
+    if (!user || user.permissions?.consultar === false) throw Error('Autenticação individual necessária ou usuário revogado.');
     return user;
   }
   async bootstrapUser(name) { return this.append({ kind: 'bootstrap', name }); }
-  async authorizeUser(userKey, role, name) {
+  async authorizeUser(userKey, role, name, permissions, displayRole) {
     if ((await this.requireUser()).role !== 'admin' || await this.role() !== 'admin') throw Error('Somente administrador autoriza usuários.');
-    return this.append({ kind: 'user', userKey, role, name });
+    return this.append({ kind: 'user', userKey, role, name, ...(permissions ? { permissions } : {}), ...(displayRole ? { displayRole } : {}) });
   }
   // This descriptor contains a secret. Hand off out of band; never put in URLs or logs.
   invitation() { return { protocol: PROTOCOL, baseKey: this.baseKey, encryptionKey: this.secret }; }
@@ -68,6 +68,10 @@ export class SstDevice {
     await this.base.append(op);
     await this.base.update();
     return { id: op.id, ...await this.receipt(op.id) };
+  }
+  async commit(mutations, reason) {
+    await this.requireUser();
+    return this.append({ kind: 'batch', mutations, reason });
   }
   async put(entity, recordId, value, previous = null) {
     if (!permission(await this.role(), entity) || !permission((await this.requireUser()).role, entity)) throw Error('Perfil sem permissão de escrita.');

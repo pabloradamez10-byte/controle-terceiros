@@ -1,0 +1,18 @@
+{
+  "target": "assets/js/backend-sessao-usuarios.js",
+  "sources": [
+    "src/backend/p2p-ui/context.js",
+    "src/backend/estado-local.part.js",
+    "src/backend/sessao-interface.part.js",
+    "src/backend/consulta-auditoria.part.js",
+    "src/backend/interface-permissoes.part.js",
+    "src/backend/gestao-usuarios.part.js",
+    "src/backend/guardas-permissoes.part.js",
+    "src/backend/persistencia-excecoes.part.js",
+    "src/backend/persistencia-auditada.part.js",
+    "src/backend/sincronizacao-interface.part.js",
+    "src/backend/p2p-ui/bootstrap.js",
+    "src/backend/p2p-ui/document-viewer.js"
+  ],
+  "reusedFragments": "Shared sources retain their original IIFE scope; this is a distinct native UI composition, not a second browser loader."
+}

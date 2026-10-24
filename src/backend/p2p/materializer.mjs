@@ -23,6 +23,7 @@ export async function applyOperations(nodes, view, host) {
     const user = typeof op.actor === 'string' ? (await view.get(`user/${op.actor}`))?.value : null;
     const signatureVerified = verifyOperation(op, root, writer);
     let reason = null;
+    const changes = [];
     if (!signatureVerified) reason = 'signature-invalid';
     else if (op.kind === 'bootstrap') {
       if (writer !== root || owner) reason = 'bootstrap-denied';
@@ -30,12 +31,15 @@ export async function applyOperations(nodes, view, host) {
         await view.put('policy/owner', { userKey: op.actor });
         await view.put(`user/${op.actor}`, { role: 'admin', name: op.name });
       }
-    } else if (!user?.role) reason = 'user-not-authorized';
+    } else if (!user?.role || user.permissions?.consultar === false) reason = 'user-not-authorized';
     else if (!role) reason = 'permission-denied';
     else if (op.kind === 'user') {
       if (role !== 'admin' || user.role !== 'admin') reason = 'permission-denied';
       else if (op.userKey === owner.userKey) reason = 'owner-is-fixed';
-      else await view.put(`user/${op.userKey}`, { role: op.role, name: op.name });
+      else {
+        const previousUser=(await view.get(`user/${op.userKey}`))?.value;
+        await view.put(`user/${op.userKey}`, { role: op.role, displayRole: op.role??op.displayRole??previousUser?.displayRole??previousUser?.role??'cadastro', name: op.name, permissions: op.permissions ?? null });
+      }
     } else if (op.kind === 'member') {
       if (role !== 'admin' || user.role !== 'admin') reason = 'permission-denied';
       else if (op.writer === root) reason = 'root-is-fixed';
@@ -47,7 +51,21 @@ export async function applyOperations(nodes, view, host) {
         // claiming that revocation erases copies or instantly reaches offline peers.
         await view.put(`member/${op.writer}`, { role: op.role });
       }
-    } else if (!permission(role, op.entity, op.kind) || !permission(user.role, op.entity, op.kind)) reason = 'permission-denied';
+    } else if (op.kind === 'batch') {
+      // Validate the entire UI transaction before changing any record.
+      for (const mutation of op.mutations) {
+        const capability = mutation.entity === 'excecoes' ? 'liberar' : 'cadastrar';
+        if (!permission(role, mutation.entity, mutation.kind) || !permission(user.role, mutation.entity, mutation.kind) || user.permissions?.[capability] === false) { reason = 'permission-denied'; break; }
+        const key = `record/${mutation.entity}/${mutation.recordId}`;
+        const previous = await view.get(key);
+        if ((previous?.value?.revision ?? null) !== mutation.previous) { reason = 'revision-conflict'; break; }
+        changes.push({ mutation, key, before: previous?.value?.value ?? null });
+      }
+      if (!reason) for (const { mutation, key } of changes) await view.put(key, {
+        revision: op.id, author: writer, actor: op.actor, deleted: mutation.kind === 'delete',
+        value: mutation.kind === 'delete' ? null : mutation.value
+      });
+    } else if (!permission(role, op.entity, op.kind) || !permission(user.role, op.entity, op.kind) || user.permissions?.[op.entity === 'excecoes' ? 'liberar' : 'cadastrar'] === false) reason = 'permission-denied';
     else {
       const key = `record/${op.entity}/${op.recordId}`;
       const previous = await view.get(key);
@@ -65,7 +83,10 @@ export async function applyOperations(nodes, view, host) {
       entity: op.entity ?? null, recordId: op.recordId ?? null,
       signatureVerified, claimedActor: signatureVerified ? null : op.actor ?? null,
       // Informational client timestamp, never an authoritative ordering/expiry clock.
-      reportedAt: typeof op.reportedAt === 'string' ? op.reportedAt : null
+      reportedAt: typeof op.reportedAt === 'string' ? op.reportedAt : null,
+      actorName: signatureVerified ? user?.name ?? (op.kind==='bootstrap'?op.name:null) : null,
+      reasonText: typeof op.reason === 'string' ? op.reason : null,
+      changes: reason ? [] : changes.filter(c => c.mutation.entity !== 'documentChunks').map(c => ({ entity: c.mutation.entity, id: c.mutation.recordId, kind: c.mutation.kind, before: c.before, after: c.mutation.kind === 'delete' ? null : c.mutation.value }))
     });
   }
 }

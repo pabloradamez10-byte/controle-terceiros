@@ -38,15 +38,15 @@ export class SstSession {
       throw Error('Usuário, senha ou autorização inválidos.');
     }
   }
-  async require() {
+  async require({ touch = true } = {}) {
     if (!this.identity || this.device.identity !== this.identity || this.clock() - this.lastUse >= this.ttlMs) { this.logout(); throw Error('Entre novamente para continuar.'); }
     const user = await this.device.user();
-    if (!user || !await this.device.role()) { this.logout(); throw Error('Usuário ou aparelho revogado.'); }
-    this.lastUse = this.clock();
+    if (!user || user.permissions?.consultar === false || !await this.device.role()) { this.logout(); throw Error('Usuário ou aparelho revogado.'); }
+    if (touch) this.lastUse = this.clock();
     return user;
   }
   async peek() {
-    if (!this.identity || this.device.identity !== this.identity || this.clock() - this.lastUse >= this.ttlMs || !await this.device.user() || !await this.device.role()) { this.logout(); return false; }
+    if (!this.identity || this.device.identity !== this.identity || this.clock() - this.lastUse >= this.ttlMs || !(await this.device.user())?.role || (await this.device.user())?.permissions?.consultar === false || !await this.device.role()) { this.logout(); return false; }
     return true;
   }
 }

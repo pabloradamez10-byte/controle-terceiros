@@ -19,7 +19,7 @@ Os arquivos de identidade locais guardam a chave privada cifrada com XChaCha20-P
 | SESMT + aparelho compatível | Sim | Não | Não | Sim | Não |
 | Portaria + aparelho compatível | Todos os terceiros e documentação (visualizador nativo pendente) | Não | Não | Consulta apenas | Não |
 
-O resultado é a interseção das permissões: um usuário ADM em aparelho Portaria não ganha escrita; um usuário Portaria em aparelho ADM também não. Download/exportação documental não são comandos disponíveis na ponte. Exibir o documento exigirá receber conteúdo no aparelho; não há promessa de impedir captura de tela ou cópia externa.
+O resultado é a interseção das permissões: um usuário ADM em aparelho Portaria não ganha escrita; um usuário Portaria em aparelho ADM também não. Download/exportação documental são recusados para Portaria; a interface nativa fornece visualização, conforme `INTERFACE.md`. Exibir o documento exigirá receber conteúdo no aparelho; não há promessa de impedir captura de tela ou cópia externa.
 
 ## Auditoria
 
@@ -37,9 +37,9 @@ Comandos de autenticação: `initializeOwner`, `createIdentity`, `login`, `logou
 
 ## Compatibilidade e limites
 
-- As telas/login existentes continuam no backend atual. Nenhum usuário, senha ou registro Supabase foi alterado ou migrado.
+- O build web padrão continua no backend atual; o pacote isolado conecta as mesmas telas/login ao núcleo nativo. Nenhum usuário, senha ou registro Supabase foi alterado ou migrado.
 - O protocolo v1 experimental, sem assinatura individual, não deve ser ativado como alternativa ao v2. Configuração/convite v1 é recusado pela entrada de arquivos; não há migração automática de bancos v1.
-- O núcleo ainda não tem ponte Android, Keystore, visualizador documental integrado, recuperação de identidade ou vinculação automática do mesmo usuário em outro aparelho. Criar o mesmo nome em outro local não comprova a mesma identidade.
+- O núcleo ainda não tem ponte Android, Keystore, validação do visualizador PDF em navegador real, recuperação de identidade ou vinculação automática do mesmo usuário em outro aparelho. Criar o mesmo nome em outro local não comprova a mesma identidade.
 - A cópia local e a chave compartilhada de dados já recebidas não são apagadas por logout/revogação. Proteções contra acesso físico, extração da réplica ou comprometimento do sistema operacional não foram comprovadas.
 - A sessão é uma barreira da ponte nativa. Quem controla o processo ou já possui chaves pode chamar APIs internas; não tratar o contrato JavaScript como sandbox contra o dono do aparelho.
 - O aparelho criador continua sendo o único indexador. Redes diferentes e operação Android em segundo plano permanecem sem ensaio.
@@ -47,4 +47,4 @@ Comandos de autenticação: `initializeOwner`, `createIdentity`, `login`, `logou
 
 ## Verificação
 
-Os nove testes P2P incluem os seis cenários anteriores e três cenários novos com Argon2id/AEAD/assinaturas e bancos reais. Cobrem credenciais cifradas, senha errada, corrupção, não sobrescrita, logout, expiração, limite de tentativas, reinício bloqueado, troca de pessoas no mesmo aparelho, interseção de perfis, bloqueio de exclusão, assinaturas ausentes/forjadas, replay entre grupo/aparelho, auditoria e revogação propagada. A suíte de regressão do SST é executada por `npm test`.
+Os 12 testes P2P incluem autenticação com Argon2id/AEAD/assinaturas e bancos reais, as telas reais em JSDOM com o serviço nativo e o host loopback HTTP (ver `INTERFACE.md`). Cobrem credenciais cifradas, senha errada, corrupção, não sobrescrita, logout, expiração, limite de tentativas, reinício bloqueado, troca de pessoas no mesmo aparelho, interseção de perfis, bloqueio de exclusão, assinaturas ausentes/forjadas, replay entre grupo/aparelho, auditoria e revogação propagada. A suíte de regressão do SST é executada por `npm test`.

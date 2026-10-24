@@ -27,3 +27,9 @@ for(const file of [...native.sources,...native.entrypoints]){
 const walk=folder=>fs.readdirSync(path.join(root,folder),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(folder+'/'+e.name):[folder+'/'+e.name]);
 for(const file of walk('src').filter(f=>f.endsWith('.mjs')))assert.ok(native.sources.includes(file),'Fonte nativa sem proprietário: '+file);
 console.log('Native ownership verified: '+native.sources.length+' isolated ESM sources; no native code in browser bundles.');
+const ui=require('./p2p/ui-sources.json');
+assert.equal(new Set(ui.sources).size,ui.sources.length,'Fonte P2P repetida');
+for(const file of ui.sources){assert.ok(file.startsWith('src/'));assert.ok(seen.has(file)||file.startsWith('src/backend/p2p-ui/'),'Fragmento P2P sem proprietário: '+file);}
+new vm.Script(ui.sources.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n'),{filename:'native-ui-backend.js'});
+new vm.Script(fs.readFileSync(path.join(root,'src/platform/native/browser-bridge.js'),'utf8'));
+console.log('Native UI composition verified: '+ui.sources.length+' sources; shared fragments stay in one IIFE.');

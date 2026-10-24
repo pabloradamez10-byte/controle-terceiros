@@ -4,9 +4,11 @@
   "build": "passed",
   "existing_regression_suite": "passed; Supabase/document transports simulated where existing tests specify",
   "new_native_tests": {
-    "passed": 9,
+    "passed": 12,
     "failed": 0,
-    "replication": "real Autobase/Corestore duplex streams, same process; not Internet"
+    "replication": "real Autobase/Corestore duplex streams, same process; not Internet",
+    "ui": "existing HTML/scripts in JSDOM; actual native core/credentials/storage; injected transport only",
+    "http": "real loopback HTTP host, origin and CSRF refusal"
   },
   "dependency_audit": {
     "info": 0,
@@ -23,13 +25,12 @@
     "source_head": "7c833475a7335a0a7b1d340c474433af8be23289"
   },
   "not_validated": [
-    "Android APK",
-    "existing UI connected to native core",
+    "Android APK/Keystore and background lifecycle",
     "different networks/NAT",
-    "Android background lifecycle",
-    "existing UI login integrated with native individual sessions; account recovery and cross-device enrollment",
-    "native document viewer and app download/export restrictions",
-    "full migration/restore"
+    "real Chromium rendering and PDF canvas",
+    "identity recovery/rotation and secure cross-device enrollment",
+    "full migration/restore and historical report reconstruction",
+    "indexer failover and independent trusted time"
   ],
   "production_ready": false,
   "backup_actions": "none",
@@ -42,5 +43,8 @@
     "operation_signature": "Ed25519 bound to group/device/user",
     "session": "logout and 15-minute inactivity expiry",
     "revocation": "enforced after propagation; not retroactive erasure"
-  }
+  },
+  "native_ui_integrated": true,
+  "public_web_backend_switched": false,
+  "verified_local_ocr_assets": 18
 }
