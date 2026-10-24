@@ -9,9 +9,9 @@ export class SstRepository {
       case 'status': return { ...this.device.status(), role: await this.device.role(), writerKey: this.device.writerKey };
       case 'get':
       case 'list': {
-        // Portaria must use a separate, minimized access projection, not the
-        // management dataset. This projection is not implemented in this phase.
-        if (!['admin', 'cadastro', 'sesmt'].includes(await this.device.role())) throw Error('Consulta de gestão não autorizada.');
+        // Portaria can consult all third parties and their documentation.
+        // Write permissions are enforced again by the signed-log materializer.
+        if (!['admin', 'cadastro', 'sesmt', 'portaria'].includes(await this.device.role())) throw Error('Consulta não autorizada.');
         return request.command === 'get'
           ? this.device.get(request.entity, request.recordId)
           : this.device.list(request.entity);

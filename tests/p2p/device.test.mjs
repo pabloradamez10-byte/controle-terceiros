@@ -75,11 +75,21 @@ test('encrypted storage, signed two-peer replication, ACL, conflicts, tombstones
   await assert.rejects(member.put('empresas', 'sesmt-negado', {}), /permissão/);
   await admin.grant(member.writerKey, 'portaria');
   await until(async () => { await member.base.update(); return await member.role() === 'portaria'; }, 'Perfil Portaria não chegou.');
-  await assert.rejects(new SstRepository(member).execute({ command: 'list', entity: 'terceiros' }), /não autorizada/);
+  const portaria = new SstRepository(member);
+  assert.equal((await portaria.execute({ command: 'list', entity: 'terceiros' })).length, 1);
+  assert.equal((await portaria.execute({ command: 'get', entity: 'terceiros', recordId: 'pessoa1' })).value.nome, 'Pessoa fictícia');
+  assert.equal((await portaria.execute({ command: 'get', entity: 'excecoes', recordId: 'ex1' })).value.motivo, 'Exceção fictícia');
+  await assert.rejects(portaria.execute({ command: 'put', entity: 'terceiros', recordId: 'pessoa2', value: {} }), /permissão/);
+  await assert.rejects(portaria.execute({ command: 'delete', entity: 'terceiros', recordId: 'pessoa1', previous: pending.id }), /permissão/);
+  await assert.rejects(portaria.execute({ command: 'grant', writerKey: member.writerKey, role: 'admin' }), /administrador/);
+  for (const command of ['download', 'export', 'downloadDocument']) await assert.rejects(portaria.execute({ command }), /não permitido/);
+  const portariaBypass = await member.append({ kind: 'put', entity: 'terceiros', recordId: 'pessoa2', value: {}, previous: null });
+  await until(async () => { await admin.base.update(); return (await admin.receipt(portariaBypass.id, member.writerKey)).reason === 'permission-denied'; }, 'Escrita direta de Portaria não rejeitada.');
   await assert.rejects(member.put('excecoes', 'portaria-negado', {}), /permissão/);
   // Revoke writes; old replicas cannot be erased remotely.
   await admin.grant(member.writerKey, null);
   await until(async () => { await member.base.update(); return await member.role() === null; }, 'Revogação não chegou.');
+  await assert.rejects(portaria.execute({ command: 'list', entity: 'terceiros' }), /não autorizada/);
   await assert.rejects(member.put('empresas', 'revogado', {}), /permissão/);
   const rejected = await member.append({ kind: 'put', entity: 'empresas', recordId: 'revogado', value: {}, previous: null });
   await until(async () => { await admin.base.update(); return (await admin.receipt(rejected.id, member.writerKey)).reason === 'permission-denied'; }, 'Escrita revogada não rejeitada.');

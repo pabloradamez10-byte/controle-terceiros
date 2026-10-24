@@ -28,9 +28,10 @@
     "different networks/NAT",
     "Android background lifecycle",
     "individual user auth",
-    "per-role cryptographic read isolation",
+    "native document viewer and app download/export restrictions",
     "full migration/restore"
   ],
   "production_ready": false,
-  "backup_actions": "none"
+  "backup_actions": "none",
+  "portaria_policy": "consult all third parties and view documentation; no create/update/delete/release/download/export"
 }
