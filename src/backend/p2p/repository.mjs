@@ -2,11 +2,18 @@ import { ENTITIES, validId } from './protocol.mjs';
 
 // Boundary for the existing SST features. No feature imports Hyperswarm/Corestore.
 export class SstRepository {
-  constructor(device) { this.device = device; }
+  constructor(device, session, { invitationWriter } = {}) { this.device = device; this.session = session; this.invitationWriter = invitationWriter; }
   async execute(request) {
     if (!request || typeof request !== 'object' || Array.isArray(request)) throw Error('Requisição inválida.');
+    if (request.command === 'status') return { ...this.device.status(), locked: !await this.session?.peek() };
+    if (request.command === 'createIdentity') return this.session.createIdentity(request.name, request.password);
+    if (request.command === 'initializeOwner') return this.session.initializeOwner(request.name, request.password);
+    if (request.command === 'login') return this.session.login(request.name, request.password);
+    if (request.command === 'logout') { this.session.logout(); return { locked: true }; }
+    if (!['get', 'list', 'put', 'delete', 'receipt', 'grant', 'authorizeUser', 'audit', 'identity', 'createInvitation'].includes(request.command)) throw Error('Comando não permitido.');
+    const user = this.session ? await this.session.require() : await this.device.requireUser();
     switch (request.command) {
-      case 'status': return { ...this.device.status(), role: await this.device.role(), writerKey: this.device.writerKey };
+      case 'identity': return { user, writerKey: this.device.writerKey, deviceRole: await this.device.role() };
       case 'get':
       case 'list': {
         // Portaria can consult all third parties and their documentation.
@@ -20,11 +27,18 @@ export class SstRepository {
       case 'delete': return this.device.remove(request.entity, request.recordId, request.previous);
       case 'receipt': return this.device.receipt(request.operationId);
       case 'grant': return this.device.grant(request.writerKey, request.role);
+      case 'authorizeUser': return this.device.authorizeUser(request.userKey, request.role, request.name);
+      case 'audit': return this.device.audit();
+      case 'createInvitation':
+        if (user.role !== 'admin' || await this.device.role() !== 'admin') throw Error('Convite exige administrador.');
+        if (!this.invitationWriter) throw Error('Emissão de convite indisponível nesta plataforma.');
+        return this.invitationWriter(this.device.invitation());
       default: throw Error('Comando não permitido.');
     }
   }
   async previewLegacyImport(state) {
-    if (await this.device.role() !== 'admin') throw Error('Somente administrador importa.');
+    const user = this.session ? await this.session.require() : await this.device.requireUser();
+    if (await this.device.role() !== 'admin' || user.role !== 'admin') throw Error('Somente administrador importa.');
     if (!state || typeof state !== 'object') throw Error('Estado inválido.');
     const records = [];
     for (const entity of ENTITIES.filter(entity => entity !== 'excecoes')) {

@@ -5,13 +5,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { SstDevice } from '../../src/backend/p2p/device.mjs';
+import { openFixtureDevice } from './fixtures.mjs';
 import { SstRepository } from '../../src/backend/p2p/repository.mjs';
 import { openDeviceConfig, writeInvitation } from '../../src/platform/native/device-files.mjs';
 
 test('legacy import preview preserves IDs, refuses duplicates, never mutates source or imports access exceptions', async t => {
   const dir = await mkdtemp(path.join(tmpdir(), 'sst-preview-'));
   const settings = await openDeviceConfig(dir);
-  const device = await SstDevice.open({ directory: settings.directory, ...settings.config });
+  const device = await openFixtureDevice({ directory: settings.directory, ...settings.config });
   t.after(async () => { await device.close(); await rm(dir, { recursive: true, force: true }); });
   const repo = new SstRepository(device);
   const source = { terceiros: [{ id: 123, nome: 'Fictício' }], empresas: [{ id: 'e1' }], treinamentos: [], liberacoesExcecao: { 123: true } };
@@ -36,7 +37,7 @@ test('device config persists identity secret, creates private invitation file an
   const first = await openDeviceConfig(root), second = await openDeviceConfig(root);
   assert.deepEqual(first.config, second.config);
   assert.equal((await stat(path.join(root, 'device.json'))).mode & 0o777, 0o600);
-  const invitation = { protocol: 'sst-p2p-v1', baseKey: 'a'.repeat(64), encryptionKey: 'b'.repeat(64) };
+  const invitation = { protocol: 'sst-p2p-v2', baseKey: 'a'.repeat(64), encryptionKey: 'b'.repeat(64) };
   const file = path.join(dir, 'fixture.invitation.json');
   await writeInvitation(file, invitation);
   const bytes = await readFile(file);
@@ -63,17 +64,20 @@ test('native stdio bridge performs writes and restarts without a network or Supa
     });
   }
   const replies = await run([
+    { command: 'initializeOwner', name: 'admin.teste', password: 'Senha-ficticia-2026' },
     { command: 'put', requestId: 1, entity: 'empresas', recordId: 'e1', value: { nome: 'Empresa fictícia' } },
     { command: 'get', requestId: 2, entity: 'empresas', recordId: 'e1' },
     { command: 'invitation', requestId: 3 }
   ]);
   assert.equal(replies[0].ready, true);
-  assert.equal(replies[1].result.accepted, true);
-  assert.equal(replies[2].result.value.nome, 'Empresa fictícia');
-  assert.equal(replies[3].ok, false);
-  const next = await run([{ command: 'get', entity: 'empresas', recordId: 'e1' }]);
-  assert.equal(next[0].status.writerKey, replies[0].status.writerKey);
-  assert.equal(next[1].result.value.nome, 'Empresa fictícia');
+  assert.equal(replies[2].result.accepted, true);
+  assert.equal(replies[3].result.value.nome, 'Empresa fictícia');
+  assert.equal(replies[4].ok, false);
+  const next = await run([{ command: 'get', entity: 'empresas', recordId: 'e1' }, { command: 'login', name: 'admin.teste', password: 'Senha-ficticia-2026' }, { command: 'identity' }, { command: 'get', entity: 'empresas', recordId: 'e1' }]);
+  assert.equal(next[0].status.locked, true);
+  assert.equal(next[1].ok, false);
+  assert.equal(next[2].ok, true);
+  assert.equal(next[4].result.value.nome, 'Empresa fictícia');
   const config = JSON.parse(await readFile(path.join(dir, 'device.json')));
   assert.ok(!JSON.stringify(replies).includes(config.encryptionKey));
 });

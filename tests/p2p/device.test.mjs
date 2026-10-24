@@ -6,6 +6,7 @@ import path from 'node:path';
 import crypto from 'hypercore-crypto';
 import b4a from 'b4a';
 import { SstDevice } from '../../src/backend/p2p/device.mjs';
+import { openFixtureDevice } from './fixtures.mjs';
 import { SstRepository } from '../../src/backend/p2p/repository.mjs';
 
 const key = () => b4a.toString(crypto.randomBytes(32), 'hex');
@@ -30,13 +31,13 @@ test('encrypted storage, signed two-peer replication, ACL, conflicts, tombstones
     await rm(dir, { recursive: true, force: true });
   });
   const secret = key();
-  const admin = await SstDevice.open({ directory: path.join(dir, 'admin'), encryptionKey: secret }); nodes.push(admin);
+  const admin = await openFixtureDevice({ directory: path.join(dir, 'admin'), encryptionKey: secret }); nodes.push(admin);
   assert.equal(await admin.role(), 'admin');
   assert.equal(admin.status().networkStarted, false);
   await assert.rejects(SstDevice.open({ directory: path.join(dir, 'bad') }), /obrigatória/);
   const result = await admin.put('empresas', 'empresa1', { nome: 'Empresa fictícia' });
   assert.equal(result.accepted, true);
-  const member = await SstDevice.open({ directory: path.join(dir, 'member'), invitation: admin.invitation() }); nodes.push(member);
+  const member = await openFixtureDevice({ directory: path.join(dir, 'member'), invitation: admin.invitation() }); nodes.push(member);
   links.push(connect(admin, member));
   await until(async () => { await member.base.update(); return !!await member.get('empresas', 'empresa1'); }, 'Replicação inicial não chegou.');
   await assert.rejects(member.put('empresas', 'negado', { nome: 'Sem autorização' }), /permissão/);
@@ -96,7 +97,7 @@ test('encrypted storage, signed two-peer replication, ACL, conflicts, tombstones
   links.forEach(close => close()); links.length = 0;
   const before = admin.baseKey;
   await admin.close(); nodes.splice(nodes.indexOf(admin), 1);
-  const reopened = await SstDevice.open({ directory: path.join(dir, 'admin'), encryptionKey: secret }); nodes.push(reopened);
+  const reopened = await openFixtureDevice({ directory: path.join(dir, 'admin'), encryptionKey: secret }); nodes.push(reopened);
   assert.equal(reopened.baseKey, before);
   assert.equal((await reopened.get('terceiros', 'pessoa1')).value.nome, 'Pessoa fictícia');
   assert.equal((await reopened.get('empresas', 'empresa1')).deleted, true);
@@ -105,8 +106,8 @@ test('encrypted storage, signed two-peer replication, ACL, conflicts, tombstones
 
 test('offline edits converge after reconnect; concurrent revision is reported instead of silently overwritten', { timeout: 40000 }, async t => {
   const dir = await mkdtemp(path.join(tmpdir(), 'sst-offline-'));
-  const a = await SstDevice.open({ directory: path.join(dir, 'a'), encryptionKey: key() });
-  const b = await SstDevice.open({ directory: path.join(dir, 'b'), invitation: a.invitation() });
+  const a = await openFixtureDevice({ directory: path.join(dir, 'a'), encryptionKey: key() });
+  const b = await openFixtureDevice({ directory: path.join(dir, 'b'), invitation: a.invitation() });
   let disconnect = connect(a, b);
   t.after(async () => { disconnect(); await a.close(); await b.close(); await rm(dir, { recursive: true, force: true }); });
   await a.grant(b.writerKey, 'cadastro');
@@ -137,8 +138,8 @@ test('offline edits converge after reconnect; concurrent revision is reported in
 
 test('different encrypted groups do not replicate business records', { timeout: 25000 }, async t => {
   const dir = await mkdtemp(path.join(tmpdir(), 'sst-p2p-isolation-'));
-  const a = await SstDevice.open({ directory: path.join(dir, 'a'), encryptionKey: key() });
-  const b = await SstDevice.open({ directory: path.join(dir, 'b'), encryptionKey: key() });
+  const a = await openFixtureDevice({ directory: path.join(dir, 'a'), encryptionKey: key() });
+  const b = await openFixtureDevice({ directory: path.join(dir, 'b'), encryptionKey: key() });
   const disconnect = connect(a, b);
   t.after(async () => { disconnect(); await a.close(); await b.close(); await rm(dir, { recursive: true, force: true }); });
   await a.put('terceiros', 'private', { nome: 'Só grupo A' });
