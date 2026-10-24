@@ -3,12 +3,22 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "test": "node scripts/check-layout.cjs && node tests/security.cjs && node tests/page-loading.cjs && node tests/audit-sync.cjs && node tests/reports.cjs && node tests/phase2.cjs && node tests/edge-documents.cjs && node tests/document-migration.cjs && node tests/internal-deployment.cjs",
+    "test": "node scripts/check-layout.cjs && node tests/security.cjs && node tests/page-loading.cjs && node tests/audit-sync.cjs && node tests/reports.cjs && node tests/phase2.cjs && node tests/edge-documents.cjs && node tests/document-migration.cjs && node tests/internal-deployment.cjs && npm run test:p2p",
+    "test:p2p": "node --test tests/p2p/*.test.mjs",
+    "p2p:device": "node scripts/p2p/device.mjs",
     "csp": "node scripts/update-csp.cjs",
     "build": "node scripts/build.cjs && node scripts/update-csp.cjs",
     "check": "node scripts/check-layout.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0"
+  },
+  "dependencies": {
+    "autobase": "7.28.2",
+    "b4a": "1.9.0",
+    "corestore": "7.16.1",
+    "hyperbee": "2.27.3",
+    "hypercore-crypto": "3.7.0",
+    "hyperswarm": "4.17.2"
   }
 }

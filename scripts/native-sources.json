@@ -1,0 +1,13 @@
+{
+  "runtime": "node >=22 (homologacao); Android/Bare bridge pending",
+  "sources": [
+    "src/backend/p2p/protocol.mjs",
+    "src/backend/p2p/materializer.mjs",
+    "src/backend/p2p/device.mjs",
+    "src/backend/p2p/repository.mjs",
+    "src/platform/native/device-files.mjs"
+  ],
+  "entrypoints": ["scripts/p2p/device.mjs"],
+  "browserAutoLoad": false
+}
+

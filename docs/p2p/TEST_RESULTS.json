@@ -1,0 +1,36 @@
+{
+  "base_commit": "3a53c180bd90e28fc5edeae9db66281d9c447430",
+  "branch": "homologacao/p2p-local-first",
+  "build": "passed",
+  "existing_regression_suite": "passed; Supabase/document transports simulated where existing tests specify",
+  "new_native_tests": {
+    "passed": 6,
+    "failed": 0,
+    "replication": "real Autobase/Corestore duplex streams, same process; not Internet"
+  },
+  "dependency_audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "rea": {
+    "version": "6.7.0",
+    "reference_inventory": "completed as historical reference",
+    "semantic_analysis": "blocked by process-ownership inspection",
+    "source_head": "7c833475a7335a0a7b1d340c474433af8be23289"
+  },
+  "not_validated": [
+    "Android APK",
+    "existing UI connected to native core",
+    "different networks/NAT",
+    "Android background lifecycle",
+    "individual user auth",
+    "per-role cryptographic read isolation",
+    "full migration/restore"
+  ],
+  "production_ready": false,
+  "backup_actions": "none"
+}

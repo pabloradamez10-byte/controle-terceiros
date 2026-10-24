@@ -20,12 +20,23 @@ O código editável fica em `src/`. `index.html` contém a estrutura das telas e
 | `src/features/dados/` | Importação e exportação |
 | `src/features/*.js` | Complementos existentes: pendências, matriz de treinamentos, portaria e visualização documental |
 | `src/backend/` | Contexto, requisições autenticadas, sessão/perfil, permissões, usuários, persistência e inicialização |
+| `src/backend/p2p/` | Núcleo nativo experimental: protocolo SST, projeção determinística, armazenamento/replicação e contrato de repositório |
+| `src/platform/native/` | Integração de arquivos do aparelho para homologação em Node; não carregar no navegador |
 | `src/security/` | Sanitização e proteção de conteúdo no navegador |
 | `src/platform/` | Service worker e limites do cache público |
 | `src/styles/` | Aparência geral, autenticação, pendências e portaria |
 | `supabase/` | Funções e controles do servidor e do banco |
 | `tests/` | Verificações de segurança, regras, sincronização e instalação |
 | `deploy/internal/` | Preparação de instalação independente e backup |
+| `scripts/p2p/` | Entrada nativa de homologação por stdio; nenhum servidor HTTP |
+
+## Núcleo P2P de homologação
+
+O núcleo experimental está isolado no mesmo projeto. `scripts/native-sources.json` é seu mapa de fontes ESM e entradas. A verificação de organização exige propriedade explícita e impede que essas fontes sejam colocadas no HTML ou no cache público. O mapa `scripts/sources.json` continua responsável apenas pelos arquivos web gerados. Os fragmentos `.part.js` existentes permanecem no escopo original.
+
+O contrato em `src/backend/p2p/repository.mjs` é a fronteira para integrar as funcionalidades do SST: as telas não devem importar bibliotecas de rede ou banco. O núcleo usa Corestore, Autobase, Hyperbee, Hyperswarm, hypercore-crypto e b4a, com versões exatas e lockfile. Não se criou criptografia, protocolo de replicação ou banco próprios.
+
+Nesta etapa **o núcleo não está conectado às telas nem ao login atual**. Não foi retirado o Supabase do aplicativo web. A ponte de homologação por stdio executa o núcleo real sem Supabase e sem HTTP. Ela testa persistência e mensagens locais, não é a ponte Android final. A ativação no aplicativo deve ser uma mudança posterior explícita, com identidade, projeções de leitura, migração completa e testes de aparelho. Consulte `docs/p2p/HOMOLOGACAO.md` para execução, limites e bloqueios de produção.
 
 ## Fonte e arquivos gerados
 
