@@ -15,3 +15,15 @@ for(const file of targets){assert.ok(html.includes('./'+file),'Arquivo fora do H
 const scriptFiles=[...html.matchAll(/<script\b[^>]*src="\.\/(assets\/js\/[^"?]+)"/g)].map(m=>m[1]);
 assert.deepEqual(scriptFiles,targets.filter(f=>f.endsWith('.js')),'Ordem de carregamento alterada');
 console.log('Layout verified: '+seen.size+' source files, syntax, ownership, script order and public cache.');
+// Native ESM has a separate owner and is never concatenated into public scripts.
+const native=require('./native-sources.json');
+for(const file of [...native.sources,...native.entrypoints]){
+ assert.ok(!seen.has(file),'Fonte nativa também registrada no navegador: '+file);
+ assert.ok(fs.existsSync(path.join(root,file)),'Fonte nativa ausente: '+file);
+ assert.ok(!html.includes(file)&&!sw.includes(file),'Núcleo nativo exposto como script público: '+file);
+ const check=require('node:child_process').spawnSync(process.execPath,['--check',path.join(root,file)],{encoding:'utf8'});
+ assert.equal(check.status,0,check.stderr);
+}
+const walk=folder=>fs.readdirSync(path.join(root,folder),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(folder+'/'+e.name):[folder+'/'+e.name]);
+for(const file of walk('src').filter(f=>f.endsWith('.mjs')))assert.ok(native.sources.includes(file),'Fonte nativa sem proprietário: '+file);
+console.log('Native ownership verified: '+native.sources.length+' isolated ESM sources; no native code in browser bundles.');

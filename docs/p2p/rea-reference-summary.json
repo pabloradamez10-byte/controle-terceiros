@@ -1,0 +1,337 @@
+{
+  "schema": "HistoricalSourceSummary",
+  "authority": "historical-reference",
+  "root_alias": "$REFERENCE_ROOT",
+  "manifest": {
+    "schema": "HistoricalSourceManifest",
+    "authority": "historical-reference",
+    "manifest_id": "hsm_76370705f77cd366bc0c4d5a6876323d35a2c2180bf13a745d5770130a07e58f",
+    "graph_sha256": "e054f8d002eff59e1cb9e9989288d530e448afe1ce0226e46c46728e28f39f59",
+    "root_sha256": "b06d0d8a101f323fa65c59b0ad1ee968682783a42eaa31268fc0673e38cea592",
+    "inventory_state": "partial",
+    "entry_count": 101,
+    "relationship_count": 208
+  },
+  "inventory_state": "partial",
+  "provenance": {
+    "importer": "rea-agents",
+    "importer_version": "6.7.0",
+    "caller": "rea-cli"
+  },
+  "vcs": {
+    "kind": "git",
+    "head": "7c833475a7335a0a7b1d340c474433af8be23289",
+    "dirty": null
+  },
+  "languages": [
+    "JSON",
+    "JavaScript",
+    "Markdown",
+    "YAML"
+  ],
+  "manifests": [
+    "package-lock.json",
+    "package.json"
+  ],
+  "counts": {
+    "entries": 101,
+    "files": 88,
+    "directories": 13,
+    "symlinks": 0,
+    "unknown": 0,
+    "relationships": 208,
+    "parse_failures": 0,
+    "exclusions": 1
+  },
+  "file_content_states": {
+    "hashed": 88,
+    "redacted-secret": 0,
+    "excluded": 0,
+    "unreadable": 0,
+    "unknown": 0
+  },
+  "directory_tree_states": {
+    "enumerated": 13,
+    "partial": 0,
+    "excluded": 0,
+    "unreadable": 0,
+    "unknown": 0
+  },
+  "file_sizes": {
+    "known_bytes": "815633",
+    "unknown_file_count": 0
+  },
+  "exclusions": [
+    {
+      "path": ".git",
+      "entry_kind": "directory",
+      "reason": "default-ignored",
+      "pattern": ".git/"
+    }
+  ],
+  "limitations": [
+    "Path identity is revalidated around operations; Node lacks portable descriptor-relative openat traversal, so a syscall-boundary pathname race remains."
+  ],
+  "outline": {
+    "depth": 2,
+    "entries": [
+      {
+        "path": ".github",
+        "classifications": [
+          "config"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": ".github/actions",
+        "classifications": [
+          "unknown"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": ".github/workflows",
+        "classifications": [
+          "unknown"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": ".gitignore",
+        "kind": "file",
+        "language": null,
+        "size": 34,
+        "content_state": "hashed",
+        "classifications": [
+          "config"
+        ],
+        "limitations": []
+      },
+      {
+        "path": ".husky",
+        "classifications": [
+          "config"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": ".husky/pre-commit",
+        "kind": "file",
+        "language": null,
+        "size": 25,
+        "content_state": "hashed",
+        "classifications": [
+          "unknown"
+        ],
+        "limitations": []
+      },
+      {
+        "path": ".nvmrc",
+        "kind": "file",
+        "language": null,
+        "size": 7,
+        "content_state": "hashed",
+        "classifications": [
+          "config"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "CONTRIBUTING.md",
+        "kind": "file",
+        "language": "Markdown",
+        "size": 778,
+        "content_state": "hashed",
+        "classifications": [
+          "documentation"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "LICENSE.md",
+        "kind": "file",
+        "language": "Markdown",
+        "size": 10523,
+        "content_state": "hashed",
+        "classifications": [
+          "documentation"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "NOTICE.md",
+        "kind": "file",
+        "language": "Markdown",
+        "size": 550,
+        "content_state": "hashed",
+        "classifications": [
+          "documentation"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "README.md",
+        "kind": "file",
+        "language": "Markdown",
+        "size": 4389,
+        "content_state": "hashed",
+        "classifications": [
+          "documentation"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "SECURITY.md",
+        "kind": "file",
+        "language": "Markdown",
+        "size": 282,
+        "content_state": "hashed",
+        "classifications": [
+          "documentation"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "babel.config.cjs",
+        "kind": "file",
+        "language": "JavaScript",
+        "size": 148,
+        "content_state": "hashed",
+        "classifications": [
+          "source"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "eslint.config.js",
+        "kind": "file",
+        "language": "JavaScript",
+        "size": 329,
+        "content_state": "hashed",
+        "classifications": [
+          "config",
+          "source"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "jest.config.js",
+        "kind": "file",
+        "language": "JavaScript",
+        "size": 240,
+        "content_state": "hashed",
+        "classifications": [
+          "source"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "jest.setup.js",
+        "kind": "file",
+        "language": "JavaScript",
+        "size": 149,
+        "content_state": "hashed",
+        "classifications": [
+          "source"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "package-lock.json",
+        "kind": "file",
+        "language": "JSON",
+        "size": 392373,
+        "content_state": "hashed",
+        "classifications": [
+          "manifest"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "package.json",
+        "kind": "file",
+        "language": "JSON",
+        "size": 2000,
+        "content_state": "hashed",
+        "classifications": [
+          "manifest"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "src",
+        "classifications": [
+          "source"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": "src/constants",
+        "classifications": [
+          "source"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": "src/index.js",
+        "kind": "file",
+        "language": "JavaScript",
+        "size": 69,
+        "content_state": "hashed",
+        "classifications": [
+          "source"
+        ],
+        "limitations": []
+      },
+      {
+        "path": "src/middleware",
+        "classifications": [
+          "source"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": "src/pearpassVaultClient",
+        "classifications": [
+          "source"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": "src/utils",
+        "classifications": [
+          "source"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      },
+      {
+        "path": "src/worklet",
+        "classifications": [
+          "source"
+        ],
+        "limitations": [],
+        "kind": "directory",
+        "tree_state": "enumerated"
+      }
+    ],
+    "omitted_entry_count": 76
+  }
+}

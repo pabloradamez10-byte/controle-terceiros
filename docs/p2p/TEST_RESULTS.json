@@ -1,0 +1,46 @@
+{
+  "base_commit": "3a53c180bd90e28fc5edeae9db66281d9c447430",
+  "branch": "homologacao/p2p-local-first",
+  "build": "passed",
+  "existing_regression_suite": "passed; Supabase/document transports simulated where existing tests specify",
+  "new_native_tests": {
+    "passed": 9,
+    "failed": 0,
+    "replication": "real Autobase/Corestore duplex streams, same process; not Internet"
+  },
+  "dependency_audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "rea": {
+    "version": "6.7.0",
+    "reference_inventory": "completed as historical reference",
+    "semantic_analysis": "blocked by process-ownership inspection",
+    "source_head": "7c833475a7335a0a7b1d340c474433af8be23289"
+  },
+  "not_validated": [
+    "Android APK",
+    "existing UI connected to native core",
+    "different networks/NAT",
+    "Android background lifecycle",
+    "existing UI login integrated with native individual sessions; account recovery and cross-device enrollment",
+    "native document viewer and app download/export restrictions",
+    "full migration/restore"
+  ],
+  "production_ready": false,
+  "backup_actions": "none",
+  "portaria_policy": "consult all third parties and view documentation; no create/update/delete/release/download/export",
+  "protocol": "sst-p2p-v2",
+  "individual_authentication": {
+    "implemented": true,
+    "password_kdf": "Argon2id",
+    "credential_encryption": "XChaCha20-Poly1305",
+    "operation_signature": "Ed25519 bound to group/device/user",
+    "session": "logout and 15-minute inactivity expiry",
+    "revocation": "enforced after propagation; not retroactive erasure"
+  }
+}
