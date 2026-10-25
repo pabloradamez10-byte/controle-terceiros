@@ -40,7 +40,7 @@
     for(const name of ['abrirEdicao','removerAnexoTerceiro','removerArquivoEmpresaV26','removerArquivoTerceiroV16']){
       const original=window[name];if(typeof original==='function')window[name]=function(){if(!can('cadastrar'))return toast('Seu perfil permite apenas consulta.');return original.apply(this,arguments);};
     }
-    for(const name of ['baixarArquivoTerceiroV26','baixarArquivoTerceiroV16','baixarArquivoEmpresaV26','v26BaixarTemp','exportarBackupJSON','exportarCSVEmpresas','exportarCSVTerceiros','baixarModeloCSV']){
+    for(const name of ['abrirExportacaoRelatorio','gerarRelatorioExecutivo','baixarArquivoTerceiroV26','baixarArquivoTerceiroV16','baixarArquivoEmpresaV26','v26BaixarTemp','exportarBackupJSON','exportarCSVEmpresas','exportarCSVTerceiros','baixarModeloCSV']){
       const original=window[name];if(typeof original==='function')window[name]=function(){if(!window.sstCanDownloadDocuments())return toast('Seu perfil permite visualizar, sem baixar ou exportar.');return original.apply(this,arguments);};
     }
     const hideBlocked=()=>{
@@ -48,7 +48,7 @@
       for(const button of document.querySelectorAll('button[data-sst-click],button[data-action]')){
         const action=button.getAttribute('data-sst-click')||'', direct=button.dataset.action;
         if(!can('cadastrar')&&(/"name":"(?:abrirEdicao|excluir|remover|salvar)/.test(action)||['remove','review','migrate'].includes(direct)))button.hidden=true;
-        if(!window.sstCanDownloadDocuments()&&(/"name":"(?:baixar|v26Baixar|exportar)/.test(action)||direct==='download'))button.hidden=true;
+        if(!window.sstCanDownloadDocuments()&&(/"name":"(?:abrirExportacaoRelatorio|gerarRelatorioExecutivo|baixar|v26Baixar|exportar)/.test(action)||direct==='download')){button.hidden=true;button.style.setProperty('display','none','important');}
       }
     };
     nativeObserver=new MutationObserver(hideBlocked);nativeObserver.observe(document.body,{childList:true,subtree:true});hideBlocked();

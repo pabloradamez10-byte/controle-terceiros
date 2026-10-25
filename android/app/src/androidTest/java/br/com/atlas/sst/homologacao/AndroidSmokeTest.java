@@ -59,13 +59,17 @@ public final class AndroidSmokeTest {
    try(InputStream stream=getInstrumentation().getContext().getAssets().open("document.pdf.base64")){pdf=new String(stream.readAllBytes(),StandardCharsets.UTF_8).trim();}
    async("(async()=>{const meta=await sstNativeHost.request({action:'documents',body:{action:'upload',kind:'terceiro',ownerId:window.__person,filename:'homologacao.pdf',mime:'application/pdf',base64:"+JSONObject.quote(pdf)+"}});window.__pdfId=meta.storageId;const data=(await sstNativeHost.request({action:'documents',body:{action:'view',id:meta.storageId}})).dataUrl;v26VisualizarDataUrl(data,'application/pdf','PDF fictício de homologação')})()");
    waitFor("document.querySelector('.v26-doc-preview-body canvas')?.dataset.sstRendered==='true'");
-   waitFor("!document.querySelector('.v26-doc-preview-body')?.textContent.includes('Não foi possível')");screenshot("03-pdf");
+   waitFor("!document.querySelector('.v26-doc-preview-body')?.textContent.includes('Não foi possível')");
+   waitFor("document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('.v26-doc-preview-overlay')");
+   assertEquals("true",js("(()=>{const c=document.querySelector('.v26-doc-preview-body canvas'),pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let dark=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>0&&pixels[i]+pixels[i+1]+pixels[i+2]<500)dark++;return dark>50})()"));
+   screenshot("03-pdf");
    String documentId=js("window.__pdfId");
    js("window.__beforeLogout=true;tssSair()");waitFor("!window.__beforeLogout&&document.getElementById('tss-native-user-password')&&!document.body.classList.contains('tss-authenticated')");
    js("document.getElementById('tss-auth-email').value='portaria@sst.local';document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('tss-auth-form').requestSubmit()");
    waitFor("document.body.classList.contains('tss-authenticated')");
    assertEquals("false",js("tssPode('cadastrar')||tssPode('liberar')||sstCanDownloadDocuments()"));
    async("(async()=>{const state=(await sstNativeHost.request({action:'state'}))[0].data;if(state.terceiros.length!==1)throw Error('Cadastro perdido');let denied=false;try{await sstNativeHost.request({action:'saveState',body:{p_data:state}})}catch(error){denied=true}if(!denied)throw Error('Portaria conseguiu gravar');await sstNativeHost.request({action:'documents',body:{action:'view',id:"+documentId+"}});let blocked=false;try{await sstNativeHost.request({action:'documents',body:{action:'download',id:"+documentId+"}})}catch(error){blocked=true}if(!blocked)throw Error('Download permitido');})()");
+   waitFor("Array.from(document.querySelectorAll('button[data-sst-click]')).filter(button=>/abrirExportacaoRelatorio|gerarRelatorioExecutivo|baixar|exportar/i.test(button.getAttribute('data-sst-click'))).every(button=>getComputedStyle(button).display==='none')");
    screenshot("04-portaria");
    getInstrumentation().runOnMainSync(()->activity.finish());getInstrumentation().waitForIdleSync();Thread.sleep(1000);
    launch();waitFor("document.getElementById('tss-native-user-password')&&!document.body.classList.contains('tss-authenticated')");

@@ -2,9 +2,10 @@
   if(!window.sstNativeMode)return;
   let pdfModule;
   window.v26VisualizarDataUrl=function(dataUrl,mime,name){
+    window.sstEnsureDocumentPreviewStyle();
     const generation=window.sstPrivateRevision;
     dataUrl=window.sstSafeDocumentURL(dataUrl);
-    const overlay=document.createElement('div');overlay.className='v26-doc-preview-overlay sst-sensitive-dialog';
+    const overlay=document.createElement('div');overlay.className='v26-doc-preview-overlay sst-sensitive-dialog';overlay.style.zIndex='100002';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
     const panel=document.createElement('section');panel.className='v26-doc-preview';
     const head=document.createElement('div');head.className='v26-doc-preview-head';
     const title=document.createElement('strong');title.textContent=name||'Documento';
