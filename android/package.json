@@ -5,7 +5,11 @@
   "devDependencies": {
     "bare-runtime": "1.36.0",
     "bare-pack": "3.0.2",
-    "bare-link": "2.1.0",
-    "bare-node-runtime": "1.5.2"
+    "bare-link": "2.1.0"
+  },
+  "dependencies": {
+    "bare-fs": "4.8.4",
+    "bare-path": "3.1.2",
+    "bare-encoding": "1.0.3"
   }
 }

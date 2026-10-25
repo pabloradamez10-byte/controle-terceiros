@@ -41,6 +41,7 @@ jobs:
         run: |
           android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons .
           android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons android
+      - run: node android/scripts/check-addons.cjs
       - run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
         working-directory: android
       - name: Allow runner access to KVM

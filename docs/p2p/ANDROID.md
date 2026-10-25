@@ -16,6 +16,7 @@ python3 android/scripts/fetch-kit.py
 SST_OCR_ASSETS=/CAMINHO/ocr-assets node android/scripts/prepare.cjs
 android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons .
 android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons android
+node android/scripts/check-addons.cjs
 cd android
 ./gradlew :app:assembleDebug :app:connectedDebugAndroidTest
 ```
@@ -32,7 +33,7 @@ A compilação exige JDK 17 e Android SDK 35. A workflow `android-homologacao.ym
 
 ## Testes
 
-O teste Bare de computador executa cofre, Argon2id, gravações assinadas, anexos e integridade, reabertura e bloqueios de Portaria nas mesmas fontes. O adaptador de arquivos acrescenta `readFile/writeFile` ao FileHandle Bare mantendo o fd exclusivo; o adaptador de texto fornece latin1 usado pelo validador existente.
+O teste Bare de computador executa cofre, Argon2id, gravações assinadas, anexos e integridade, reabertura e bloqueios de Portaria nas mesmas fontes. A entrada Bare usa apenas as bibliotecas de arquivo/caminho/texto necessárias; SHA-256 reutiliza sodium-native. O inventário confere todas as bibliotecas nativas exigidas pelo bundle para as duas arquiteturas. O adaptador de arquivos acrescenta `readFile/writeFile` ao FileHandle Bare mantendo o fd exclusivo; o adaptador de texto fornece latin1 usado pelo validador existente.
 
 O teste instrumentado Android é separado: inicia o APK num emulador, cria conta pelo formulário, salva empresa/terceiro pelas telas, renderiza PDF em canvas, troca para Portaria, verifica bloqueios e reabre o aplicativo preservando os registros. Evidência final de compilação/emulador deve ser conferida na execução da workflow; existir o código de teste não comprova aprovação. Teste no celular de Pablo, seleção de anexos, teclado/rotação e redes diferentes exigem validação física posterior.
 

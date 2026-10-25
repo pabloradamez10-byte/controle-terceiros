@@ -1,4 +1,4 @@
-require('bare-node-runtime/global');require('./encoding.cjs');
+require('bare-encoding/global');require('./encoding.cjs');
 const {openAndroidCore}=require('./worklet.mjs');
 const fs=require('bare-fs/promises'),crypto=require('hypercore-crypto'),b4a=require('b4a');
 function check(ok,message){if(!ok)throw Error(message);}

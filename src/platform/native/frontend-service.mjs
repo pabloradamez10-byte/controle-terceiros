@@ -1,7 +1,7 @@
 import canonicalize from 'canonicalize';
 import crypto from 'hypercore-crypto';
 import b4a from 'b4a';
-import { createHash } from 'node:crypto';
+import sodium from 'sodium-native';
 import { validateFile } from '../../../supabase/functions/sst-documentos/validate.mjs';
 import { validId, ROLES } from '../../backend/p2p/protocol.mjs';
 
@@ -12,7 +12,7 @@ const arrays = ['terceiros', 'empresas', 'treinamentos'];
 const maps = ['anexosTerceiros', 'anexosEmpresas', 'arquivosTerceirosV16', 'arquivosEmpresasV26'];
 const hex = bytes => b4a.toString(bytes, 'hex');
 const digest = value => hex(crypto.hash(b4a.from(canonicalize(value))));
-const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+const sha256 = bytes => { const hash=b4a.alloc(sodium.crypto_hash_sha256_BYTES);sodium.crypto_hash_sha256(hash,bytes);return hex(hash); };
 const defaults = {
   admin: { consultar: true, cadastrar: true, liberar: true }, cadastro: { consultar: true, cadastrar: true, liberar: false },
   sesmt: { consultar: true, cadastrar: false, liberar: true }, portaria: { consultar: true, cadastrar: false, liberar: false }

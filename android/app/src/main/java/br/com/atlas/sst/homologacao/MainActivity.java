@@ -78,9 +78,9 @@ public final class MainActivity extends Activity {
     }catch(Exception ignored){/* Invalid requests have no access to the core. */}
    });
    worklet=new Worklet(null);
+   worklet.start("/core.bundle",getAssets().open("core.bundle"),new String[]{new File(getFilesDir(),"sst-homologacao").getAbsolutePath()});
    ipc=new IPC(worklet);
    ipc.readable(this::readAvailable);
-   worklet.start("/core.bundle",getAssets().open("core.bundle"),new String[]{new File(getFilesDir(),"sst-homologacao").getAbsolutePath()});
   }catch(Throwable error){fail("Não foi possível iniciar o SST de homologação. "+(error instanceof IllegalStateException?error.getMessage():"O núcleo Android não carregou."));}
  }
  private void readAvailable(){
