@@ -42,6 +42,7 @@ public final class AndroidSmokeTest {
   Bitmap image=getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(image);
   File output=new File(getInstrumentation().getTargetContext().getFilesDir(),name+".png");
   try(FileOutputStream stream=new FileOutputStream(output)){image.compress(Bitmap.CompressFormat.PNG,100,stream);}image.recycle();
+  try(android.os.ParcelFileDescriptor descriptor=getInstrumentation().getUiAutomation().executeShellCommand("screencap -p /data/local/tmp/sst-"+name+".png");InputStream command=new android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor)){while(command.read()!=-1){}}
  }
  @Test public void testRealAndroidCoreAndWebView()throws Exception{
   String password="Teste-"+UUID.randomUUID();
@@ -60,14 +61,14 @@ public final class AndroidSmokeTest {
    waitFor("document.querySelector('.v26-doc-preview-body canvas')?.dataset.sstRendered==='true'");
    waitFor("!document.querySelector('.v26-doc-preview-body')?.textContent.includes('Não foi possível')");screenshot("03-pdf");
    String documentId=js("window.__pdfId");
-   js("tssSair()");waitFor("document.getElementById('tss-auth-form')&&!document.body.classList.contains('tss-authenticated')");
+   js("window.__beforeLogout=true;tssSair()");waitFor("!window.__beforeLogout&&document.getElementById('tss-native-user-password')&&!document.body.classList.contains('tss-authenticated')");
    js("document.getElementById('tss-auth-email').value='portaria@sst.local';document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('tss-auth-form').requestSubmit()");
    waitFor("document.body.classList.contains('tss-authenticated')");
    assertEquals("false",js("tssPode('cadastrar')||tssPode('liberar')||sstCanDownloadDocuments()"));
    async("(async()=>{const state=(await sstNativeHost.request({action:'state'}))[0].data;if(state.terceiros.length!==1)throw Error('Cadastro perdido');let denied=false;try{await sstNativeHost.request({action:'saveState',body:{p_data:state}})}catch(error){denied=true}if(!denied)throw Error('Portaria conseguiu gravar');await sstNativeHost.request({action:'documents',body:{action:'view',id:"+documentId+"}});let blocked=false;try{await sstNativeHost.request({action:'documents',body:{action:'download',id:"+documentId+"}})}catch(error){blocked=true}if(!blocked)throw Error('Download permitido');})()");
    screenshot("04-portaria");
    getInstrumentation().runOnMainSync(()->activity.finish());getInstrumentation().waitForIdleSync();Thread.sleep(1000);
-   launch();waitFor("document.getElementById('tss-auth-form')&&!document.body.classList.contains('tss-authenticated')");
+   launch();waitFor("document.getElementById('tss-native-user-password')&&!document.body.classList.contains('tss-authenticated')");
    assertEquals("null",js("document.getElementById('sst-native-initialize')"));
    js("document.getElementById('tss-auth-email').value='portaria@sst.local';document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('tss-auth-form').requestSubmit()");
    waitFor("document.body.classList.contains('tss-authenticated')");
