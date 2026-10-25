@@ -26,6 +26,9 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
       - run: npm ci && npm ci --prefix android
       - run: npm run build && npm test
       - run: node android/scripts/smoke.cjs
@@ -40,6 +43,8 @@ jobs:
           android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons android
       - run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
         working-directory: android
+      - name: Allow runner access to KVM
+        run: sudo setfacl -m "u:$(whoami):rw" /dev/kvm
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
