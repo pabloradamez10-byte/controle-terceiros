@@ -2,7 +2,12 @@ package br.com.atlas.sst.homologacao;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.test.InstrumentationTestCase;
+import android.app.Instrumentation;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import static org.junit.Assert.*;
 import org.json.JSONObject;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -11,7 +16,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-public final class AndroidSmokeTest extends InstrumentationTestCase {
+@RunWith(AndroidJUnit4.class)
+public final class AndroidSmokeTest {
+ private Instrumentation getInstrumentation(){return InstrumentationRegistry.getInstrumentation();}
  private MainActivity activity;
  private String js(String source)throws Exception{
   AtomicReference<String> value=new AtomicReference<>();CountDownLatch latch=new CountDownLatch(1);
@@ -36,7 +43,7 @@ public final class AndroidSmokeTest extends InstrumentationTestCase {
   File output=new File(getInstrumentation().getTargetContext().getFilesDir(),name+".png");
   try(FileOutputStream stream=new FileOutputStream(output)){image.compress(Bitmap.CompressFormat.PNG,100,stream);}image.recycle();
  }
- public void testRealAndroidCoreAndWebView()throws Exception{
+ @Test public void testRealAndroidCoreAndWebView()throws Exception{
   String password="Teste-"+UUID.randomUUID();
   try{
    launch();waitFor("document.getElementById('sst-native-initialize')");screenshot("01-login");

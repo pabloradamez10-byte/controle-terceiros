@@ -28,6 +28,7 @@ public final class MainActivity extends Activity {
  private final Map<String,Reply> replies=new HashMap<>();
  private boolean writing;
  private ValueCallback<Uri[]> fileCallback;
+ private Uri[] selectedFiles;
  private interface Reply { void receive(JSONObject value); }
 
  @Override public void onCreate(Bundle state){
@@ -114,7 +115,7 @@ public final class MainActivity extends Activity {
  private void fail(String message){
   ready=false;replies.clear();if(web!=null)web.loadUrl("about:blank");TextView text=new TextView(this);text.setPadding(24,48,24,24);text.setText(message);setContentView(text);
  }
- @Override protected void onResume(){super.onResume();foreground=true;if(pickingFile||resumeFromPicker){resumeFromPicker=false;return;}if(ready)lockThenLoad();}
+ @Override protected void onResume(){super.onResume();foreground=true;if(pickingFile||resumeFromPicker){resumeFromPicker=false;if(!pickingFile&&fileCallback!=null){ValueCallback<Uri[]> callback=fileCallback;fileCallback=null;callback.onReceiveValue(selectedFiles);selectedFiles=null;}return;}if(ready)lockThenLoad();}
  @Override protected void onPause(){
   foreground=false;if(pickingFile){super.onPause();return;}generation++;replies.clear();if(web!=null)web.loadUrl("about:blank");
   if(ready)try{submit(new JSONObject().put("action","logout"),value->{});}catch(Exception ignored){}
@@ -122,7 +123,7 @@ public final class MainActivity extends Activity {
  }
  @Override protected void onActivityResult(int request,int result,Intent data){
   super.onActivityResult(request,result,data);
-  if(request==31&&fileCallback!=null){pickingFile=false;resumeFromPicker=true;fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result,data));fileCallback=null;}
+  if(request==31&&fileCallback!=null){pickingFile=false;resumeFromPicker=true;selectedFiles=WebChromeClient.FileChooserParams.parseResult(result,data);}
  }
  @Override protected void onDestroy(){
   destroyed=true;ready=false;replies.clear();writes.clear();

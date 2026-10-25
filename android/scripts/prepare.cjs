@@ -6,6 +6,8 @@ const root=path.resolve(__dirname,'../..'),android=path.join(root,'android');
  fs.rmSync(out,{recursive:true,force:true});
  require('../../scripts/p2p/build-ui.cjs').buildNativeUI({assets,out});
  fs.copyFileSync(path.join(android,'webview-bridge.js'),path.join(out,'native-bridge.js'));
+ const index=path.join(out,'index.html');
+ fs.writeFileSync(index,fs.readFileSync(index,'utf8').replace('<title>Portal Terceiros SST</title>','<title>SST Homologação</title>').replace('SST Manager</h2>','SST Homologação</h2>').replace('Acesso restrito ao controle de terceiros.','Teste local com dados fictícios. Crie uma conta própria deste teste.'));
  // Android serves its own packaged assets; the browser-host release manifest is not used here.
  fs.unlinkSync(path.join(out,'release.json'));
  const notices=path.join(out,'notices');fs.mkdirSync(notices,{recursive:true});
