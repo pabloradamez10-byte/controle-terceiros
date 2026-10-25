@@ -69,7 +69,9 @@
       const password=document.getElementById('tss-auth-password');
       password.autocapitalize='none';password.spellcheck=false;
       const visibility=document.createElement('label'),toggle=document.createElement('input');
+      visibility.style.cssText='display:flex;align-items:center;gap:8px;margin:8px 0;';
       toggle.id='sst-native-show-password';toggle.type='checkbox';
+      toggle.style.cssText='width:18px;height:18px;min-height:0;padding:0;margin:0;flex:0 0 auto;';
       toggle.onchange=()=>{password.type=toggle.checked?'text':'password';};
       visibility.append(toggle,document.createTextNode(' Mostrar senha'));password.parentElement.after(visibility);
       const status=await nativeCall('status');
