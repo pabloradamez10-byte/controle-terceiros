@@ -25,12 +25,13 @@
     "source_head": "7c833475a7335a0a7b1d340c474433af8be23289"
   },
   "not_validated": [
-    "Android APK/Keystore and background lifecycle",
-    "different networks/NAT",
-    "real Chromium rendering and PDF canvas",
+    "Physical Android arm64 device, keyboard, file picker and rotation",
+    "Android Keystore, operating-system suspension/kill and background lifecycle beyond tested Activity restart",
+    "different networks/NAT; Android network entry still disabled",
     "identity recovery/rotation and secure cross-device enrollment",
     "full migration/restore and historical report reconstruction",
-    "indexer failover and independent trusted time"
+    "indexer failover and independent trusted time",
+    "stable APK update signing"
   ],
   "production_ready": false,
   "backup_actions": "none",
@@ -46,5 +47,24 @@
   },
   "native_ui_integrated": true,
   "public_web_backend_switched": false,
-  "verified_local_ocr_assets": 18
+  "verified_local_ocr_assets": 18,
+  "android": {
+    "source_commit": "5211d6535ad04c33ac79be012b1e688c5e933059",
+    "application_id": "br.com.atlas.sst.homologacao",
+    "version": "0.1.0-homologacao",
+    "build": "passed",
+    "bare_real_core_smoke": "passed",
+    "instrumented_android_15_x86_64": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "owner onboarding; company/person UI saves; nonblank visible PDF canvas; Portaria view/write/download/export guards; logout/login; native core restart and data persistence"
+    },
+    "visual_review": "login, PDF overlay and Portaria screenshots inspected",
+    "workflow_run": 40159780237,
+    "apk_sha256": "34166846e47f6d13a147f0245adb8e9ace2dd8b525e3dd17830f0c0cdfe7774b",
+    "apk_bytes": 193599956,
+    "network_discovery_enabled": false,
+    "signing": "ephemeral CI debug key; stable production signing pending"
+  }
 }

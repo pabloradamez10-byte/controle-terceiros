@@ -1,6 +1,6 @@
 # Interface P2P de homologação
 
-O pacote nativo isolado reutiliza as telas existentes e conecta login, cadastros, usuários, auditoria e documentos ao núcleo local real. O build web padrão permanece no backend anterior; abrir o endereço público atual não ativa P2P. Não há APK produzido nesta etapa.
+O pacote nativo isolado reutiliza as telas existentes e conecta login, cadastros, usuários, auditoria e documentos ao núcleo local real. O build web padrão permanece no backend anterior; abrir o endereço público atual não ativa P2P. O APK Android de homologação foi produzido e validado em emulador; veja `ANDROID.md`.
 
 ## Organização
 
@@ -36,6 +36,6 @@ São comandos de homologação do adaptador Node, não instrução para instalar
 
 `npm run build` e a suíte completa passaram. Os 12 testes P2P incluem bancos/criptografia reais, integração das telas reais em JSDOM e um host HTTP loopback real. O cenário visual cobre administrador inicial, senha errada/correta, empresa, terceiro, criação de Portaria, documento PNG, bloqueios de escrita/download, logout e expiração. O cenário de serviço cobre lote atômico, revisão antiga, integridade documental, permissões restritas e conta desativada. JSDOM injeta somente o transporte para o serviço real; não simula o banco. A suíte antiga mantém seus transportes simulados onde indicado.
 
-Ainda não foram validados Chromium com renderização real, canvas PDF em navegador real, APK/Keystore, suspensão Android ou redes diferentes. A tentativa de obter Chromium não concluiu, portanto não se declara teste visual real. Recuperação/rotação de identidade, vinculação de outros aparelhos, migração integral e substituição segura do indexador continuam pendentes. O aparelho criador ainda é o único indexador.
+A versão Android foi instalada em emulador, com renderização real de PDF no WebView e reabertura autenticada; veja `ANDROID.md`. Ainda não foram validados Chrome desktop, aparelho físico arm64, Keystore, suspensão do sistema Android ou redes diferentes. A tentativa de obter Chromium não concluiu, portanto não se declara teste visual real. Recuperação/rotação de identidade, vinculação de outros aparelhos, migração integral e substituição segura do indexador continuam pendentes. O aparelho criador ainda é o único indexador.
 
 O trabalho fica na branch `homologacao/p2p-local-first`, PR #5 em rascunho. Main e `backup/pre-p2p-2026-10-24-3a53c18` permanecem em `3a53c180bd90e28fc5edeae9db66281d9c447430`; não houve restauração, importação de backup nem promoção para produção.

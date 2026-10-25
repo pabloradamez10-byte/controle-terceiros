@@ -39,7 +39,7 @@ Comandos de autenticação: `initializeOwner`, `createIdentity`, `login`, `logou
 
 - O build web padrão continua no backend atual; o pacote isolado conecta as mesmas telas/login ao núcleo nativo. Nenhum usuário, senha ou registro Supabase foi alterado ou migrado.
 - O protocolo v1 experimental, sem assinatura individual, não deve ser ativado como alternativa ao v2. Configuração/convite v1 é recusado pela entrada de arquivos; não há migração automática de bancos v1.
-- O núcleo ainda não tem ponte Android, Keystore, validação do visualizador PDF em navegador real, recuperação de identidade ou vinculação automática do mesmo usuário em outro aparelho. Criar o mesmo nome em outro local não comprova a mesma identidade.
+- A ponte Android e o visualizador PDF foram validados no WebView de um emulador, incluindo login e reabertura. Ainda faltam teste físico arm64, Keystore, recuperação de identidade e vinculação automática do mesmo usuário em outro aparelho. Criar o mesmo nome em outro local não comprova a mesma identidade.
 - A cópia local e a chave compartilhada de dados já recebidas não são apagadas por logout/revogação. Proteções contra acesso físico, extração da réplica ou comprometimento do sistema operacional não foram comprovadas.
 - A sessão é uma barreira da ponte nativa. Quem controla o processo ou já possui chaves pode chamar APIs internas; não tratar o contrato JavaScript como sandbox contra o dono do aparelho.
 - O aparelho criador continua sendo o único indexador. Redes diferentes e operação Android em segundo plano permanecem sem ensaio.

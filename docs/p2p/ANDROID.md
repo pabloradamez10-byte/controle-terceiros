@@ -41,3 +41,11 @@ O teste instrumentado Android é separado: inicia o APK num emulador, cria conta
 Backup `backup/pre-p2p-2026-10-24-3a53c18` e main permanecem preservados. As credenciais de teste são geradas apenas durante os ensaios; não há senha embutida no APK.
 
 A primeira tentativa no emulador identificou corrupção de `.dynsym` pelo linker LIEF (mesmo sintoma do [issue 1309](https://github.com/lief-project/LIEF/issues/1309)). O empacotador passou a editar SONAME/NEEDED com patchelf 0.19.1.0 e verificar as tabelas de símbolos com readelf, sem alterar a implementação criptográfica.
+
+## Resultado confirmado do APK 0.1.0
+
+Código compilado: `5211d6535ad04c33ac79be012b1e688c5e933059`. A [execução Android 40159780237](https://github.com/pabloradamez10-byte/controle-terceiros/actions/runs/40159780237) concluiu com sucesso: compilação, cofre e banco reais no Bare, inventário/símbolos ELF, instalação no emulador Android 15 x86_64 e cenário instrumentado completo (1 aprovado, 0 falhas/pulos). A suíte existente/P2P também passou na checagem separada com assets verificados.
+
+Foram conferidas as capturas de login, PDF e Portaria. O teste exige overlay visível, pixels do PDF desenhados, controles de exportação ocultos e rejeição real de escrita/download para Portaria; a reabertura confirmou persistência e novo login. O teste não comprova uso num aparelho físico arm64, seleção de arquivo, rotação ou ciclo de suspensão do sistema.
+
+APK de 193.599.956 bytes, SHA-256 `34166846e47f6d13a147f0245adb8e9ace2dd8b525e3dd17830f0c0cdfe7774b`. O instalador contém arm64-v8a e x86_64. Nenhuma credencial de teste fica embutida; o administrador inicial é criado explicitamente na primeira abertura. Main e backup foram novamente conferidos no commit preservado.
