@@ -2,11 +2,14 @@ name: SST Android homologacao
 on:
   push:
     branches: [homologacao/p2p-local-first]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   apk:
+    if: github.ref == 'refs/heads/homologacao/p2p-local-first' || github.head_ref == 'homologacao/p2p-local-first'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
