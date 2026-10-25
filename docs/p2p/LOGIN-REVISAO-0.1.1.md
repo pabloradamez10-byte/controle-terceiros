@@ -22,4 +22,16 @@ Não altera main nem backup/pre-p2p-2026-10-24-3a53c18. Não utiliza dados reais
 - node android/scripts/smoke.cjs: passou no Bare real, inclusive mesma identidade do administrador após logout e reabertura.
 - Teste de encerramento abrupto: processo filho cria administrador e registro, é encerrado com SIGKILL, novo processo reabre, valida a mesma identidade e registro; senha errada é recusada sem modificar a credencial.
 
-Build APK e instrumentação Android desta revisão: verificar o resultado do workflow do commit. Não declarar que a falha do aparelho físico foi resolvida sem reproduzir ou validar naquele aparelho.
+## APK final verificado
+
+- Código compilado: `a8f00e73260c40c8c94e47650455d75492a7f779`.
+- CI Android: https://github.com/pabloradamez10-byte/controle-terceiros/actions/runs/40244915751 — passou.
+- CI regressão: https://github.com/pabloradamez10-byte/controle-terceiros/actions/runs/40244915737 — passou.
+- Instrumentação Android 15 x86_64: 1 teste, 0 falhas, 0 erros, 0 skips; 27,147 segundos. Administrador após logout/reabertura, senha incorreta/duplo envio, dados preservados, PDF e Portaria.
+- Captura da tela final de login inspecionada: nome da revisão e mostrar senha alinhados.
+- Artefato APK: `12618571356`, nome `SST-homologacao-0.1.1`.
+- Artefato de resultados: `12618860673`.
+- APK: 193.600.912 bytes, SHA-256 `eae56068374acdcf98d070f8e79904cbe7de6b628757b7a70a2021a65d5e79fb`.
+- Download GitHub (ZIP contendo app-debug.apk): https://github.com/pabloradamez10-byte/controle-terceiros/actions/runs/40244915751/artifacts/12618571356
+
+A causa da falha do aparelho físico continua sem confirmação. Esta revisão melhora atualização de autorização e diagnóstico; não declarar a falha física corrigida sem validar no celular de Pablo.

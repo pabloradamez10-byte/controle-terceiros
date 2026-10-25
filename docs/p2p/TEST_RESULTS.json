@@ -4,7 +4,7 @@
   "build": "passed",
   "existing_regression_suite": "passed; Supabase/document transports simulated where existing tests specify",
   "new_native_tests": {
-    "passed": 12,
+    "passed": 13,
     "failed": 0,
     "replication": "real Autobase/Corestore duplex streams, same process; not Internet",
     "ui": "existing HTML/scripts in JSDOM; actual native core/credentials/storage; injected transport only",
@@ -66,5 +66,30 @@
     "apk_bytes": 193599956,
     "network_discovery_enabled": false,
     "signing": "ephemeral CI debug key; stable production signing pending"
+  },
+  "android_login_revision": {
+    "source_commit": "a8f00e73260c40c8c94e47650455d75492a7f779",
+    "application_id": "br.com.atlas.sst.homologacao.revisao2",
+    "version": "0.1.1-homologacao",
+    "workflow_run": 40244915751,
+    "regression_run": 40244915737,
+    "build": "passed",
+    "instrumented_android_15_x86_64": {
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 27.147
+    },
+    "apk_artifact_id": 12618571356,
+    "results_artifact_id": 12618860673,
+    "apk_sha256": "eae56068374acdcf98d070f8e79904cbe7de6b628757b7a70a2021a65d5e79fb",
+    "apk_bytes": 193600912,
+    "same_owner_after_logout_and_restart": "passed",
+    "abrupt_termination": "Node SIGKILL test passed; Android process kill not tested",
+    "physical_report": "same password rejected after logout; root cause not reproduced or confirmed",
+    "parallel_installation": true,
+    "prior_installation_data_migrated": false,
+    "identity_recovery_implemented": false
   }
 }

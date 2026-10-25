@@ -1,6 +1,8 @@
 # SST Android de homologação
 
-Aplicativo separado `br.com.atlas.sst.homologacao`, nome **SST Homologação**. Reutiliza a interface isolada e o núcleo P2P real dentro de um Worklet Bare Kit. Não depende de servidor Node no notebook ou de site hospedado para funcionar. O primeiro APK é para dados fictícios e testes em um aparelho; descoberta/sincronização entre aparelhos permanece desabilitada nesta entrada, como no adaptador anterior.
+Revisão atual: **SST Homologação 2**, versão 0.1.1, pacote `br.com.atlas.sst.homologacao.revisao2`. Instala em paralelo e começa com conta própria, preservando o aplicativo anterior. Investigação do login, limites e evidências desta revisão em [LOGIN-REVISAO-0.1.1.md](LOGIN-REVISAO-0.1.1.md). A causa relatada no celular físico ainda não foi confirmada.
+
+O primeiro aplicativo usou `br.com.atlas.sst.homologacao`, nome **SST Homologação**. Reutiliza a interface isolada e o núcleo P2P real dentro de um Worklet Bare Kit. Não depende de servidor Node no notebook ou de site hospedado para funcionar. O primeiro APK é para dados fictícios e testes em um aparelho; descoberta/sincronização entre aparelhos permanece desabilitada nesta entrada, como no adaptador anterior.
 
 ## Fontes e compilação
 
