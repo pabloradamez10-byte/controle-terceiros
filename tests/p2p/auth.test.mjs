@@ -11,9 +11,46 @@ import { SstDevice } from '../../src/backend/p2p/device.mjs';
 import { SstRepository } from '../../src/backend/p2p/repository.mjs';
 import { signOperation } from '../../src/backend/p2p/signatures.mjs';
 import { PROTOCOL } from '../../src/backend/p2p/protocol.mjs';
+import { spawn } from 'node:child_process';
+import { openDeviceConfig } from '../../src/platform/native/device-files.mjs';
 
 const password = 'Senha-ficticia-longa-2026';
 const hex = bytes => b4a.toString(bytes, 'hex');
+
+test('owner keeps the same identity and records after abrupt process termination; login errors do not leak secrets', {timeout:20000}, async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'sst-owner-restart-'));
+  t.after(() => rm(dir, {recursive:true,force:true}));
+  const moduleURL = relative => new URL(relative, import.meta.url).href;
+  const child = spawn(process.execPath, ['--input-type=module', '-e', `
+    import {openDeviceConfig} from ${JSON.stringify(moduleURL('../../src/platform/native/device-files.mjs'))};
+    import {SstDevice} from ${JSON.stringify(moduleURL('../../src/backend/p2p/device.mjs'))};
+    import {SstSession} from ${JSON.stringify(moduleURL('../../src/backend/p2p/session.mjs'))};
+    import {IdentityVault} from ${JSON.stringify(moduleURL('../../src/platform/native/identity-vault.mjs'))};
+    const dir=${JSON.stringify(dir)}, settings=await openDeviceConfig(dir);
+    const device=await SstDevice.open({...settings.config,directory:settings.directory});
+    const session=new SstSession(device,new IdentityVault(dir+'/identities'));
+    await session.initializeOwner('Owner@sst.local',${JSON.stringify(password)});
+    await device.put('empresas','retained',{razao:'Empresa fictícia preservada'});
+    process.send('saved');setInterval(()=>{},1000);
+  `], {stdio:['ignore','ignore','pipe','ipc']});
+  t.after(() => {if(child.exitCode===null)child.kill('SIGKILL');});
+  await new Promise((resolve,reject)=>{
+    child.on('error',reject);
+    child.on('message',()=>child.kill('SIGKILL'));
+    child.on('exit',(_code,signal)=>signal==='SIGKILL'?resolve():reject(Error('Child initialization failed')));
+  });
+  const settings=await openDeviceConfig(dir),device=await SstDevice.open({...settings.config,directory:settings.directory});
+  const vault=new IdentityVault(path.join(dir,'identities')),session=new SstSession(device,vault);
+  t.after(async()=>{session.logout();await device.close();});
+  const original=await readFile(vault.file('owner@sst.local'),'utf8');
+  const user=await session.login('owner@sst.local',password);
+  assert.equal(user.publicKey,JSON.parse(original).publicKey);assert.equal(user.role,'admin');
+  assert.equal((await device.get('empresas','retained')).value.razao,'Empresa fictícia preservada');
+  session.logout();
+  await assert.rejects(session.login('owner@sst.local','Senha-incorreta-2026'),error=>error.code==='AUTH_CREDENTIALS'&&!error.message.includes(dir)&&!error.message.includes(password));
+  await session.login('OWNER@sst.local',password);
+  assert.equal(await readFile(vault.file('owner@sst.local'),'utf8'),original);
+});
 async function until(check) {
   const deadline = Date.now() + 12000;
   while (Date.now() < deadline) { if (await check()) return; await new Promise(r => setTimeout(r, 20)); }
@@ -150,7 +187,7 @@ test('individual identity, role intersection, forgery/replay rejection, audit an
   assert.ok(oldSessionSecret.every(byte => byte === 0));
   await peer.device.base.append(late);
   await until(async () => { await owner.device.base.update(); return (await owner.device.receipt(late.id, peer.device.writerKey)).reason === 'user-not-authorized'; });
-  await assert.rejects(peer.session.login('cadastro.teste', password), /inválidos/);
+  await assert.rejects(peer.session.login('cadastro.teste', password), /AUTH_ACCESS/);
   await peer.session.login('portaria.teste', password);
   assert.equal((await peer.repository.execute({ command: 'list', entity: 'terceiros' })).length, 1);
 });

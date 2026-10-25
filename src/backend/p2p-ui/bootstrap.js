@@ -53,23 +53,33 @@
     };
     nativeObserver=new MutationObserver(hideBlocked);nativeObserver.observe(document.body,{childList:true,subtree:true});hideBlocked();
   }
+  let loginBusy=false;
+  function setLoginBusy(value){loginBusy=value;for(const button of document.querySelectorAll('#tss-auth-form button'))button.disabled=value;}
   document.getElementById('tss-auth-form').addEventListener('submit',async event=>{
-    event.preventDefault();if(loggingOut)return;authError('Entrando...');
+    event.preventDefault();if(loggingOut||loginBusy)return;setLoginBusy(true);authError('Entrando...');
     const password=document.getElementById('tss-auth-password');
     try{await authToken('password',{email:document.getElementById('tss-auth-email').value.trim(),password:password.value});password.value='';await initNative();}
     catch(error){password.value='';authError(error.message);}
+    finally{password.type='password';setLoginBusy(false);const toggle=document.getElementById('sst-native-show-password');if(toggle)toggle.checked=false;}
   });
   document.getElementById('tss-auth-recover').textContent='Ajuda para recuperar o acesso';
   document.getElementById('tss-auth-recover').onclick=()=>authError('A recuperação de identidade P2P ainda não está disponível. O acesso atual não foi alterado.');
   async function prepareNativeLogin(){
     try{
+      const password=document.getElementById('tss-auth-password');
+      password.autocapitalize='none';password.spellcheck=false;
+      const visibility=document.createElement('label'),toggle=document.createElement('input');
+      toggle.id='sst-native-show-password';toggle.type='checkbox';
+      toggle.onchange=()=>{password.type=toggle.checked?'text':'password';};
+      visibility.append(toggle,document.createTextNode(' Mostrar senha'));password.parentElement.after(visibility);
       const status=await nativeCall('status');
       if(status.needsOwner){
         const button=document.createElement('button');button.id='sst-native-initialize';button.type='button';button.textContent='Criar administrador inicial neste aparelho';
         button.onclick=async()=>{
-          button.disabled=true;const password=document.getElementById('tss-auth-password');
+          if(loginBusy)return;setLoginBusy(true);const password=document.getElementById('tss-auth-password');
           try{await authToken('initializeOwner',{email:document.getElementById('tss-auth-email').value.trim(),password:password.value});password.value='';button.remove();await initNative();}
-          catch(error){password.value='';authError(error.message);button.disabled=false;}
+          catch(error){password.value='';authError(error.message);}
+          finally{password.type='password';toggle.checked=false;setLoginBusy(false);}
         };
         document.getElementById('tss-auth-form').append(button);
       }

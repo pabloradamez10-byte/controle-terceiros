@@ -25,17 +25,30 @@ export class SstSession {
   async login(name, password) {
     this.logout();
     if (this.clock() < this.blockedUntil) throw Error('Aguarde antes de tentar entrar novamente.');
+    let stage = 'credentials';
     try {
       this.identity = await this.vault.unlock(name, password);
+      stage = 'state';
+      await this.device.base.update();
       this.device.setIdentity(this.identity);
+      stage = 'access';
       const user = await this.device.requireUser();
       if (!await this.device.role()) throw Error('Aparelho não autorizado.');
       this.lastUse = this.clock(); this.failures = 0;
       return user;
-    } catch {
+    } catch (cause) {
       this.logout(); this.failures++;
       if (this.failures >= 5) { this.blockedUntil = this.clock() + 30000; this.failures = 0; }
-      throw Error('Usuário, senha ou autorização inválidos.');
+      const code = stage === 'state' ? 'AUTH_STATE' : stage === 'access' ? 'AUTH_ACCESS'
+        : ['AUTH_STORAGE', 'AUTH_CRYPTO'].includes(cause.code) ? cause.code : 'AUTH_CREDENTIALS';
+      const message = {
+        AUTH_STORAGE: 'Não foi possível ler a credencial local. Preserve os dados do aplicativo.',
+        AUTH_CRYPTO: 'Não foi possível abrir a credencial neste aparelho. Feche e abra o aplicativo.',
+        AUTH_STATE: 'Não foi possível atualizar as autorizações locais. Feche e abra o aplicativo.',
+        AUTH_ACCESS: 'A credencial foi aberta, mas a autorização local não foi confirmada.',
+        AUTH_CREDENTIALS: 'Usuário ou senha inválidos. Confira o e-mail e a senha criada neste APK.'
+      }[code];
+      throw Object.assign(Error(`${message} [${code}]`), { code });
     }
   }
   async require({ touch = true } = {}) {

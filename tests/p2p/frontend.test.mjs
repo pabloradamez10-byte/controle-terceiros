@@ -55,7 +55,7 @@ test('native UI service saves atomic record diffs, rejects stale revisions and v
  await env.service.execute({action:'users',body:{email:'restrito@sst.local',role:'cadastro',ativo:false,permissoes:{consultar:true,cadastrar:false,liberar:false}}});
  const inactive=(await env.service.execute({action:'users'})).users.find(user=>user.email==='restrito@sst.local');
  assert.equal(inactive.ativo,false);assert.equal(inactive.role,'cadastro');
- await assert.rejects(env.service.execute({action:'login',body:{email:'restrito@sst.local',password}}),/inválidos/);
+ await assert.rejects(env.service.execute({action:'login',body:{email:'restrito@sst.local',password}}),/AUTH_ACCESS/);
  await env.service.execute({action:'logout'});
  await env.service.execute({action:'login',body:{email:'portaria@sst.local',password}});
  assert.equal((await env.service.execute({action:'state'}))[0].data.terceiros.length,1);

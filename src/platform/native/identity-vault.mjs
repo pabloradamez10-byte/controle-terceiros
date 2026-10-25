@@ -45,7 +45,7 @@ export class IdentityVault {
     } finally { key?.fill(0); pair.secretKey.fill(0); }
   }
   async unlock(name, password) {
-    let key, secretKey;
+    let key, secretKey, stage = 'storage';
     try {
       name = normalize(name);
       const file = this.file(name), stat = await lstat(file);
@@ -54,15 +54,21 @@ export class IdentityVault {
       let entry;
       try { entry = JSON.parse(await handle.readFile('utf8')); } finally { await handle.close(); }
       if (entry.format !== FORMAT || entry.name !== name || !validKey(entry.publicKey) || !/^[a-f0-9]{32}$/.test(entry.salt) || !/^[a-f0-9]{48}$/.test(entry.nonce) || !/^[a-f0-9]{160}$/.test(entry.ciphertext)) throw Error('Credencial inválida.');
+      stage = 'derive';
       key = await derive(password, unhex(entry.salt));
+      stage = 'decrypt';
       secretKey = b4a.alloc(64);
       sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(secretKey, null, unhex(entry.ciphertext), aad(entry), unhex(entry.nonce), key);
       const pair = { publicKey: unhex(entry.publicKey), secretKey };
       if (!crypto.validateKeyPair(pair)) throw Error('Identidade inválida.');
       return pair;
-    } catch {
+    } catch (cause) {
       secretKey?.fill(0);
-      throw Error('Usuário ou senha inválidos.');
+      // Fixed codes only: never forward filesystem paths, credential bytes or native errors.
+      const code = stage === 'storage' && cause.code !== 'ENOENT' ? 'AUTH_STORAGE'
+        : stage === 'derive' && typeof password === 'string' && password.length >= 10 && b4a.byteLength(password) <= 1024 ? 'AUTH_CRYPTO'
+        : 'AUTH_CREDENTIALS';
+      const error = Error('Usuário ou senha inválidos.'); error.code = code; throw error;
     } finally { key?.fill(0); }
   }
 }

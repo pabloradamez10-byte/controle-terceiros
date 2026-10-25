@@ -50,6 +50,13 @@ public final class AndroidSmokeTest {
    launch();waitFor("document.getElementById('sst-native-initialize')");screenshot("01-login");
    js("document.getElementById('tss-auth-email').value='owner@sst.local';document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('sst-native-initialize').click()");
    waitFor("document.body.classList.contains('tss-authenticated')");
+   js("window.__beforeOwnerLogout=true;tssSair()");waitFor("!window.__beforeOwnerLogout&&document.getElementById('sst-native-show-password')&&!document.body.classList.contains('tss-authenticated')");
+   js("document.getElementById('tss-auth-email').value='owner@sst.local';document.getElementById('tss-auth-password').value='Senha-incorreta-2026';document.getElementById('tss-auth-form').requestSubmit()");
+   waitFor("document.getElementById('tss-auth-error').textContent.includes('AUTH_CREDENTIALS')");
+   js("document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('sst-native-show-password').click()");
+   assertEquals("\"text\"",js("document.getElementById('tss-auth-password').type"));
+   js("document.getElementById('tss-auth-form').requestSubmit();document.getElementById('tss-auth-form').requestSubmit()");
+   waitFor("document.body.classList.contains('tss-authenticated')");
    js("window.prompt=()=> 'Cadastro fictício no emulador';window.confirm=()=>true;window.alert=message=>{window.__lastAlert=message};abrirModalNovaEmpresa();Object.entries({'emp-razao':'Empresa fictícia Android','emp-cnpj':'11.111.111/0001-11','emp-resp':'Teste','emp-contrato-fim':'2030-01-01','emp-doc-dp':'2030-01-01','emp-doc-sesmt':'2030-01-01'}).forEach(([id,value])=>document.getElementById(id).value=value);salvarEmpresa()");
    async("tssSupabaseSyncNow().then(ok=>{if(!ok)throw Error(window.__lastAlert)})");
    async("(async()=>{const company=(await sstNativeHost.request({action:'state'}))[0].data.empresas[0];window.__company=company.id;showPage('cadastro');Object.entries({'f-nome':'Pessoa fictícia Android','f-cpf':'111.111.111-11','f-empresa':company.id,'f-funcao':'Teste','f-aso':'2030-01-01','f-integ':'2030-01-01'}).forEach(([id,value])=>document.getElementById(id).value=value);salvarTerceiro();if(!await tssSupabaseSyncNow())throw Error(window.__lastAlert);window.__person=(await sstNativeHost.request({action:'state'}))[0].data.terceiros[0].id})()");
@@ -74,6 +81,11 @@ public final class AndroidSmokeTest {
    getInstrumentation().runOnMainSync(()->activity.finish());getInstrumentation().waitForIdleSync();Thread.sleep(1000);
    launch();waitFor("document.getElementById('tss-native-user-password')&&!document.body.classList.contains('tss-authenticated')");
    assertEquals("null",js("document.getElementById('sst-native-initialize')"));
+   js("document.getElementById('tss-auth-email').value='owner@sst.local';document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('tss-auth-form').requestSubmit()");
+   waitFor("document.body.classList.contains('tss-authenticated')");
+   assertEquals("true",js("tssPode('cadastrar')&&tssPode('liberar')"));
+   async("sstNativeHost.request({action:'state'}).then(rows=>{if(rows[0].data.terceiros.length!==1)throw Error('Cadastro do administrador perdido ao reabrir')})");
+   js("window.__beforeOwnerLogout=true;tssSair()");waitFor("!window.__beforeOwnerLogout&&document.getElementById('sst-native-show-password')&&!document.body.classList.contains('tss-authenticated')");
    js("document.getElementById('tss-auth-email').value='portaria@sst.local';document.getElementById('tss-auth-password').value="+JSONObject.quote(password)+";document.getElementById('tss-auth-form').requestSubmit()");
    waitFor("document.body.classList.contains('tss-authenticated')");
    async("sstNativeHost.request({action:'state'}).then(rows=>{if(rows[0].data.terceiros.length!==1)throw Error('Cadastro perdido ao reabrir')})");
