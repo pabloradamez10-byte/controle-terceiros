@@ -38,7 +38,9 @@
   async function authorizedFetch(url,options={}){
     const generation=sessionGeneration;
     let data,body=options.body?JSON.parse(options.body):undefined;
-    const route=new URL(url).pathname;
+    if(typeof url!=='string'||!url.startsWith(SUPABASE_URL+'/'))throw Error('Destino não permitido na ponte local.');
+    const relative=url.slice(SUPABASE_URL.length),route=relative.split('?')[0];
+    const query=new URLSearchParams(relative.includes('?')?relative.slice(relative.indexOf('?')+1):'');
     try{
       if(route==='/auth/v1/user')data=(await nativeCall('membership')).user;
       else if(route==='/rest/v1/sst_members')data=[await nativeCall('membership')];
@@ -46,13 +48,13 @@
       else if(route==='/rest/v1/rpc/sst_save_state')data=await nativeCall('saveState',body);
       else if(route==='/rest/v1/rpc/sst_read_exceptions')data=await nativeCall('exceptions');
       else if(route==='/rest/v1/rpc/sst_save_exception')data=await nativeCall('saveException',body);
-      else if(route==='/rest/v1/sst_audit_log')data=(await nativeCall('audit')).slice(Number(new URL(url).searchParams.get('offset')||0),Number(new URL(url).searchParams.get('offset')||0)+50);
+      else if(route==='/rest/v1/sst_audit_log')data=(await nativeCall('audit')).slice(Number(query.get('offset')||0),Number(query.get('offset')||0)+50);
       else if(route==='/rest/v1/rpc/sst_audit_report')data=await nativeCall('historicalReport',body);
       else if(route==='/users'){
         if(body&&!body.action)body.password=document.getElementById('tss-native-user-password')?.value;
         data=await nativeCall('users',body);
         const password=document.getElementById('tss-native-user-password');if(password)password.value='';
-      }else throw Error('Operação não disponível no modo P2P.');
+      }else {console.error('SST: operação local não mapeada',route);throw Error('Operação não disponível no modo P2P.');}
       if(generation!==sessionGeneration)throw Error('Sessão encerrada.');
       return {ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data)};
     }catch(error){

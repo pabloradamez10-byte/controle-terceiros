@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const root=path.resolve(__dirname,'../..'),composition=require('./ui-sources.json');
 function buildNativeUI({assets,out}){
  require('../../deploy/internal/build.cjs').build({origin:'https://sst-device.invalid',key:'sb_publishable_nativepackage',assets,out});
- const backend=composition.sources.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n').replaceAll('horário do banco','horário informado pelo aparelho');
+ const backend=composition.sources.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n').replaceAll('horário do banco','horário informado pelo aparelho').replaceAll('Falha ao consultar Supabase','Falha ao consultar o núcleo local');
  new vm.Script(backend,{filename:'native-backend.js'});
  if(backend.includes('obzycbtfbadjwwwfpsed')||backend.includes('SUPABASE_ANON_KEY'))throw Error('Configuração remota no pacote P2P.');
  fs.writeFileSync(path.join(out,composition.target),backend);
