@@ -4,7 +4,7 @@ Aplicativo separado `br.com.atlas.sst.homologacao`, nome **SST Homologação**. 
 
 ## Fontes e compilação
 
-`android/` é o proprietário da Activity Java, da ponte WebMessage e da entrada Bare. `android/scripts/prepare.cjs` reutiliza `scripts/p2p/build-ui.cjs` e gera interface/core em assets ignorados pelo Git. O projeto web padrão não muda de backend. As bibliotecas nativas vêm de seus pacotes existentes, ligadas por `bare-link`; a distribuição Bare Kit 2.5.5 é verificada por SHA-256 antes da extração. O exemplo oficial `holepunchto/bare-android` orientou Gradle/Worklet; código da aplicação e controles locais são próprios. Avisos/licenças em `android/THIRD_PARTY.md`.
+`android/` é o proprietário da Activity Java, da ponte WebMessage e da entrada Bare. `android/scripts/prepare.cjs` reutiliza `scripts/p2p/build-ui.cjs` e gera interface/core em assets ignorados pelo Git. O projeto web padrão não muda de backend. As bibliotecas nativas vêm de seus pacotes existentes, ligadas por `patchelf`; a distribuição Bare Kit 2.5.5 é verificada por SHA-256 antes da extração. O exemplo oficial `holepunchto/bare-android` orientou Gradle/Worklet; código da aplicação e controles locais são próprios. Avisos/licenças em `android/THIRD_PARTY.md`.
 
 ```sh
 npm ci
@@ -14,8 +14,9 @@ node android/scripts/smoke.cjs
 python3 deploy/internal/download-assets.py /CAMINHO/ocr-assets
 python3 android/scripts/fetch-kit.py
 SST_OCR_ASSETS=/CAMINHO/ocr-assets node android/scripts/prepare.cjs
-android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons .
-android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons android
+python3 -m venv /CAMINHO/elf-tools
+/CAMINHO/elf-tools/bin/pip install patchelf==0.19.1.0
+PATCHELF=/CAMINHO/elf-tools/bin/patchelf node android/scripts/link-addons.cjs
 node android/scripts/check-addons.cjs
 cd android
 ./gradlew :app:assembleDebug :app:connectedDebugAndroidTest
@@ -38,3 +39,5 @@ O teste Bare de computador executa cofre, Argon2id, gravações assinadas, anexo
 O teste instrumentado Android é separado: inicia o APK num emulador, cria conta pelo formulário, salva empresa/terceiro pelas telas, renderiza PDF em canvas, troca para Portaria, verifica bloqueios e reabre o aplicativo preservando os registros. Evidência final de compilação/emulador deve ser conferida na execução da workflow; existir o código de teste não comprova aprovação. Teste no celular de Pablo, seleção de anexos, teclado/rotação e redes diferentes exigem validação física posterior.
 
 Backup `backup/pre-p2p-2026-10-24-3a53c18` e main permanecem preservados. As credenciais de teste são geradas apenas durante os ensaios; não há senha embutida no APK.
+
+A primeira tentativa no emulador identificou corrupção de `.dynsym` pelo linker LIEF (mesmo sintoma do [issue 1309](https://github.com/lief-project/LIEF/issues/1309)). O empacotador passou a editar SONAME/NEEDED com patchelf 0.19.1.0 e verificar as tabelas de símbolos com readelf, sem alterar a implementação criptográfica.

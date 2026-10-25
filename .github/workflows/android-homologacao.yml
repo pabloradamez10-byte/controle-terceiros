@@ -37,10 +37,12 @@ jobs:
       - run: node android/scripts/prepare.cjs
         env:
           SST_OCR_ASSETS: ${{ runner.temp }}/sst-ocr-assets
-      - name: Link upstream Android addons
+      - name: Prepare ELF tooling
         run: |
-          android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons .
-          android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons android
+          python3 -m venv "$RUNNER_TEMP/sst-elf-tools"
+          "$RUNNER_TEMP/sst-elf-tools/bin/pip" install patchelf==0.19.1.0
+          echo "$RUNNER_TEMP/sst-elf-tools/bin" >> "$GITHUB_PATH"
+      - run: node android/scripts/link-addons.cjs
       - run: node android/scripts/check-addons.cjs
       - run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
         working-directory: android
