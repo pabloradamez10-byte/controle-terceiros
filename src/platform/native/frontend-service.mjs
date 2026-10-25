@@ -1,13 +1,12 @@
 import canonicalize from 'canonicalize';
 import crypto from 'hypercore-crypto';
 import b4a from 'b4a';
-import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { validateFile } from '../../../supabase/functions/sst-documentos/validate.mjs';
 import { validId, ROLES } from '../../backend/p2p/protocol.mjs';
 
 // Reuse the app's existing eligibility evaluator and byte validator, not copies.
-createRequire(import.meta.url)('../../features/auditoria/relatorios.js');
+import '../../features/auditoria/relatorios.js';
 const rules = globalThis.sstRelatorioCore;
 const arrays = ['terceiros', 'empresas', 'treinamentos'];
 const maps = ['anexosTerceiros', 'anexosEmpresas', 'arquivosTerceirosV16', 'arquivosEmpresasV26'];

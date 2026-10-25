@@ -1,0 +1,68 @@
+name: SST Android homologacao
+on:
+  push:
+    branches: [homologacao/p2p-local-first]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            android/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - run: npm ci && npm ci --prefix android
+      - run: npm run build && npm test
+      - run: node android/scripts/smoke.cjs
+      - run: python3 deploy/internal/download-assets.py "$RUNNER_TEMP/sst-ocr-assets"
+      - run: python3 android/scripts/fetch-kit.py
+      - run: node android/scripts/prepare.cjs
+        env:
+          SST_OCR_ASSETS: ${{ runner.temp }}/sst-ocr-assets
+      - name: Link upstream Android addons
+        run: |
+          android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons .
+          android/node_modules/.bin/bare-link --target android-arm64 --target android-x64 --needs libbare-kit.so --out android/app/src/main/addons android
+      - run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
+        working-directory: android
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            cd android
+            ./gradlew --no-daemon :app:connectedDebugAndroidTest
+            mkdir -p app/build/screenshots
+            for name in 01-login 02-cadastro 03-pdf 04-portaria; do adb exec-out run-as br.com.atlas.sst.homologacao cat files/$name.png > app/build/screenshots/$name.png; done
+      - name: APK checksum
+        run: sha256sum android/app/build/outputs/apk/debug/app-debug.apk > android/app/build/outputs/apk/debug/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SST-homologacao-0.1.0
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/SHA256SUMS.txt
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SST-android-test-results
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+            android/app/build/screenshots/
+          if-no-files-found: ignore

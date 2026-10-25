@@ -32,7 +32,7 @@
           totalPixels+=Math.ceil(viewport.width)*Math.ceil(viewport.height);
           if(!Number.isFinite(totalPixels)||viewport.width<=0||viewport.height<=0||totalPixels>24000000)throw Error('Documento excede o limite de visualização.');
           canvas.width=viewport.width;canvas.height=viewport.height;canvas.style.maxWidth='100%';canvas.setAttribute('aria-label','Página '+number);
-          body.append(canvas);await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+          body.append(canvas);await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;canvas.dataset.sstRendered='true';
         }
       }finally{await pdf.destroy();}
     })().catch(()=>{if(overlay.isConnected)body.textContent='Não foi possível visualizar este PDF. O aplicativo não disponibilizou um download alternativo.';});

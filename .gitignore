@@ -4,3 +4,11 @@ node_modules/
 *.invitation.json
 coverage/
 
+android/.gradle/
+android/**/build/
+android/local.properties
+android/app/libs/
+android/app/src/main/addons/
+android/app/src/main/assets/
+*.jks
+*.keystore

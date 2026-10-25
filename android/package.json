@@ -1,0 +1,11 @@
+{
+  "name": "sst-android-homologacao",
+  "private": true,
+  "version": "0.1.0",
+  "devDependencies": {
+    "bare-runtime": "1.36.0",
+    "bare-pack": "3.0.2",
+    "bare-link": "2.1.0",
+    "bare-node-runtime": "1.5.2"
+  }
+}
