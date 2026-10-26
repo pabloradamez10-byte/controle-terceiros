@@ -15,8 +15,36 @@
   }
 
   // ──────────────────────────────────────────────────
-  //  CPF MASK
+  //  CPF / FORM VALIDATION
   // ──────────────────────────────────────────────────
+  function validarCPFSST(value) {
+    const cpf = String(value || '').replace(/\D/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    const calc = tamanho => {
+      let soma = 0;
+      for (let i = 0; i < tamanho; i++) soma += Number(cpf[i]) * (tamanho + 1 - i);
+      const resto = (soma * 10) % 11;
+      return resto === 10 ? 0 : resto;
+    };
+    return calc(9) === Number(cpf[9]) && calc(10) === Number(cpf[10]);
+  }
+
+  function cpfJaCadastradoSST(cpf, ignorarId) {
+    const alvo = String(cpf || '').replace(/\D/g, '');
+    return getAll().some(t => t.id !== ignorarId && String(t.cpf || '').replace(/\D/g, '') === alvo);
+  }
+
+  function validarCadastroTerceiroSST({ nome, cpf, empresaId, funcao, aso, integ, ignorarId }) {
+    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
+      return 'Preencha todos os campos obrigatórios.';
+    }
+    if (!validarCPFSST(cpf)) return 'Informe um CPF válido.';
+    if (cpfJaCadastradoSST(cpf, ignorarId)) return 'Já existe um terceiro com este CPF.';
+    if (!isDataValidaSistema(aso)) return 'Informe uma data válida para o ASO.';
+    if (!isDataValidaSistema(integ)) return 'Informe uma data válida para a integração.';
+    return '';
+  }
+
   document.getElementById('f-cpf').addEventListener('input', function() {
     this.value = maskCPF(this.value);
   });
@@ -25,8 +53,6 @@
   });
   document.getElementById('f-empresa').addEventListener('change', renderTreinosExigidosCadastro);
   document.getElementById('e-empresa').addEventListener('change', function(){ renderTreinosEdicao(); });
-
-
 
   function coletarTreinamentosDoFormulario(prefixo) {
     return Array.from(document.querySelectorAll(`.${prefixo}-treino-data`))
@@ -78,20 +104,14 @@
     const obs    = document.getElementById('f-obs').value.trim();
     const treinamentosRealizados = coletarTreinamentosDoFormulario('f');
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
-      toast('⚠ Preencha todos os campos obrigatórios.');
+    const erro = validarCadastroTerceiroSST({ nome, cpf, empresaId, funcao, aso, integ });
+    if (erro) {
+      toast('⚠ ' + erro);
       return;
     }
 
     const lista = getAll();
-    const cpfLimpo = cpf.replace(/\D/g, '');
-    const duplicado = lista.find(t => t.cpf.replace(/\D/g, '') === cpfLimpo);
-    if (duplicado) {
-      toast('⚠ Já existe um terceiro com este CPF.');
-      return;
-    }
-
-    lista.push({ id: uid(), nome, cpf, empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados });
+    lista.push({ id: uid(), nome, cpf: maskCPF(cpf), empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados });
     saveAll(lista);
     limparForm();
     toast('✓ Terceiro cadastrado com sucesso!');
