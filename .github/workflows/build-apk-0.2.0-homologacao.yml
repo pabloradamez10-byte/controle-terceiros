@@ -1,4 +1,4 @@
-name: Build APK 0.2.1 homologacao
+name: Build APK 0.2.2 homologacao
 
 on:
   push:
@@ -49,11 +49,11 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist-apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/SST-Manager-0.2.1-homologacao.apk
-          sha256sum dist-apk/SST-Manager-0.2.1-homologacao.apk > dist-apk/SST-Manager-0.2.1-homologacao.sha256.txt
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/SST-Manager-0.2.2-homologacao.apk
+          sha256sum dist-apk/SST-Manager-0.2.2-homologacao.apk > dist-apk/SST-Manager-0.2.2-homologacao.sha256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: SST-Manager-0.2.1-homologacao
+          name: SST-Manager-0.2.2-homologacao
           path: dist-apk/
           if-no-files-found: error
           retention-days: 14
