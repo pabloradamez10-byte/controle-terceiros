@@ -93,7 +93,7 @@ test('existing screens connect to the real native core: onboarding, login, compa
  w.salvarEmpresa();assert.equal(await w.tssSupabaseSyncNow(),true);
  const company=(await env.device.list('empresas'))[0];assert.ok(company);
  w.showPage('cadastro');
- for(const[id,value]of Object.entries({'f-nome':'Ana Fictícia','f-cpf':'111.111.111-11','f-empresa':company.id,'f-funcao':'Teste','f-aso':'2030-01-01','f-integ':'2030-01-01'}))w.document.getElementById(id).value=value;
+ for(const[id,value]of Object.entries({'f-nome':'Ana Fictícia','f-cpf':'123.456.789-09','f-empresa':company.id,'f-funcao':'Teste','f-aso':'2030-01-01','f-integ':'2030-01-01'}))w.document.getElementById(id).value=value;
  w.salvarTerceiro();assert.equal(await w.tssSupabaseSyncNow(),true);
  const person=(await env.device.list('terceiros'))[0];assert.equal(person.value.nome,'Ana Fictícia');
  assert.equal(w.getStatus(person.value).confirmado,false,'Não enfraquecer a confirmação de entrada.');
