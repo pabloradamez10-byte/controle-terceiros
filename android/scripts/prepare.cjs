@@ -7,7 +7,7 @@ const root=path.resolve(__dirname,'../..'),android=path.join(root,'android');
  require('../../scripts/p2p/build-ui.cjs').buildNativeUI({assets,out});
  fs.copyFileSync(path.join(android,'webview-bridge.js'),path.join(out,'native-bridge.js'));
  const index=path.join(out,'index.html');
- fs.writeFileSync(index,fs.readFileSync(index,'utf8').replace('<title>Portal Terceiros SST</title>','<title>SST Homologação 0.2.0</title>').replace('SST Manager</h2>','SST Homologação 0.2.0</h2>').replace('Acesso restrito ao controle de terceiros.','Revisão 0.2.0. Teste local com dados fictícios. Crie uma conta própria desta instalação.'));
+ fs.writeFileSync(index,fs.readFileSync(index,'utf8').replace('<title>Portal Terceiros SST</title>','<title>SST Homologação 0.2.1</title>').replace('SST Manager</h2>','SST Homologação 0.2.1</h2>').replace('Acesso restrito ao controle de terceiros.','Revisão 0.2.1. Teste local com diagnóstico Android e dados fictícios. Crie uma conta própria desta instalação.'));
  // Android serves its own packaged assets; the browser-host release manifest is not used here.
  fs.unlinkSync(path.join(out,'release.json'));
  const notices=path.join(out,'notices');fs.mkdirSync(notices,{recursive:true});
