@@ -1,4 +1,4 @@
-import {mkdir,open,rename,readFile,lstat,readdir,link,unlink} from 'node:fs/promises';
+import {mkdir,open,rename,readFile,lstat,readdir,unlink} from 'node:fs/promises';
 import path from 'node:path';
 import sodium from 'sodium-native';
 import crypto from 'hypercore-crypto';
@@ -7,13 +7,24 @@ import b4a from 'b4a';
 export const hex=value=>b4a.toString(value,'hex');
 export async function privateJSON(file,value,{exclusive=false}={}){
   await mkdir(path.dirname(file),{recursive:true,mode:0o700});
+  const serialized=JSON.stringify(value);
+  if(exclusive){
+    const handle=await open(file,'wx',0o600);
+    let completed=false;
+    try{
+      await handle.writeFile(serialized);await handle.sync();completed=true;
+    }finally{
+      await handle.close();
+      if(!completed)try{await unlink(file);}catch(e){if(e.code!=='ENOENT')throw e;}
+    }
+    return;
+  }
   const temporary=file+'.'+hex(crypto.randomBytes(8))+'.tmp';
   const handle=await open(temporary,'wx',0o600);
   try{
-    try{await handle.writeFile(JSON.stringify(value));await handle.sync();}finally{await handle.close();}
-    if(exclusive)await link(temporary,file);else await rename(temporary,file);
+    try{await handle.writeFile(serialized);await handle.sync();}finally{await handle.close();}
+    await rename(temporary,file);
   }finally{try{await unlink(temporary);}catch(e){if(e.code!=='ENOENT')throw e;}}
-
 }
 export function invalidPrivateMode(stat){return globalThis.process?.platform!=='win32'&&globalThis.Bare?.platform!=='win32'&&!!(stat.mode&0o077);}
 export async function readPrivateJSON(file,max=64*1024*1024){
