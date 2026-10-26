@@ -23,7 +23,8 @@
         "src/features/excecoes/selecoes-legadas.js",
         "src/features/excecoes/autorizacao.js",
         "src/features/dashboard/filtros-interativos.js",
-        "src/features/empresas/alertas-painel.js"
+        "src/features/empresas/alertas-painel.js",
+        "src/features/mobile-ux-coerencia.js"
       ],
       "extractedSha256": "ecf7d5384e61032ae2d38a9bcc5a6dd23a46eea9902e55ed6eda6637650f6b68"
     },
@@ -46,14 +47,14 @@
       "sources": [
         "src/features/portaria-express.js"
       ],
-      "extractedSha256": "5b3d7fa808538d39f8c0ce6eeba83ce4119bf00a98639c43d7a9e051b9b5da26"
+      "extractedSha256": "da1ab124a67a5d9b4a5dd3be30c7c0aad4e55f6f5adebffe4a5db051b9b5da26"
     },
     {
       "target": "assets/js/portaria-semaforo.js",
       "sources": [
         "src/features/portaria-semaforo.js"
       ],
-      "extractedSha256": "da1ab124a67a5d9b4a5dd3be30c7c0aad4e55f6f5adebffe4a5db051d1260d7d"
+      "extractedSha256": "da1ab124a67a5d9b4a5dd3be30c7c0aad4e55f6f5adebffe4a5db051b9b5da26"
     },
     {
       "target": "assets/js/documentos-compatibilidade.js",
