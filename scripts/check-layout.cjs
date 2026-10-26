@@ -15,3 +15,21 @@ for(const file of targets){assert.ok(html.includes('./'+file),'Arquivo fora do H
 const scriptFiles=[...html.matchAll(/<script\b[^>]*src="\.\/(assets\/js\/[^"?]+)"/g)].map(m=>m[1]);
 assert.deepEqual(scriptFiles,targets.filter(f=>f.endsWith('.js')),'Ordem de carregamento alterada');
 console.log('Layout verified: '+seen.size+' source files, syntax, ownership, script order and public cache.');
+// Native ESM has a separate owner and is never concatenated into public scripts.
+const native=require('./native-sources.json');
+for(const file of [...native.sources,...native.entrypoints]){
+ assert.ok(!seen.has(file),'Fonte nativa também registrada no navegador: '+file);
+ assert.ok(fs.existsSync(path.join(root,file)),'Fonte nativa ausente: '+file);
+ assert.ok(!html.includes(file)&&!sw.includes(file),'Núcleo nativo exposto como script público: '+file);
+ const check=require('node:child_process').spawnSync(process.execPath,['--check',path.join(root,file)],{encoding:'utf8'});
+ assert.equal(check.status,0,check.stderr);
+}
+const walk=folder=>fs.readdirSync(path.join(root,folder),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(folder+'/'+e.name):[folder+'/'+e.name]);
+for(const file of walk('src').filter(f=>f.endsWith('.mjs')))assert.ok(native.sources.includes(file),'Fonte nativa sem proprietário: '+file);
+console.log('Native ownership verified: '+native.sources.length+' isolated ESM sources; no native code in browser bundles.');
+const ui=require('./p2p/ui-sources.json');
+assert.equal(new Set(ui.sources).size,ui.sources.length,'Fonte P2P repetida');
+for(const file of ui.sources){assert.ok(file.startsWith('src/'));assert.ok(seen.has(file)||file.startsWith('src/backend/p2p-ui/'),'Fragmento P2P sem proprietário: '+file);}
+new vm.Script(ui.sources.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n'),{filename:'native-ui-backend.js'});
+new vm.Script(fs.readFileSync(path.join(root,'src/platform/native/browser-bridge.js'),'utf8'));
+console.log('Native UI composition verified: '+ui.sources.length+' sources; shared fragments stay in one IIFE.');

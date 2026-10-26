@@ -37,7 +37,7 @@ function build({origin,key,assets,out}){
  // Every release has a unique public-shell cache, including the configured origin/key.
  const release=crypto.createHash('sha256').update(html+docs+publicFiles.filter(f=>f!=='index.html'&&f!=='documentos.js').map(f=>fs.readFileSync(path.join(out,f))).join('')).digest('hex').slice(0,16);
  for(const name of ['security.js','service-worker.js']){
-  let text=fs.readFileSync(path.join(out,name),'utf8').replaceAll('portal-terceiros-sst-organization-20261021-1','portal-terceiros-sst-internal-'+release);
+  let text=fs.readFileSync(path.join(out,name),'utf8').replaceAll('portal-terceiros-sst-organization-20261021-1','portal-terceiros-sst-internal-'+release).replaceAll('portal-terceiros-sst-nativeui-20261024-2','portal-terceiros-sst-internal-'+release);
   fs.writeFileSync(path.join(out,name),text);
  }
  fs.writeFileSync(path.join(out,'csp.nginx.conf'),'add_header Content-Security-Policy "'+csp+'" always;\n');

@@ -1,0 +1,74 @@
+name: SST Android homologacao
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    if: github.ref == 'refs/heads/homologacao/p2p-local-first' || github.head_ref == 'homologacao/p2p-local-first'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            android/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
+      - run: npm ci && npm ci --prefix android
+      - run: npm run build && npm test
+      - run: node android/scripts/smoke.cjs
+      - run: python3 deploy/internal/download-assets.py "$RUNNER_TEMP/sst-ocr-assets"
+      - run: python3 android/scripts/fetch-kit.py
+      - run: node android/scripts/prepare.cjs
+        env:
+          SST_OCR_ASSETS: ${{ runner.temp }}/sst-ocr-assets
+      - name: Prepare ELF tooling
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sst-elf-tools"
+          "$RUNNER_TEMP/sst-elf-tools/bin/pip" install patchelf==0.19.1.0
+          echo "$RUNNER_TEMP/sst-elf-tools/bin" >> "$GITHUB_PATH"
+      - run: node android/scripts/link-addons.cjs
+      - run: node android/scripts/check-addons.cjs
+      - run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
+        working-directory: android
+      - name: Allow runner access to KVM
+        run: sudo setfacl -m "u:$(whoami):rw" /dev/kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: bash android/scripts/emulator-test.sh
+      - name: APK checksum
+        if: always()
+        run: sha256sum android/app/build/outputs/apk/debug/app-debug.apk > android/app/build/outputs/apk/debug/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SST-homologacao-0.1.1
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/SHA256SUMS.txt
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SST-android-test-results
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+            android/app/build/screenshots/
+            android/app/build/diagnostics/
+          if-no-files-found: ignore

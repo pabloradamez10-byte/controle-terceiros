@@ -1,0 +1,47 @@
+plugins { id 'com.android.application' }
+android {
+ namespace 'br.com.atlas.sst.homologacao'
+ compileSdk 35
+ defaultConfig {
+  applicationId 'br.com.atlas.sst.homologacao.revisao5'
+  minSdk 29
+  targetSdk 35
+  versionCode 5
+  versionName '0.2.2-homologacao'
+  testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+  ndk { abiFilters 'arm64-v8a', 'x86_64' }
+ }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+ sourceSets { main { jniLibs.srcDirs 'src/main/addons', 'libs/bare-kit/jni' } }
+ packaging { jniLibs { useLegacyPackaging = false } }
+ signingConfigs {
+  stableHomologation {
+   if (System.getenv('SST_ANDROID_KEYSTORE')) {
+    storeFile file(System.getenv('SST_ANDROID_KEYSTORE'))
+    storePassword System.getenv('SST_ANDROID_STORE_PASSWORD')
+    keyAlias System.getenv('SST_ANDROID_KEY_ALIAS') ?: 'sst-homologacao'
+    keyPassword System.getenv('SST_ANDROID_KEY_PASSWORD') ?: System.getenv('SST_ANDROID_STORE_PASSWORD')
+   }
+  }
+ }
+ buildTypes {
+  debug { debuggable true }
+  release {
+   signingConfig signingConfigs.stableHomologation
+   minifyEnabled false
+  }
+ }
+ tasks.configureEach { task ->
+  if (task.name in ['packageRelease', 'assembleRelease']) {
+   task.doFirst {
+    if (!System.getenv('SST_ANDROID_KEYSTORE') || !System.getenv('SST_ANDROID_STORE_PASSWORD')) throw new GradleException('Assinatura persistente obrigatória. Nenhuma chave temporária será criada para release.')
+   }
+  }
+ }
+}
+dependencies {
+ implementation fileTree(dir:'libs',include:['bare-kit/classes.jar'])
+ implementation 'androidx.webkit:webkit:1.12.1'
+ androidTestImplementation 'androidx.test:runner:1.6.2'
+ androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

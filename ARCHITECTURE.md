@@ -20,12 +20,23 @@ O código editável fica em `src/`. `index.html` contém a estrutura das telas e
 | `src/features/dados/` | Importação e exportação |
 | `src/features/*.js` | Complementos existentes: pendências, matriz de treinamentos, portaria e visualização documental |
 | `src/backend/` | Contexto, requisições autenticadas, sessão/perfil, permissões, usuários, persistência e inicialização |
+| `src/backend/p2p/` | Núcleo nativo experimental: protocolo SST, projeção determinística, armazenamento/replicação e contrato de repositório |
+| `src/platform/native/` | Integração de arquivos do aparelho para homologação em Node; não carregar no navegador |
 | `src/security/` | Sanitização e proteção de conteúdo no navegador |
 | `src/platform/` | Service worker e limites do cache público |
 | `src/styles/` | Aparência geral, autenticação, pendências e portaria |
 | `supabase/` | Funções e controles do servidor e do banco |
 | `tests/` | Verificações de segurança, regras, sincronização e instalação |
 | `deploy/internal/` | Preparação de instalação independente e backup |
+| `scripts/p2p/` | Entrada nativa de homologação por stdio; nenhum servidor HTTP |
+
+## Núcleo P2P de homologação
+
+O núcleo experimental está isolado no mesmo projeto. `scripts/native-sources.json` é seu mapa de fontes ESM e entradas. A verificação de organização exige propriedade explícita e impede que essas fontes sejam colocadas no HTML ou no cache público. O mapa `scripts/sources.json` continua responsável apenas pelos arquivos web gerados. Os fragmentos `.part.js` existentes permanecem no escopo original.
+
+O contrato em `src/backend/p2p/repository.mjs` é a fronteira para integrar as funcionalidades do SST: as telas não devem importar bibliotecas de rede ou banco. O núcleo usa Corestore, Autobase, Hyperbee, Hyperswarm, hypercore-crypto, b4a, canonicalize e sodium-native, com versões exatas e lockfile. Não se criou criptografia, protocolo de replicação ou banco próprios.
+
+Nesta etapa **o núcleo não está conectado às telas nem ao login atual**. Não foi retirado o Supabase do aplicativo web. A ponte de homologação por stdio executa o núcleo real sem Supabase e sem HTTP. Ela exige sessão individual e operações assinadas, além de testar persistência e mensagens locais; não é a ponte Android final. A ativação no aplicativo deve ser uma mudança posterior explícita, com integração da identidade e visualização documental, migração completa e testes de aparelho. Consulte `docs/p2p/HOMOLOGACAO.md` para execução, limites e bloqueios de produção.
 
 ## Fonte e arquivos gerados
 
@@ -61,3 +72,17 @@ Esta organização não afirma que todas as dependências globais ou versões le
 - O pacote interno continua gerando uma configuração independente, com dependências de leitura locais e sem endereço do serviço hospedado.
 - Testes com backend simulado não são login real; homologação autenticada, restauração de backup e ensaio de servidor continuam pendentes.
 - Para reversão de código, usar o commit anterior completo, incluindo HTML e cache; não reverter apenas um arquivo gerado. Não é necessário reverter banco nesta organização.
+
+A segurança individual P2P fica em `src/backend/p2p/signatures.mjs` e `session.mjs`; a persistência cifrada de credenciais do host Node fica em `src/platform/native/identity-vault.mjs`. A projeção verifica assinaturas e perfis sem depender das telas. Detalhes e limites em `docs/p2p/AUTHENTICATION.md`.
+
+## Composição alternativa da interface P2P
+
+`scripts/p2p/ui-sources.json` reutiliza os fragmentos backend compartilhados em uma única IIFE, com transporte e inicialização próprios em `src/backend/p2p-ui/`. `sessao-interface.part.js` reúne apenas a interface visual de bloqueio/limpeza, sem transporte. O build padrão mantém seu backend anterior; o pacote isolado é montado por `scripts/p2p/build-ui.cjs`. Não inserir código nativo nos bundles web comuns.
+
+`src/platform/native/frontend-service.mjs` converte os contratos das telas em lotes assinados, usuários e documentos do núcleo. O adaptador loopback em `browser-host.mjs` é por aparelho e somente para homologação; o Android ainda precisa de ponte/empacotamento. Detalhes de segurança, execução e testes em `docs/p2p/INTERFACE.md`. A confirmação de entrada permanece bloqueada no pacote P2P até existir prova temporal independente.
+
+`android/` contém o host Android separado, a ponte WebMessage e o empacotamento Bare; seus assets/bibliotecas gerados nunca entram nos bundles web nem no Git. Veja `docs/p2p/ANDROID.md`. A entrada Android mantém rede P2P desativada nesta primeira homologação local.
+
+## Fonte multiaparelho de homologação
+
+O ciclo de vida compartilhado PC/Android, convites, recuperação, fila cifrada e cópias estão descritos em [docs/p2p/MULTIDEVICE.md](docs/p2p/MULTIDEVICE.md). Não há failover automático com dois aparelhos, teste de Internet física nem novo APK nesta entrega.

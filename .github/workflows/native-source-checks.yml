@@ -1,0 +1,44 @@
+name: SST native source checks
+on:
+  push:
+    branches: [homologacao/p2p-local-first]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: node --test tests/p2p/runtime.test.mjs
+      - run: node tests/p2p/desktop-source.cjs
+  android-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
+      - run: npm ci && npm ci --prefix android
+      - run: node android/scripts/smoke.cjs
+      - run: python3 android/scripts/fetch-kit.py
+      - name: Compile Android Java sources without packaging an APK
+        run: ./gradlew --no-daemon :app:compileDebugJavaWithJavac
+        working-directory: android

@@ -1,0 +1,27 @@
+{
+  "runtime": "Node >=22 desktop and Android/Bare; shared device runtime",
+  "sources": [
+    "src/backend/p2p/protocol.mjs",
+    "src/backend/p2p/signatures.mjs",
+    "src/backend/p2p/session.mjs",
+    "src/backend/p2p/materializer.mjs",
+    "src/backend/p2p/device.mjs",
+    "src/backend/p2p/repository.mjs",
+    "src/platform/native/device-files.mjs",
+    "src/platform/native/identity-vault.mjs",
+    "src/platform/native/frontend-service.mjs",
+    "src/platform/native/browser-host.mjs",
+    "src/platform/native/sealed-store.mjs",
+    "src/platform/native/journal.mjs",
+    "src/platform/native/checkpoints.mjs",
+    "src/platform/native/pairing.mjs",
+    "src/platform/native/runtime.mjs"
+  ],
+  "entrypoints": [
+    "scripts/p2p/device.mjs",
+    "scripts/p2p/browser.mjs",
+    "scripts/p2p/desktop.mjs",
+    "scripts/p2p/secure-desktop.cjs"
+  ],
+  "browserAutoLoad": false
+}

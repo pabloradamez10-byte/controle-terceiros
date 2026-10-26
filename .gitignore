@@ -1,0 +1,20 @@
+node_modules/
+.sst-device/
+.sst-native-ui/
+*.invitation.json
+coverage/
+
+android/.gradle/
+android/**/build/
+android/local.properties
+android/app/libs/
+android/app/src/main/addons/
+android/app/src/main/assets/
+*.jks
+*.keystore
+
+# Generated desktop UI and private signing material
+/desktop/ui/
+*.p12
+*.jks
+*.keystore

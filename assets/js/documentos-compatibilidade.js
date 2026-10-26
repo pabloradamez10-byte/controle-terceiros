@@ -104,6 +104,7 @@
       .v26-doc-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
       .v26-doc-actions .btn{padding:6px 10px;font-size:12px}
       .v26-doc-preview-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}
+      .v26-doc-preview-overlay[hidden]{display:none}
       .v26-doc-preview{background:var(--surface,#fff);border-radius:22px;width:min(920px,96vw);max-height:92vh;overflow:hidden;box-shadow:0 30px 80px rgba(15,23,42,.35);display:flex;flex-direction:column}
       .v26-doc-preview-head{padding:14px 16px;border-bottom:1px solid var(--border,#dde5f0);display:flex;justify-content:space-between;align-items:center;gap:10px}
       .v26-doc-preview-head strong{font-size:15px;line-height:1.2;word-break:break-word}
@@ -124,6 +125,8 @@
     link.click();
     link.remove();
   }
+
+  window.sstEnsureDocumentPreviewStyle = ensureV26Style;
 
   window.v26VisualizarDataUrl = function(dataUrl, mime, nome){
     ensureV26Style();

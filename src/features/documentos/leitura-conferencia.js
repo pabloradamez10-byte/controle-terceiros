@@ -5,7 +5,8 @@
   const keys = {terceiro:'arquivosTerceirosV16', empresa:'arquivosEmpresasV26'};
   const types = {terceiro:['ASO','Integração','Certificado NR','Ficha EPI','Contrato/Ficha Registro','CNH','Documento DP','Outro'], empresa:['Contrato de prestação','CNPJ','Alvará','PGR','PCMSO','Documento DP','Documento SESMT','Outro']};
   const canEdit = () => window.tssPode?.('cadastrar') === true;
-  const canView = () => canEdit() || window.tssPode?.('liberar') === true;
+  const canView = () => window.sstNativeMode ? window.tssPode?.('consultar') === true : canEdit() || window.tssPode?.('liberar') === true;
+  const canDownload = () => typeof window.sstCanDownloadDocuments !== 'function' || window.sstCanDownloadDocuments();
   const records = (kind, id) => JSON.parse(localStorage.getItem(keys[kind]) || '{}')[id] || [];
   const notice = text => typeof toast === 'function' ? toast(text) : alert(text);
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -140,7 +141,8 @@
       if (!item || !canView()) return;
       if (button.dataset.action === 'view') { try { return window.v26VisualizarDataUrl(await window.sstPrivateDocuments.dataURL(item),item.mime,item.nome); } catch(error) { return notice(error.message); } }
       if (button.dataset.action === 'download') {
-        try { const a = document.createElement('a'); a.href = window.sstSafeDocumentURL(await window.sstPrivateDocuments.dataURL(item)); a.download = item.nome; a.click(); } catch(error) { notice(error.message); } return;
+        if (!canDownload()) return notice('Seu perfil permite visualizar, sem baixar documentos.');
+        try { const a = document.createElement('a'); a.href = window.sstSafeDocumentURL(await window.sstPrivateDocuments.dataURL(item,'download')); a.download = item.nome; a.click(); } catch(error) { notice(error.message); } return;
       }
       if (!canEdit()) return;
       if (button.dataset.action === 'migrate') {
