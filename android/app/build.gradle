@@ -3,11 +3,11 @@ android {
  namespace 'br.com.atlas.sst.homologacao'
  compileSdk 35
  defaultConfig {
-  applicationId 'br.com.atlas.sst.homologacao.revisao4'
+  applicationId 'br.com.atlas.sst.homologacao.revisao5'
   minSdk 29
   targetSdk 35
-  versionCode 4
-  versionName '0.2.1-homologacao'
+  versionCode 5
+  versionName '0.2.2-homologacao'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
   ndk { abiFilters 'arm64-v8a', 'x86_64' }
  }
