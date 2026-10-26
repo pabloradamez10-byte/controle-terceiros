@@ -63,3 +63,17 @@ A configuração release exige SST_ANDROID_KEYSTORE e SST_ANDROID_STORE_PASSWORD
 ## Validação
 
 Registrar resultados finais em TEST_RESULTS.json e no PR. Separar os testes locais (criptografia, streams reais, Bare, telas JSDOM), a DHT local real do CI, a compilação Java sem APK e testes físicos ainda pendentes. A falha de login relatada na primeira instalação não deve ser declarada reproduzida ou corrigida no celular apenas pelos testes novos.
+
+### Resultado confirmado nesta etapa
+
+Código executável `3bf6226da3bcbc0abb3e449675842c6b2fab9f42`.
+
+- Regressão completa: https://github.com/pabloradamez10-byte/controle-terceiros/actions/runs/40308171538 — passou; 18 testes P2P, 0 falhas, 0 skips.
+- Rede real no CI: DHT UDP local, autorização com código, identidade Noise, replicação via Hyperswarm e cópia no receptor; passou em 1,847 s. É uma rede de testes local do CI, não uma prova de travessia de NAT ou de dados móveis.
+- Fonte nativa: https://github.com/pabloradamez10-byte/controle-terceiros/actions/runs/40308171493 — Windows, Linux e Android Java passaram. O job Android executou Bare e compileDebugJavaWithJavac; não assemble/package APK.
+- Telas em JSDOM usaram serviços reais de recuperação e convite, com limpeza dos códigos ao sair. Não equivalem a validação visual em aparelhos físicos.
+- Handover, operações pendentes após reabertura e revogação do antigo criador passaram sobre streams reais de replicação. Usuário Portaria continuou sem escrita/administração/cópias.
+- Checkpoint corrompido foi recusado sem alterar o cadastro atual; recuperação de exclusão preservou IDs. Kit de recuperação manteve a chave pública após mudar a senha.
+- Main e backup original permaneceram em `3a53c180bd90e28fc5edeae9db66281d9c447430`.
+
+A etapa não gerou APK nem instalador e não criou chave de assinatura. Continuam pendentes: teste físico celular/PC em redes diferentes, câmera ao vivo, suspensão/rotação e seletor de arquivo real, empacotamento de PC, configuração material da chave estável, exportação externa completa, restauração grande fracionada e recuperação da perda inesperada do único indexador. Nenhuma promoção para produção.

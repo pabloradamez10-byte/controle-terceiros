@@ -103,15 +103,31 @@
     },
     "bare_runtime_smoke": "passed; includes recovery identity and native export artifact",
     "desktop_private_directory_linux": "passed",
-    "windows_ci": "pending",
-    "android_java_compile_no_apk": "pending",
-    "real_dht_ci": "pending",
+    "windows_ci": "passed; native runtime recovery/enrollment/handover and private-directory ACL initialization",
+    "android_java_compile_no_apk": "passed; compileDebugJavaWithJavac and Bare runtime smoke",
+    "real_dht_ci": "passed; local real UDP DHT, encrypted invitation, code approval, authenticated Hyperswarm replication and checkpoint",
     "physical_devices_different_networks": "not tested",
     "automatic_two_device_failover": false,
     "planned_indexer_handover": "passed over real replication streams",
     "identity_recovery_same_key": "passed",
     "checkpoint_deletion_recovery": "passed",
     "portaria_and_revocation": "passed",
-    "backup_branch_actions": "none"
+    "backup_branch_actions": "none",
+    "source_commit": "3bf6226da3bcbc0abb3e449675842c6b2fab9f42",
+    "ci_p2p_tests": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0
+    },
+    "linux_ci": "passed; native runtime and private-directory initialization",
+    "regression_workflow_run": 40308171538,
+    "native_source_workflow_run": 40308171493,
+    "desktop_jobs": [
+      121522383662,
+      121522383846
+    ],
+    "android_source_job": 121522383981,
+    "real_dht_seconds": 1.846909134,
+    "backup_main_verified_sha": "3a53c180bd90e28fc5edeae9db66281d9c447430"
   }
 }
