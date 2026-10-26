@@ -1,0 +1,28 @@
+name: Fix homologacao test fixture
+
+on:
+  push:
+    branches:
+      - homologacao/p2p-local-first
+    paths:
+      - .github/workflows/fix-fixture-homologacao.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: homologacao/p2p-local-first
+      - name: Replace invalid CPF fixture
+        run: sed -i 's/111\.111\.111-11/123.456.789-09/g' tests/p2p/frontend.test.mjs
+      - name: Commit fixture correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/p2p/frontend.test.mjs
+          git commit -m "test: usa CPF sintético válido no fluxo nativo [skip ci]"
+          git push origin HEAD:homologacao/p2p-local-first
