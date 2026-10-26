@@ -31,7 +31,7 @@ export class SstDevice {
   }
   constructor(store, base, secret) {
     this.store = store; this.base = base; this.secret = secret; this.swarm = null;
-    this.connections = new Set(); this.lastNetworkError = null;
+    this.connections = new Set(); this.lastNetworkError = null; this.lastPeerAt=null;this.trustedTransports=new Set();
   }
   get writerKey() { return hex(this.base.local.key); }
   get baseKey() { return hex(this.base.key); }
@@ -55,8 +55,8 @@ export class SstDevice {
   // This descriptor contains a secret. Hand off out of band; never put in URLs or logs.
   invitation() { return { protocol: PROTOCOL, baseKey: this.baseKey, encryptionKey: this.secret }; }
   async role() {
-    if (this.writerKey === this.baseKey) return 'admin';
-    return (await this.base.view.get(`member/${this.writerKey}`))?.value?.role ?? null;
+    const entry=await this.base.view.get(`member/${this.writerKey}`);
+    return entry?entry.value.role:this.writerKey===this.baseKey?'admin':null;
   }
   async grant(writer, role) {
     if (await this.role() !== 'admin' || (await this.requireUser()).role !== 'admin') throw Error('Somente administrador autoriza aparelhos.');
@@ -65,7 +65,10 @@ export class SstDevice {
   async append(fields) {
     const op = signOperation(validateOperation({ ...fields, protocol: PROTOCOL, id: hex(crypto.randomBytes(16)), reportedAt: new Date().toISOString() }), this.identity, this.baseKey, this.writerKey);
     validateOperation(op);
+    await this.journal?.prepare(op);
+    if(!this.base.writable)return {id:op.id,accepted:null,reason:'awaiting-writer',finalized:false};
     await this.base.append(op);
+    await this.journal?.submitted(op.id);
     await this.base.update();
     return { id: op.id, ...await this.receipt(op.id) };
   }
@@ -108,13 +111,22 @@ export class SstDevice {
     for await (const { value } of this.base.view.createReadStream({ gte: 'audit/', lt: 'audit0', limit: 500 })) rows.push(value);
     return rows;
   }
+  async transportAllowed(key){
+    const known=await this.base.view.get('transport/'+key);
+    if(known){const member=await this.base.view.get('member/'+known.value.writer);return member?!!member.value.role:known.value.writer===this.baseKey;}
+    return !await this.base.view.get('policy/owner')&&this.trustedTransports.has(key);
+  }
   async startNetwork(options = {}) {
     if (this.swarm) return;
-    const swarm = new Hyperswarm(options);
+    const swarm = new Hyperswarm({...options,...(this.transportPair?{keyPair:this.transportPair}:{})});
     this.swarm = swarm;
     swarm.on('error', error => { this.lastNetworkError = error.code ?? 'network-error'; });
-    swarm.on('connection', socket => {
-      this.connections.add(socket);
+    swarm.on('connection', async socket => {
+      socket.on('error',()=>{});
+      try{
+        if(!await this.transportAllowed(hex(socket.remotePublicKey))){socket.destroy();return;}
+      }catch{socket.destroy();return;}
+      this.lastPeerAt=new Date().toISOString();this.connections.add(socket);
       socket.on('error', error => { this.lastNetworkError = error.code ?? 'connection-error'; });
       socket.on('close', () => this.connections.delete(socket));
       this.store.replicate(socket);
@@ -126,7 +138,9 @@ export class SstDevice {
     return { mode: 'homologacao', protocol: PROTOCOL, networkStarted: !!this.swarm,
       peers: this.connections.size, lastNetworkError: this.lastNetworkError,
       signedLength: this.base.signedLength, localLength: this.base.length,
-      productionReady: false };
+      writerKey:this.writerKey,baseKey:this.baseKey,isIndexer:this.base.isIndexer,
+      pendingBlocks:Math.max(0,this.base.view.core.length-this.base.view.core.signedLength),
+      lastPeerAt:this.lastPeerAt, productionReady: false };
   }
   async close() {
     await this.swarm?.destroy(); this.swarm = null;

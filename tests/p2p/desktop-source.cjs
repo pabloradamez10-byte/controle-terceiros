@@ -1,0 +1,3 @@
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
+const secure=require('../../scripts/p2p/secure-desktop.cjs');
+(async()=>{const directory=await fs.mkdtemp(path.join(os.tmpdir(),'sst-desktop-'));try{await secure(directory);await fs.writeFile(path.join(directory,'probe'),'test',{mode:0o600});assert.equal(await fs.readFile(path.join(directory,'probe'),'utf8'),'test');if(process.platform!=='win32')assert.equal((await fs.stat(directory)).mode&0o777,0o700);console.log('Desktop private-directory initialization passed on',process.platform);}finally{await fs.rm(directory,{recursive:true,force:true});}})().catch(error=>{console.error(error.message);process.exitCode=1;});

@@ -14,7 +14,30 @@ android {
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
  sourceSets { main { jniLibs.srcDirs 'src/main/addons', 'libs/bare-kit/jni' } }
  packaging { jniLibs { useLegacyPackaging = false } }
- buildTypes { debug { debuggable true } }
+ signingConfigs {
+  stableHomologation {
+   if (System.getenv('SST_ANDROID_KEYSTORE')) {
+    storeFile file(System.getenv('SST_ANDROID_KEYSTORE'))
+    storePassword System.getenv('SST_ANDROID_STORE_PASSWORD')
+    keyAlias System.getenv('SST_ANDROID_KEY_ALIAS') ?: 'sst-homologacao'
+    keyPassword System.getenv('SST_ANDROID_KEY_PASSWORD') ?: System.getenv('SST_ANDROID_STORE_PASSWORD')
+   }
+  }
+ }
+ buildTypes {
+  debug { debuggable true }
+  release {
+   signingConfig signingConfigs.stableHomologation
+   minifyEnabled false
+  }
+ }
+ tasks.configureEach { task ->
+  if (task.name in ['packageRelease', 'assembleRelease']) {
+   task.doFirst {
+    if (!System.getenv('SST_ANDROID_KEYSTORE') || !System.getenv('SST_ANDROID_STORE_PASSWORD')) throw new GradleException('Assinatura persistente obrigatória. Nenhuma chave temporária será criada para release.')
+   }
+  }
+ }
 }
 dependencies {
  implementation fileTree(dir:'libs',include:['bare-kit/classes.jar'])

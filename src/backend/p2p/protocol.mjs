@@ -20,6 +20,12 @@ export function validateOperation(op) {
     if (!validKey(op.userKey) || (!ROLES.includes(op.role) && op.role !== null) || typeof op.name !== 'string' || op.name.length < 1 || op.name.length > 120) throw Error('Usuário inválido.');
     if (op.permissions !== undefined && (!op.permissions || ['consultar', 'cadastrar', 'liberar'].some(k => typeof op.permissions[k] !== 'boolean') || Object.keys(op.permissions).some(k => !['consultar', 'cadastrar', 'liberar'].includes(k)))) throw Error('Permissões inválidas.');
     if (op.displayRole != null && !ROLES.includes(op.displayRole)) throw Error('Perfil inválido.');
+  } else if (op.kind === 'enroll') {
+    if(!validKey(op.writer)||!validKey(op.userKey)||!validKey(op.transportKey)||!validKey(op.inviteId)||!ROLES.includes(op.role)||!ROLES.includes(op.userRole)||typeof op.name!=='string'||op.name.length<3||op.name.length>120||typeof op.label!=='string'||op.label.length<1||op.label.length>80)throw Error('Vinculação inválida.');
+  } else if(op.kind==='transport'){
+    if(!validKey(op.transportKey))throw Error('Identidade de rede inválida.');
+  } else if(op.kind==='handover'){
+    if(!validKey(op.writer))throw Error('Destino inválido.');
   } else if (op.kind === 'member') {
     if (!validKey(op.writer) || (!ROLES.includes(op.role) && op.role !== null)) throw Error('Permissão inválida.');
   } else if (op.kind === 'batch') {

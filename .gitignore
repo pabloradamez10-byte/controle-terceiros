@@ -12,3 +12,9 @@ android/app/src/main/addons/
 android/app/src/main/assets/
 *.jks
 *.keystore
+
+# Generated desktop UI and private signing material
+/desktop/ui/
+*.p12
+*.jks
+*.keystore

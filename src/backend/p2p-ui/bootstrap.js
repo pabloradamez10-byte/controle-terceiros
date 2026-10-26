@@ -13,7 +13,7 @@
       let banner=document.getElementById('sst-native-status');
       if(!banner){banner=document.createElement('p');banner.id='sst-native-status';banner.setAttribute('role','status');document.querySelector('main').prepend(banner);}
       banner.textContent='Homologação P2P · dados neste aparelho. As situações de entrada ainda não têm confirmação temporal independente.';
-      updateBancoBadge('online');
+      updateBancoBadge('online');renderNativeDeviceToolbar();refreshNativeSyncBanner().catch(()=>{});
     }catch(error){await nativeCall('logout').catch(()=>{});endNativeSession();authError(error.message);}
   }
   window.tssSair=async function(){
@@ -87,6 +87,7 @@
       }
       const field=document.createElement('label');field.textContent='Senha inicial (somente para criar conta neste aparelho)';
       const input=document.createElement('input');input.id='tss-native-user-password';input.type='password';input.minLength=10;input.autocomplete='new-password';field.append(input);document.getElementById('tss-users-form').append(field);
+      installNativeDeviceUI();
       await initNative();
     }catch(error){authError(error.message);lockApp();}
   }
@@ -96,6 +97,7 @@
     if(!bootFinished||document.hidden)return;
     const status=await nativeCall('status').catch(()=>({locked:true}));
     if(status.locked){bootFinished=false;endNativeSession();return;}
+    await refreshNativeSyncBanner().catch(()=>{});
     await window.tssSupabaseReload();
   },20000);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',prepareNativeLogin);else setTimeout(prepareNativeLogin,0);

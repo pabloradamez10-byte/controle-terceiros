@@ -10,7 +10,9 @@
     "p2p:browser": "node scripts/p2p/browser.mjs",
     "csp": "node scripts/update-csp.cjs",
     "build": "node scripts/build.cjs && node scripts/update-csp.cjs",
-    "check": "node scripts/check-layout.cjs"
+    "check": "node scripts/check-layout.cjs",
+    "desktop:start": "node scripts/p2p/desktop.mjs",
+    "desktop:prepare": "node scripts/p2p/build-ui.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0"
@@ -18,11 +20,16 @@
   "dependencies": {
     "autobase": "7.28.2",
     "b4a": "1.9.0",
+    "blind-pairing": "2.3.1",
+    "blind-pairing-core": "2.10.1",
     "canonicalize": "5.1.0",
+    "compact-encoding": "3.5.2",
     "corestore": "7.16.1",
     "hyperbee": "2.27.3",
     "hypercore-crypto": "3.7.0",
     "hyperswarm": "4.17.2",
+    "jsqr": "1.4.0",
+    "qrcode-generator": "2.0.4",
     "sodium-native": "5.2.0"
   }
 }

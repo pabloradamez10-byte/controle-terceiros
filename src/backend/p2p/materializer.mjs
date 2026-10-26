@@ -18,7 +18,7 @@ export async function applyOperations(nodes, view, host) {
     const receiptKey = `operation/${writer}/${op.id}`;
     if (await view.get(receiptKey)) continue;
     const member = await view.get(`member/${writer}`);
-    const role = writer === root ? 'admin' : member?.value?.role;
+    const role = member ? member.value.role : writer === root ? 'admin' : null;
     const owner = (await view.get('policy/owner'))?.value;
     const user = typeof op.actor === 'string' ? (await view.get(`user/${op.actor}`))?.value : null;
     const signatureVerified = verifyOperation(op, root, writer);
@@ -40,16 +40,48 @@ export async function applyOperations(nodes, view, host) {
         const previousUser=(await view.get(`user/${op.userKey}`))?.value;
         await view.put(`user/${op.userKey}`, { role: op.role, displayRole: op.role??op.displayRole??previousUser?.displayRole??previousUser?.role??'cadastro', name: op.name, permissions: op.permissions ?? null });
       }
+    } else if(op.kind==='transport'){
+      const existing=await view.get('transport/'+op.transportKey);
+      if(existing&&existing.value.writer!==writer)reason='transport-in-use';
+      else await view.put('transport/'+op.transportKey,{writer});
+    } else if(op.kind==='enroll'){
+      const existing=(await view.get('user/'+op.userKey))?.value;
+      if(role!=='admin'||user.role!=='admin')reason='permission-denied';
+      else if(await view.get('invite/'+op.inviteId))reason='invite-used';
+      else if(await view.get('transport/'+op.transportKey))reason='transport-in-use';
+      else if(op.writer===root||await view.get('member/'+op.writer))reason='writer-already-enrolled';
+      else if(existing&&(!existing.role||existing.name.toLowerCase()!==op.name.toLowerCase()))reason='identity-mismatch';
+      else{
+        let duplicate=false;
+        for await(const entry of view.createReadStream({gte:'user/',lt:'user0'}))if(entry.value.name.toLowerCase()===op.name.toLowerCase()&&entry.key!=='user/'+op.userKey)duplicate=true;
+        if(duplicate)reason='identity-already-exists';
+        else{
+          await host.addWriter(b4a.from(op.writer,'hex'),{indexer:false});
+          await view.put('member/'+op.writer,{role:op.role,label:op.label,transportKey:op.transportKey});
+          await view.put('transport/'+op.transportKey,{writer:op.writer});
+          if(!existing)await view.put('user/'+op.userKey,{role:op.userRole,name:op.name});
+          await view.put('invite/'+op.inviteId,{writer:op.writer,userKey:op.userKey});
+        }
+      }
+    } else if(op.kind==='handover'){
+      const target=(await view.get('member/'+op.writer))?.value;
+      if(role!=='admin'||user.role!=='admin'||writer!==((await view.get('policy/indexer'))?.value?.writer??root)||target?.role!=='admin'||op.writer===writer)reason='handover-denied';
+      else{
+        await host.addWriter(b4a.from(op.writer,'hex'),{indexer:true});
+        await host.removeWriter(b4a.from(writer,'hex'));
+        await host.addWriter(b4a.from(writer,'hex'),{indexer:false});
+        await view.put('policy/indexer',{writer:op.writer});
+      }
     } else if (op.kind === 'member') {
       if (role !== 'admin' || user.role !== 'admin') reason = 'permission-denied';
-      else if (op.writer === root) reason = 'root-is-fixed';
+      else if(op.role===null&&op.writer===((await view.get('policy/indexer'))?.value.writer??root))reason='transfer-indexer-first';
       else {
         const previous = await view.get(`member/${op.writer}`);
         if (op.role !== null && !previous?.value?.role) await host.addWriter(b4a.from(op.writer, 'hex'), { indexer: false });
         // Keep revoked writers in the authenticated log so their subsequent
         // operations are rejected deterministically on every peer, rather than
         // claiming that revocation erases copies or instantly reaches offline peers.
-        await view.put(`member/${op.writer}`, { role: op.role });
+        await view.put(`member/${op.writer}`, { ...previous?.value, role: op.role });
       }
     } else if (op.kind === 'batch') {
       // Validate the entire UI transaction before changing any record.

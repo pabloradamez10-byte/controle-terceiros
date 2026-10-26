@@ -7,6 +7,8 @@ function check(ok,message){if(!ok)throw Error(message);}
  try{
   const password=b4a.toString(crypto.randomBytes(20),'hex');
   await core.service.execute({action:'initializeOwner',body:{email:'android-test@sst.local',password}});
+  const recovery=await core.service.execute({action:'recoveryCreate',body:{password}});check(recovery.kit.publicKey===core.session.identity.publicKey.toString('hex'),'Recovery identity');
+  const artifact=await core.service.execute({action:'exportArtifact',body:{ref:recovery.exportRef}});check(artifact.filename==='sst-identidade.json','Native file export');
   const ownerKey=core.session.identity.publicKey.toString('hex');
   await core.service.execute({action:'logout'});
   await core.service.execute({action:'login',body:{email:'ANDROID-TEST@sst.local',password}});

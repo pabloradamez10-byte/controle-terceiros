@@ -1,6 +1,7 @@
 // Bare FileHandle lacks readFile/writeFile. Keep operations on the exclusive fd.
 const fs=require('bare-fs/promises'),b4a=require('b4a');
 exports.mkdir=fs.mkdir;exports.lstat=fs.lstat;exports.chmod=fs.chmod;exports.readFile=fs.readFile;
+exports.link=fs.link;exports.unlink=fs.unlink;exports.rename=fs.rename;exports.readdir=fs.readdir;
 exports.open=async function(...args){
  const handle=await fs.open(...args);
  handle.writeFile=async data=>{

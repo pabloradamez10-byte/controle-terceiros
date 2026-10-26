@@ -82,3 +82,7 @@ A segurança individual P2P fica em `src/backend/p2p/signatures.mjs` e `session.
 `src/platform/native/frontend-service.mjs` converte os contratos das telas em lotes assinados, usuários e documentos do núcleo. O adaptador loopback em `browser-host.mjs` é por aparelho e somente para homologação; o Android ainda precisa de ponte/empacotamento. Detalhes de segurança, execução e testes em `docs/p2p/INTERFACE.md`. A confirmação de entrada permanece bloqueada no pacote P2P até existir prova temporal independente.
 
 `android/` contém o host Android separado, a ponte WebMessage e o empacotamento Bare; seus assets/bibliotecas gerados nunca entram nos bundles web nem no Git. Veja `docs/p2p/ANDROID.md`. A entrada Android mantém rede P2P desativada nesta primeira homologação local.
+
+## Fonte multiaparelho de homologação
+
+O ciclo de vida compartilhado PC/Android, convites, recuperação, fila cifrada e cópias estão descritos em [docs/p2p/MULTIDEVICE.md](docs/p2p/MULTIDEVICE.md). Não há failover automático com dois aparelhos, teste de Internet física nem novo APK nesta entrega.

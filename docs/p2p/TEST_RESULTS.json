@@ -91,5 +91,27 @@
     "parallel_installation": true,
     "prior_installation_data_migrated": false,
     "identity_recovery_implemented": false
+  },
+  "multidevice_source": {
+    "apk_generated": false,
+    "installer_generated": false,
+    "local_p2p_tests": {
+      "passed": 17,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "Real DHT test requires SST_TEST_DHT=1; local container denies UDX network-interface watcher (EPERM). CI enables this test."
+    },
+    "bare_runtime_smoke": "passed; includes recovery identity and native export artifact",
+    "desktop_private_directory_linux": "passed",
+    "windows_ci": "pending",
+    "android_java_compile_no_apk": "pending",
+    "real_dht_ci": "pending",
+    "physical_devices_different_networks": "not tested",
+    "automatic_two_device_failover": false,
+    "planned_indexer_handover": "passed over real replication streams",
+    "identity_recovery_same_key": "passed",
+    "checkpoint_deletion_recovery": "passed",
+    "portaria_and_revocation": "passed",
+    "backup_branch_actions": "none"
   }
 }

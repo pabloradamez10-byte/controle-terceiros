@@ -29,6 +29,9 @@ public final class MainActivity extends Activity {
  private boolean writing;
  private ValueCallback<Uri[]> fileCallback;
  private Uri[] selectedFiles;
+ private byte[] saveBytes;
+ private Reply saveReply;
+ private JSONObject saveResult;
  private interface Reply { void receive(JSONObject value); }
 
  @Override public void onCreate(Bundle state){
@@ -60,7 +63,7 @@ public final class MainActivity extends Activity {
     @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams parameters){
      if(fileCallback!=null)fileCallback.onReceiveValue(null);fileCallback=callback;pickingFile=true;
      Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("*/*");
-     intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/pdf","image/png","image/jpeg","image/webp"});
+     intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/pdf","image/png","image/jpeg","image/webp","application/json","text/plain"});
      try{startActivityForResult(intent,31);}catch(Exception error){fileCallback.onReceiveValue(null);fileCallback=null;pickingFile=false;}return true;
     }
    });
@@ -71,6 +74,14 @@ public final class MainActivity extends Activity {
      JSONObject request=new JSONObject(raw);String clientId=request.getString("id");
      if(!clientId.matches("[0-9]{1,16}")||replies.size()>20)throw new IllegalArgumentException();
      long pageGeneration=generation;
+     Reply send=value->{
+      if(!foreground||destroyed||pageGeneration!=generation)return;
+      try{value.put("id",clientId);proxy.postMessage(value.toString());}catch(Exception ignored){}
+     };
+     if("platformSaveFile".equals(request.optString("action"))){
+      request.put("action","exportArtifact");
+      submit(request,value->{if(!foreground||destroyed||pageGeneration!=generation)return;if(!value.optBoolean("ok")){send.receive(value);return;}saveArtifact(value,send);});return;
+     }
      submit(request,value->{
       if(!foreground||destroyed||pageGeneration!=generation)return;
       try{value.put("id",clientId);proxy.postMessage(value.toString());}catch(Exception ignored){}
@@ -82,6 +93,17 @@ public final class MainActivity extends Activity {
    ipc=new IPC(worklet);
    ipc.readable(this::readAvailable);
   }catch(Throwable error){fail("Não foi possível iniciar o SST de homologação. "+(error instanceof IllegalStateException?error.getMessage():"O núcleo Android não carregou."));}
+ }
+ private void saveArtifact(JSONObject value,Reply reply){
+  try{
+   if(pickingFile||saveReply!=null)throw new IOException("Busy");
+   JSONObject artifact=value.getJSONObject("data");String name=artifact.getString("filename");
+   if(!name.matches("sst-(identidade|convite|pedido|resposta)\\.json"))throw new IOException("Name");
+   saveBytes=artifact.getJSONObject("value").toString().getBytes(StandardCharsets.UTF_8);
+   if(saveBytes.length>32000)throw new IOException("Size");
+   saveReply=reply;pickingFile=true;
+   Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,name);startActivityForResult(intent,32);
+  }catch(Exception error){saveBytes=null;saveReply=null;pickingFile=false;try{reply.receive(new JSONObject().put("ok",false).put("error","Não foi possível abrir o salvamento do arquivo."));}catch(Exception ignored){}}
  }
  private void readAvailable(){
   try{
@@ -115,7 +137,7 @@ public final class MainActivity extends Activity {
  private void fail(String message){
   ready=false;replies.clear();if(web!=null)web.loadUrl("about:blank");TextView text=new TextView(this);text.setPadding(24,48,24,24);text.setText(message);setContentView(text);
  }
- @Override protected void onResume(){super.onResume();foreground=true;if(pickingFile||resumeFromPicker){resumeFromPicker=false;if(!pickingFile&&fileCallback!=null){ValueCallback<Uri[]> callback=fileCallback;fileCallback=null;callback.onReceiveValue(selectedFiles);selectedFiles=null;}return;}if(ready)lockThenLoad();}
+ @Override protected void onResume(){super.onResume();foreground=true;if(pickingFile||resumeFromPicker){resumeFromPicker=false;if(!pickingFile&&saveReply!=null&&saveResult!=null){Reply reply=saveReply;JSONObject result=saveResult;saveReply=null;saveResult=null;reply.receive(result);}if(!pickingFile&&fileCallback!=null){ValueCallback<Uri[]> callback=fileCallback;fileCallback=null;callback.onReceiveValue(selectedFiles);selectedFiles=null;}return;}if(ready)lockThenLoad();}
  @Override protected void onPause(){
   foreground=false;if(pickingFile){super.onPause();return;}generation++;replies.clear();if(web!=null)web.loadUrl("about:blank");
   if(ready)try{submit(new JSONObject().put("action","logout"),value->{});}catch(Exception ignored){}
@@ -123,11 +145,21 @@ public final class MainActivity extends Activity {
  }
  @Override protected void onActivityResult(int request,int result,Intent data){
   super.onActivityResult(request,result,data);
+  if(request==32&&saveReply!=null){
+   pickingFile=false;resumeFromPicker=true;
+   try{
+    if(result!=RESULT_OK||data==null||data.getData()==null)throw new IOException("Cancelled");
+    try(OutputStream stream=getContentResolver().openOutputStream(data.getData(),"wt")){if(stream==null)throw new IOException("No stream");stream.write(saveBytes);stream.flush();}
+    saveResult=new JSONObject().put("ok",true).put("data",new JSONObject().put("saved",true));
+   }catch(Exception error){try{saveResult=new JSONObject().put("ok",false).put("error","Arquivo não foi salvo. Tente novamente sem fechar a janela do SST.");}catch(Exception ignored){}}
+   finally{if(saveBytes!=null)Arrays.fill(saveBytes,(byte)0);saveBytes=null;}
+  }
   if(request==31&&fileCallback!=null){pickingFile=false;resumeFromPicker=true;selectedFiles=WebChromeClient.FileChooserParams.parseResult(result,data);}
  }
  @Override protected void onDestroy(){
   destroyed=true;ready=false;replies.clear();writes.clear();
   if(fileCallback!=null)fileCallback.onReceiveValue(null);
+  if(saveBytes!=null)Arrays.fill(saveBytes,(byte)0);saveBytes=null;saveReply=null;saveResult=null;
   if(ipc!=null)ipc.close();if(worklet!=null)worklet.terminate();
   if(web!=null){web.loadUrl("about:blank");web.destroy();}super.onDestroy();
  }

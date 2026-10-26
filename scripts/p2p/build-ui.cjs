@@ -8,8 +8,10 @@ function buildNativeUI({assets,out}){
  fs.writeFileSync(path.join(out,composition.target),backend);
  fs.copyFileSync(path.join(root,'src/platform/native/browser-bridge.js'),path.join(out,'native-bridge.js'));
  fs.copyFileSync(path.join(root,'assets/css/mobile.css'),path.join(out,'assets/css/mobile.css'));
+ fs.copyFileSync(require.resolve('jsqr'),path.join(out,'jsqr.js'));
+ fs.copyFileSync(path.join(path.dirname(require.resolve('jsqr')),'../LICENSE'),path.join(out,'jsqr-LICENSE'));
  let html=fs.readFileSync(path.join(out,'index.html'),'utf8');
- html=html.replace('<script src="./assets/js/backend-sessao-usuarios.js">','<script src="./native-bridge.js"></script>\n<script src="./assets/js/backend-sessao-usuarios.js">');
+ html=html.replace('<script src="./assets/js/backend-sessao-usuarios.js">','<script src="./native-bridge.js"></script>\n<script src="./jsqr.js"></script>\n<script src="./assets/js/backend-sessao-usuarios.js">');
  fs.writeFileSync(path.join(out,'index.html'),html);
  // The host never caches a private response. A native package does not need a service worker.
  fs.writeFileSync(path.join(out,'service-worker.js'),"self.addEventListener('install',event=>self.skipWaiting());self.addEventListener('activate',event=>event.waitUntil(self.registration.unregister()));\n");

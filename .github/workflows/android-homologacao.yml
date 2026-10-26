@@ -1,9 +1,5 @@
 name: SST Android homologacao
 on:
-  push:
-    branches: [homologacao/p2p-local-first]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

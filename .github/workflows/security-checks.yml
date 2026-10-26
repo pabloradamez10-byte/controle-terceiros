@@ -17,4 +17,5 @@ jobs:
       - run: git diff --exit-code
       - run: npm test
         env:
+          SST_TEST_DHT: '1'
           SST_TEST_OCR_ASSETS: ${{ runner.temp }}/sst-ocr-assets
