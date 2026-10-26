@@ -78,15 +78,15 @@ export class NativeFrontendService {
     return { state, exceptions, rows, version };
   }
   async confirmed(result) {
-    if (!result.accepted) throw Error(result.reason === 'revision-conflict' ? 'Outra alteração chegou antes. Recarregue os dados; seu rascunho não foi confirmado.' : 'Operação recusada pelo núcleo: ' + result.reason);
+    if (result.accepted===false) throw Error(result.reason === 'revision-conflict' ? 'Outra alteração chegou antes. Recarregue os dados; seu rascunho não foi confirmado.' : 'Operação recusada pelo núcleo: ' + result.reason);
     let receipt = result;
-    const until = Date.now() + 2000;
+    const until = Date.now() + 8000;
     while (!receipt.finalized && Date.now() < until) {
       await new Promise(resolve => setTimeout(resolve, 25)); await this.device.base.update();
       receipt = await this.device.receipt(result.id);
       if (receipt.accepted === false) throw Error('Alteração recusada após sincronização: ' + receipt.reason);
     }
-    if (!receipt.finalized) throw Error('Alteração registrada localmente, aguardando confirmação do indexador. Não foi anunciada como concluída.');
+    if (!receipt.finalized||receipt.accepted!==true) throw Error('Alteração registrada localmente, aguardando confirmação do indexador. Não foi anunciada como concluída.');
     return receipt;
   }
   async saveState(state, expected, reason) {

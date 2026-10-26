@@ -97,7 +97,7 @@ export class DeviceRuntime{
        finally{keys.secretKey.fill(0);}
      }finally{identity.secretKey.fill(0);await store.close();}
    }
-   if(action==='linkSubmit')return this.pairing.submit(body.code,body.online!==false);
+   if(action==='linkSubmit'){const result=this.pairing.submit(body.code,body.online!==false);return {...result,exportRef:this.artifact('sst-pedido.json',{request:result.request},'candidate')};}
    if(action==='linkResponse')return this.pairing.response(body.response);
    if(action==='linkComplete'){
      const auth=this.pairing.auth(),extra=JSON.parse(b4a.toString(auth.data));
@@ -143,7 +143,7 @@ export class DeviceRuntime{
        if(typeof body.request!=='string'||body.request.length>16000||!/^[a-f0-9]+$/.test(body.request))throw Error('Pedido inválido.');
        this.pairing.receive(MemberRequest.from(b4a.from(body.request,'hex'))).catch(()=>{});return this.pairing.requests();
      }
-     if(action==='linkApprove'){const result=await this.pairing.approve(body.id,body.code,body.role,body.userRole,this.device,this.session);return {...result,exportRef:this.artifact('sst-resposta.json',{response:result.response},'admin')};}
+     if(action==='linkApprove'){const result=await this.pairing.approve(body.id,body.code,body.role,body.userRole,this.device,this.session,result=>this.service.confirmed(result));return {...result,exportRef:this.artifact('sst-resposta.json',{response:result.response},'admin')};}
      if(action==='linkDeny')return this.pairing.deny(body.id);
      if(action==='devices'){
        const rows=[{writer:this.device.baseKey,role:'admin',label:'Aparelho criador'}];

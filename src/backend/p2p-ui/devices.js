@@ -60,7 +60,7 @@
     nativeButton(dialog,'Preparar vinculação',async()=>{
       prepared=await nativeCall('linkPrepare',{code:code.value.trim(),name:name.value.trim(),label:label.value.trim(),password:password.value,kit,recoveryCode:recoveryCode.value.trim()});password.value='';recoveryCode.value='';
       const display=nativeField(dialog,'Compare este código nas duas telas','text',prepared.code);display.readOnly=true;
-      nativeButton(dialog,'Conferi o código — enviar pedido',async()=>{await nativeCall('linkSubmit',{code:prepared.code,online:!manual.checked});dialog.message.textContent='Aguardando o administrador autorizar. Você pode verificar o resultado abaixo.';});
+      nativeButton(dialog,'Conferi o código — enviar pedido',async()=>{prepared=await nativeCall('linkSubmit',{code:prepared.code,online:!manual.checked});dialog.message.textContent='Aguardando o administrador autorizar. Você pode verificar o resultado abaixo.';});
       nativeButton(dialog,'Salvar pedido para envio manual',async()=>nativeDownload(prepared.exportRef));
       nativeJSONInput(dialog,'Resposta do administrador, se o envio foi manual',async value=>{await nativeCall('linkResponse',{response:value.response});dialog.message.textContent='Resposta aceita. Conclua a vinculação.';});
       nativeButton(dialog,'Verificar e concluir vinculação',async()=>{const status=await nativeCall('linkStatus');if(status.candidate?.state!=='accepted')throw Error('Ainda aguardando autorização.');await nativeCall('linkComplete');location.reload();});

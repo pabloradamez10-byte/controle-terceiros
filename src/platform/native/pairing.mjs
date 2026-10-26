@@ -46,15 +46,18 @@ export class Pairing{
     return waiting;
   }
   requests(){return [...this.pending.values()].map(({id,code,data,expiresAt})=>({id,code,label:data.label,name:data.name,expiresAt}));}
-  async approve(id,code,role,userRole,device,session){
+  async approve(id,code,role,userRole,device,session,confirm){
     const user=await session.require();
     if(user.role!=='admin'||await device.role()!=='admin')throw Error('Somente administrador vincula aparelhos.');
     const row=this.pending.get(id),invite=this.invite;
-    if(!row||!invite||invite.used||this.clock()>=row.expiresAt||row.code!==code||!ROLES.includes(role)||!ROLES.includes(userRole))throw Error('Confira o código ou crie outro convite.');
+    if(!row||!invite||(invite.used&&!row.operation)||this.clock()>=row.expiresAt||row.code!==code||!ROLES.includes(role)||!ROLES.includes(userRole))throw Error('Confira o código ou crie outro convite.');
     // Mark in memory before any await; the signed log also rejects a reused invitation.
     invite.used=true;
-    const result=await device.append({kind:'enroll',writer:row.data.writer,userKey:row.data.userKey,transportKey:row.data.transportKey,inviteId:hex(invite.id),name:row.data.name,label:row.data.label,role,userRole});
-    if(!result.accepted||!result.finalized){row.request.deny();row.finish();throw Error('Vinculação não confirmada pelo núcleo. Crie outro convite.');}
+    if(row.roles&&(row.roles.role!==role||row.roles.userRole!==userRole))throw Error('Este pedido já foi enviado com outro perfil. Confira o resultado antes de continuar.');
+    row.roles={role,userRole};
+    row.operation??=await device.append({kind:'enroll',writer:row.data.writer,userKey:row.data.userKey,transportKey:row.data.transportKey,inviteId:hex(invite.id),name:row.data.name,label:row.data.label,role,userRole});
+    await confirm(row.operation);
+    if(row.request._denied)throw Error('Pedido expirou antes da confirmação. O administrador deve conferir a autorização registrada.');
     row.request.confirm({key:bytes(device.baseKey),encryptionKey:bytes(device.secret),additional:invite.additional});
     clearTimeout(row.timer);this.pending.delete(id);row.finish();
     return {approved:true,response:hex(row.request.response)};
@@ -65,17 +68,17 @@ export class Pairing{
     if(typeof code!=='string'||!code.startsWith(WIRE+':'))throw Error('Convite incompatível.');
     const body={format:WIRE,writer,transportKey,userKey:hex(identity.publicKey),name:name.trim().toLowerCase(),label,nonce:hex(crypto.randomBytes(32))};
     const signature=hex(crypto.sign(b4a.from(canonicalize(body)),identity.secretKey));
-    const request=new CandidateRequest(decode(code.slice(WIRE.length+1)),b4a.from(canonicalize({...body,signature})));
-    this.candidate={request,code:sas(request.inviteId,request.userData),state:'prepared'};
+    const invite=decode(code.slice(WIRE.length+1)),request=new CandidateRequest(invite,b4a.from(canonicalize({...body,signature})));
+    this.candidate={request,invite,code:sas(request.inviteId,request.userData),state:'prepared'};
     return this.candidateStatus();
   }
   candidateStatus(){const row=this.candidate;return row?{state:row.state,code:row.code,request:hex(row.request.encode())}:null;}
   submit(code,online=true){
     const row=this.candidate;if(!row||row.state!=='prepared'||row.code!==code)throw Error('Confira o código antes de continuar.');
-    row.state='waiting';row.online=online;if(!online)return this.candidateStatus();this.client=this.network().addCandidate(row.request,{onadd:auth=>{row.auth=auth;row.state='accepted';}});
+    row.state='waiting';row.online=online;if(!online)return this.candidateStatus();row.originalRequest=row.request;this.client=this.network().addCandidate({invite:row.invite,userData:row.request.userData,onadd:auth=>{row.auth=auth;row.state='accepted';}});row.request=this.client.request;
     this.client.pairing.catch(()=>{row.state='failed';});return this.candidateStatus();
   }
-  response(value){const row=this.candidate;if(!row||row.state!=='waiting')throw Error('Pedido não confirmado neste aparelho.');const auth=row.request.handleResponse(decode(value));if(!auth)throw Error('Resposta inválida ou negada.');row.auth=auth;row.state='accepted';return this.candidateStatus();}
+  response(value){const row=this.candidate;if(!row||row.state!=='waiting')throw Error('Pedido não confirmado neste aparelho.');const payload=decode(value);const auth=row.request.handleResponse(payload)||row.originalRequest?.handleResponse(payload);if(!auth)throw Error('Resposta inválida ou negada.');row.auth=auth;row.state='accepted';return this.candidateStatus();}
   auth(){const row=this.candidate;if(row?.state!=='accepted'||!row.auth?.key||!row.auth?.encryptionKey)throw Error('Aguarde a autorização do administrador.');return row.auth;}
-  async close(){for(const id of this.pending.keys())this.deny(id);await this.blind?.close();await this.swarm?.destroy();this.candidate?.request.destroy();this.blind=null;this.swarm=null;this.member=null;this.client=null;this.candidate=null;this.invite?.seed?.fill(0);this.invite?.invite?.fill(0);this.invite=null;}
+  async close(){for(const id of this.pending.keys())this.deny(id);await this.blind?.close();await this.swarm?.destroy();this.candidate?.request.destroy();this.candidate?.originalRequest?.destroy();this.blind=null;this.swarm=null;this.member=null;this.client=null;this.candidate=null;this.invite?.seed?.fill(0);this.invite?.invite?.fill(0);this.invite=null;}
 }
