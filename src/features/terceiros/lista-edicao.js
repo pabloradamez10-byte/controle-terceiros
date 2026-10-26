@@ -15,15 +15,12 @@
     empty.style.display = 'none';
 
     lista.forEach(t => {
-      const { ok, motivos } = getStatus(t);
+      const { ok } = getStatus(t);
       const badge = ok
         ? `<span class="badge badge-ok">✓ Liberado</span>`
         : `<span class="badge badge-blocked">✕ Bloqueado</span>`;
-      const h = hoje();
-      const asoTag  = t.aso  < h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
-      const integTag= t.integ< h ? `<span class="tag-venc">VENCIDO</span>` : `<span class="tag-ok">OK</span>`;
-      const obrig = getTreinosObrigatoriosDaEmpresa(t.empresaId);
-      const pend = obrig.filter(tr => !getStatusTreinamentoTerceiro(t, tr).ok).length;
+      const asoTag = tagData(t.aso);
+      const integTag = tagData(t.integ);
       const treinoBadge = badgeTreinamentosComplementares(t);
       const stDP = getStatusDP(t);
       const stSESMT = getStatusSESMT(t);
@@ -33,7 +30,7 @@
       tr.innerHTML = `
         <td class="td-name">${escapeHtmlSafeV131(t.nome)}</td>
         <td class="td-cpf">${escapeHtmlSafeV131(t.cpf)}</td>
-        <td class="td-company">${t.empresa}</td>
+        <td class="td-company">${escapeHtmlSafeV131(t.empresa || '')}</td>
         <td>${fmtData(t.aso)}${asoTag}</td>
         <td>${fmtData(t.integ)}${integTag}</td>
         <td>${treinoBadge}</td>
@@ -105,11 +102,13 @@
     const obs    = document.getElementById('e-obs').value.trim();
     const treinamentosRealizados = coletarTreinamentosDoFormulario('e');
 
-    if (!nome || !cpf || !empresaId || !funcao || !aso || !integ) {
-      toast('⚠ Preencha todos os campos obrigatórios.'); return;
+    const erro = validarCadastroTerceiroSST({ nome, cpf, empresaId, funcao, aso, integ, ignorarId:id });
+    if (erro) {
+      toast('⚠ ' + erro);
+      return;
     }
 
-    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf, empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados } : t);
+    const lista = getAll().map(t => t.id === id ? { ...t, nome, cpf:maskCPF(cpf), empresaId, empresa, funcao, aso, integ, obs, treinamentosRealizados } : t);
     saveAll(lista);
     fecharModal();
     renderLista();
