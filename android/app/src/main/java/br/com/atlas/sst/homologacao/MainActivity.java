@@ -88,8 +88,11 @@ public final class MainActivity extends Activity {
      });
     }catch(Exception ignored){/* Invalid requests have no access to the core. */}
    });
+   File localRoot=new File(getNoBackupFilesDir(),"sst-homologacao");
+   if(!localRoot.exists()&&!localRoot.mkdirs())throw new IOException("Não foi possível criar a pasta privada do SST.");
+   if(!localRoot.isDirectory()||!localRoot.canWrite())throw new IOException("A pasta privada do SST não está disponível para escrita.");
    worklet=new Worklet(null);
-   worklet.start("/core.bundle",getAssets().open("core.bundle"),new String[]{new File(getFilesDir(),"sst-homologacao").getAbsolutePath()});
+   worklet.start("/core.bundle",getAssets().open("core.bundle"),new String[]{localRoot.getAbsolutePath()});
    ipc=new IPC(worklet);
    ipc.readable(this::readAvailable);
   }catch(Throwable error){fail("Não foi possível iniciar o SST de homologação. "+(error instanceof IllegalStateException?error.getMessage():"O núcleo Android não carregou."));}
@@ -116,7 +119,7 @@ public final class MainActivity extends Activity {
      JSONObject value=new JSONObject(incoming.toString(StandardCharsets.UTF_8.name()));incoming.reset();
      String event=value.optString("event");
      if(event.equals("ready")){ready=true;if(foreground)lockThenLoad();}
-     else if(event.equals("fatal")){fail("Não foi possível abrir a base local de homologação.");return;}
+     else if(event.equals("fatal")){String detail=value.optString("error","Falha desconhecida do núcleo Android.");fail("Não foi possível abrir a base local de homologação.\n\nDetalhe: "+detail);return;}
      else{Reply reply=replies.remove(value.optString("id"));if(reply!=null)reply.receive(value);}
     }
    }
