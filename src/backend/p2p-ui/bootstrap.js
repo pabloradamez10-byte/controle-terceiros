@@ -47,8 +47,8 @@
       if(!document?.body)return;
       for(const button of document.querySelectorAll('button[data-sst-click],button[data-action]')){
         const action=button.getAttribute('data-sst-click')||'', direct=button.dataset.action;
-        if(!can('cadastrar')&&(/"name":"(?:abrirEdicao|excluir|remover|salvar)/.test(action)||['remove','review','migrate'].includes(direct)))button.hidden=true;
-        if(!window.sstCanDownloadDocuments()&&(/"name":"(?:abrirExportacaoRelatorio|gerarRelatorioExecutivo|baixar|v26Baixar|exportar)/.test(action)||direct==='download')){button.hidden=true;button.style.setProperty('display','none','important');}
+        if(!can('cadastrar')&&(/\"name\":\"(?:abrirEdicao|excluir|remover|salvar)/.test(action)||['remove','review','migrate'].includes(direct)))button.hidden=true;
+        if(!window.sstCanDownloadDocuments()&&(/\"name\":\"(?:abrirExportacaoRelatorio|gerarRelatorioExecutivo|baixar|v26Baixar|exportar)/.test(action)||direct==='download')){button.hidden=true;button.style.setProperty('display','none','important');}
       }
     };
     nativeObserver=new MutationObserver(hideBlocked);nativeObserver.observe(document.body,{childList:true,subtree:true});hideBlocked();
@@ -62,8 +62,8 @@
     catch(error){password.value='';authError(error.message);}
     finally{password.type='password';setLoginBusy(false);const toggle=document.getElementById('sst-native-show-password');if(toggle)toggle.checked=false;}
   });
-  document.getElementById('tss-auth-recover').textContent='Ajuda para recuperar o acesso';
-  document.getElementById('tss-auth-recover').onclick=()=>authError('A recuperação de identidade P2P ainda não está disponível. O acesso atual não foi alterado.');
+  document.getElementById('tss-auth-recover').textContent='Recuperar acesso';
+  document.getElementById('tss-auth-recover').onclick=()=>{authError('');showRecoveryRestore();};
   async function prepareNativeLogin(){
     try{
       const password=document.getElementById('tss-auth-password');
