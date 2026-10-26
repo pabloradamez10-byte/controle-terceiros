@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TSS V29 — Protótipo UX</title>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--line:#dfe6ef;--text:#152033;--muted:#667085;--brand:#155eef;--brand2:#0f3d99;--ok:#16803d;--okbg:#e9f8ef;--warn:#b75d00;--warnbg:#fff4df;--danger:#c62828;--dangerbg:#ffebeb;--info:#1769aa;--infobg:#eaf4ff;--shadow:0 12px 34px rgba(16,24,40,.09);--r:18px}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}button,input{font:inherit}.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}.sidebar{background:#101828;color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh}.brand{font-weight:800;font-size:20px;margin:4px 8px 26px}.brand small{display:block;font-size:11px;color:#98a2b3;margin-top:4px}.nav{display:grid;gap:7px}.nav button{border:0;background:transparent;color:#cfd5df;padding:12px 14px;border-radius:12px;text-align:left;cursor:pointer}.nav button:hover,.nav button.active{background:#1f2a44;color:#fff}.content{padding:24px 28px 50px}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.topbar h1{font-size:28px;margin:0}.role{background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:var(--muted)}.page{display:none}.page.active{display:block}.grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}.kpi span{font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700}.kpi strong{display:block;font-size:30px;margin-top:8px}.hero{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:24px;padding:24px;margin-bottom:18px}.hero p{color:#dce7ff;margin-bottom:0}.cols{grid-template-columns:1.3fr .7fr}.section-title{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}.section-title h2{margin:0;font-size:20px}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.danger{background:var(--dangerbg);color:var(--danger)}.info{background:var(--infobg);color:var(--info)}.list{display:grid;gap:10px}.item{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff}.item.clickable{cursor:pointer}.item.clickable:hover{border-color:#9bb7ff}.item strong{display:block}.item small{color:var(--muted)}.btn{border:0;border-radius:11px;padding:10px 14px;font-weight:700;cursor:pointer}.btn-primary{background:var(--brand);color:#fff}.btn-ghost{background:#eef2f7;color:var(--text)}.btn-danger{background:var(--dangerbg);color:var(--danger)}.btn-ok{background:var(--okbg);color:var(--ok)}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.search{width:100%;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:#fff}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tabs button{border:1px solid var(--line);background:#fff;padding:9px 12px;border-radius:999px;cursor:pointer}.tabs button.active{background:var(--brand);border-color:var(--brand);color:#fff}.detail-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.person{display:flex;gap:14px;align-items:center}.avatar{width:58px;height:58px;border-radius:50%;background:#dce7ff;color:var(--brand);display:grid;place-items:center;font-size:20px;font-weight:800}.reason-box{border-left:5px solid var(--danger);background:var(--dangerbg);padding:14px;border-radius:12px;margin-top:16px}.reason-box ul{margin:8px 0 0 18px}.timeline{border-left:2px solid var(--line);margin-left:8px;padding-left:18px}.timeline div{margin-bottom:18px}.gate-search{max-width:820px;margin:0 auto}.gate-result{margin-top:18px;text-align:center}.status-big{font-size:30px;font-weight:900;margin:14px 0}.gate-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:left;margin:18px 0}.gate-meta div{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}.gate-actions{display:flex;gap:10px;justify-content:center}.empty-note{color:var(--muted);font-size:13px}.toast{position:fixed;right:22px;bottom:22px;background:#101828;color:#fff;padding:13px 16px;border-radius:12px;box-shadow:var(--shadow);display:none}.mobile-nav{display:none}
+    @media(max-width:1050px){.kpis{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}.app{grid-template-columns:1fr}.sidebar{display:none}.content{padding:18px 14px 90px}.mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#101828;padding:8px;z-index:20;gap:4px;overflow:auto}.mobile-nav button{flex:1;min-width:95px;border:0;background:transparent;color:#d0d5dd;padding:10px;border-radius:10px}.mobile-nav button.active{background:#24304c;color:#fff}.gate-meta{grid-template-columns:1fr}.topbar{align-items:flex-start;gap:10px}.role{font-size:12px}.detail-head{flex-direction:column}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">TSS V29<small>Protótipo navegável — Fase 1</small></div>
+    <nav class="nav">
+      <button class="active" data-page="dashboard">Painel inicial</button>
+      <button data-page="validation">Central de validação</button>
+      <button data-page="person">Prontuário da pessoa</button>
+      <button data-page="gatehouse">Portaria</button>
+    </nav>
+  </aside>
+  <main class="content">
+    <div class="topbar"><h1 id="pageTitle">Painel inicial</h1><div class="role">Perfil simulado: Gestor de Terceiros</div></div>
+
+    <section id="dashboard" class="page active">
+      <div class="hero"><h2>O que precisa ser resolvido hoje?</h2><p>O sistema prioriza pendências e mostra a próxima ação, sem exigir que o usuário procure em vários módulos.</p></div>
+      <div class="grid kpis">
+        <div class="card kpi"><span>Aguardando análise</span><strong>12</strong><span class="pill info">Documentos</span></div>
+        <div class="card kpi"><span>Vencendo em 30 dias</span><strong>7</strong><span class="pill warn">Atenção</span></div>
+        <div class="card kpi"><span>Terceiros bloqueados</span><strong>4</strong><span class="pill danger">Ação necessária</span></div>
+        <div class="card kpi"><span>Autorizações pendentes</span><strong>3</strong><span class="pill info">Aprovação</span></div>
+        <div class="card kpi"><span>Sem saída registrada</span><strong>2</strong><span class="pill danger">Portaria</span></div>
+      </div>
+      <div class="grid cols" style="margin-top:18px">
+        <div class="card">
+          <div class="section-title"><h2>Prioridades</h2><button class="btn btn-ghost" onclick="go('validation')">Ver todas</button></div>
+          <div class="list">
+            <div class="item clickable" onclick="openPerson()"><div><strong>João da Silva — ASO vencido</strong><small>ABC Manutenção · acesso bloqueado</small></div><span class="pill danger">Urgente</span></div>
+            <div class="item"><div><strong>Mariana Costa — Integração vence em 5 dias</strong><small>Servlimp · revisar renovação</small></div><span class="pill warn">Vence em breve</span></div>
+            <div class="item"><div><strong>3 autorizações aguardam aprovação</strong><small>Período solicitado inicia amanhã</small></div><span class="pill info">Aprovar</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Resumo operacional</h2></div>
+          <div class="list">
+            <div class="item"><div><strong>38 pessoas dentro</strong><small>Em todas as portarias</small></div><span class="pill ok">Normal</span></div>
+            <div class="item"><div><strong>2 negativas hoje</strong><small>Ambas por documento vencido</small></div><span class="pill danger">Revisar</span></div>
+            <div class="item"><div><strong>91% de conformidade</strong><small>Meta interna: 95%</small></div><span class="pill warn">Abaixo da meta</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="validation" class="page">
+      <div class="toolbar"><input id="validationSearch" placeholder="Pesquise por pessoa, empresa ou documento" oninput="filterValidation()" /></div>
+      <div class="tabs" id="validationTabs">
+        <button class="active" data-filter="all">Todas (18)</button><button data-filter="urgent">Urgentes (3)</button><button data-filter="soon">Vencem em breve (5)</button><button data-filter="waiting">Aguardando análise (10)</button>
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>Fila única de validação</h2><span class="empty-note">Ordenada por risco e prazo</span></div>
+        <div class="list" id="validationList">
+          <div class="item validation-row" data-kind="urgent" data-text="joão da silva abc manutenção aso"><div><strong>João da Silva</strong><small>ABC Manutenção · ASO · vencido em 15/07/2026</small></div><div><span class="pill danger">Urgente</span> <button class="btn btn-primary" onclick="openPerson()">Analisar</button></div></div>
+          <div class="item validation-row" data-kind="soon" data-text="mariana costa servlimp integração"><div><strong>Mariana Costa</strong><small>Servlimp · Integração · vence em 5 dias</small></div><div><span class="pill warn">Vence em breve</span> <button class="btn btn-primary">Analisar</button></div></div>
+          <div class="item validation-row" data-kind="waiting" data-text="carlos menezes eletro sul nr-10"><div><strong>Carlos Menezes</strong><small>Eletro Sul · NR-10 · enviado hoje</small></div><div><span class="pill info">Aguardando análise</span> <button class="btn btn-primary">Analisar</button></div></div>
+          <div class="item validation-row" data-kind="waiting" data-text="aline rocha obras rs identidade"><div><strong>Aline Rocha</strong><small>Obras RS · Documento de identificação · enviado ontem</small></div><div><span class="pill info">Aguardando análise</span> <button class="btn btn-primary">Analisar</button></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="person" class="page">
+      <div class="card">
+        <div class="detail-head">
+          <div class="person"><div class="avatar">JS</div><div><h2 style="margin:0">João da Silva</h2><div style="color:var(--muted);margin-top:5px">ABC Manutenção · Eletricista · CPF ***.***.***-12</div></div></div>
+          <span class="pill danger" style="font-size:14px;padding:8px 12px">Acesso bloqueado</span>
+        </div>
+        <div class="reason-box"><strong>Por que o acesso está bloqueado?</strong><ul><li>ASO vencido em 15/07/2026.</li><li>Integração de segurança não realizada.</li><li>Autorização ainda não aprovada.</li></ul></div>
+        <div class="tabs" id="personTabs"><button class="active" data-person-tab="summary">Resumo</button><button data-person-tab="docs">Documentos</button><button data-person-tab="trainings">Treinamentos</button><button data-person-tab="access">Autorizações</button><button data-person-tab="history">Histórico</button></div>
+        <div id="person-summary" class="person-tab">
+          <div class="grid cols"><div class="card" style="box-shadow:none"><h3>Próximas ações</h3><div class="list"><div class="item"><div><strong>Solicitar novo ASO</strong><small>Empresa terceirizada deve reenviar o documento</small></div><button class="btn btn-primary" onclick="toast('Solicitação enviada para a empresa terceirizada')">Solicitar</button></div><div class="item"><div><strong>Agendar integração</strong><small>Próxima turma: 22/07 às 09:00</small></div><button class="btn btn-ghost" onclick="toast('Integração reservada no protótipo')">Agendar</button></div></div></div><div class="card" style="box-shadow:none"><h3>Situação</h3><p><b>Empresa:</b> regular</p><p><b>Documentos:</b> 1 vencido</p><p><b>Treinamentos:</b> 1 pendente</p><p><b>Autorização:</b> aguardando aprovação</p></div></div>
+        </div>
+        <div id="person-docs" class="person-tab" style="display:none"><div class="list"><div class="item"><div><strong>ASO</strong><small>Venceu em 15/07/2026</small></div><span class="pill danger">Vencido</span></div><div class="item"><div><strong>Documento de identificação</strong><small>Validado em 04/06/2026</small></div><span class="pill ok">Aprovado</span></div></div></div>
+        <div id="person-trainings" class="person-tab" style="display:none"><div class="list"><div class="item"><div><strong>Integração de Segurança</strong><small>Ainda não realizada</small></div><span class="pill danger">Pendente</span></div><div class="item"><div><strong>NR-10</strong><small>Válida até 12/02/2027</small></div><span class="pill ok">Válida</span></div></div></div>
+        <div id="person-access" class="person-tab" style="display:none"><div class="item"><div><strong>Manutenção elétrica — Área produtiva</strong><small>Solicitada para 21/07/2026 a 25/07/2026</small></div><span class="pill info">Aguardando aprovação</span></div></div>
+        <div id="person-history" class="person-tab" style="display:none"><div class="timeline"><div><strong>18/07/2026 — ASO sinalizado como vencido</strong><small>Sistema</small></div><div><strong>17/07/2026 — Autorização solicitada</strong><small>Carlos Supervisor</small></div><div><strong>04/06/2026 — Documento de identificação aprovado</strong><small>SESMT</small></div></div></div>
+      </div>
+    </section>
+
+    <section id="gatehouse" class="page">
+      <div class="gate-search">
+        <div class="hero"><h2>Consulta rápida da portaria</h2><p>Digite nome, CPF, empresa ou código. A decisão precisa aparecer em poucos segundos.</p></div>
+        <input class="search" id="gateSearch" value="João da Silva" placeholder="Digite nome, CPF, empresa ou código" />
+        <div class="card gate-result" id="gateResult">
+          <div class="avatar" style="margin:0 auto">JS</div><h2>João da Silva</h2><div>ABC Manutenção · Eletricista</div><div class="status-big" style="color:var(--danger)">ENTRADA BLOQUEADA</div>
+          <div class="reason-box" style="text-align:left"><strong>Motivo da decisão</strong><ul><li>ASO vencido em 15/07/2026.</li><li>Integração não realizada.</li></ul></div>
+          <div class="gate-meta"><div><small>Destino</small><strong>Manutenção</strong></div><div><small>Responsável</small><strong>Carlos Supervisor</strong></div><div><small>Contato</small><strong>SESMT · Ramal 123</strong></div></div>
+          <div class="gate-actions"><button class="btn btn-danger" onclick="toast('Negativa registrada com sucesso')">Registrar negativa</button><button class="btn btn-ghost" onclick="openPerson()">Ver prontuário</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<nav class="mobile-nav"><button class="active" data-page="dashboard">Painel</button><button data-page="validation">Validação</button><button data-page="person">Pessoa</button><button data-page="gatehouse">Portaria</button></nav>
+<div class="toast" id="toast"></div>
+<script>
+  const titles={dashboard:'Painel inicial',validation:'Central de validação',person:'Prontuário da pessoa',gatehouse:'Portaria'};
+  function go(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('pageTitle').textContent=titles[id];document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));window.scrollTo({top:0,behavior:'smooth'});} 
+  document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
+  function openPerson(){go('person')}
+  document.querySelectorAll('#validationTabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#validationTabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.validation-row').forEach(r=>r.style.display=(b.dataset.filter==='all'||r.dataset.kind===b.dataset.filter)?'flex':'none')}));
+  function filterValidation(){const q=document.getElementById('validationSearch').value.toLowerCase();document.querySelectorAll('.validation-row').forEach(r=>r.style.display=r.dataset.text.includes(q)?'flex':'none')}
+  document.querySelectorAll('[data-person-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-person-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.person-tab').forEach(x=>x.style.display='none');document.getElementById('person-'+b.dataset.personTab).style.display='block'}));
+  function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',2600)}
+</script>
+</body>
+</html>
